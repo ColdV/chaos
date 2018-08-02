@@ -31,6 +31,9 @@
 
 #endif  //_WIN32
 
+
+
+
 struct socket_info
 {
 	unsigned int socket;
