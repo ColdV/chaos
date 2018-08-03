@@ -116,10 +116,6 @@ int MySvrConnector::Bind()
 }
 
 
-
-
-
-
 int MySvrConnector::Listen()
 {
 	if (0 != listen(m_listen_socket, 5))
