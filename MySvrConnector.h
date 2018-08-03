@@ -8,12 +8,19 @@
 #	Last Modified: 2018-07-31 10:31:29
 *******************************************/
 
+
+
 #pragma once
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <map>
 #include <string.h>
+
+#ifndef FD_SETSIZE
+#define FD_SETSIZE 1024
+
+#endif // !FD_SETSIZE
 
 #ifdef _WIN32
 #include <WS2tcpip.h>
@@ -32,21 +39,27 @@
 #endif  //_WIN32
 
 
+#ifdef _WIN32
 
+inline int Close(unsigned int nfd)
+{
+	return closesocket(nfd);
+}
 
+#else
+inline int Close(unsigned int nfd)
+{
+	return close(nfd);
+}
 
-
-
-
-
-
-
-
+#endif // _WIN32
 
 
 struct socket_info
 {
 	unsigned int socket;
+	char ip[64];
+	unsigned short port;
 	sockaddr_in socket_addr;	
 };
 
@@ -63,7 +76,7 @@ private:
 	int Bind();
 	int Listen();
 	int Accept(/*unsigned int nfd, const sockaddr_in* pSockaddr*/);
-	int Recv();
+	int Recv(unsigned int nfd);
 	int Send();
 
 private:
@@ -77,7 +90,7 @@ private:
 	char m_recv_buf[1024 * 10];
 	unsigned int m_recv_bytes;		
 
-	char m_send_buf[1024 * 10];
+	char m_send_buf[1024/* * 10*/];
 	unsigned int m_send_bytes;
 
 	std::map<unsigned int, socket_info> client_socket_map;
