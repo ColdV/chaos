@@ -22,6 +22,8 @@ MySvrConnector::MySvrConnector(int nMaxConnect)
 	memset(m_send_buf, 0, sizeof(m_send_buf));
 	client_socket_map.clear();	
 	FD_ZERO(&m_rfds);
+	FD_ZERO(&m_sfds);
+	FD_ZERO(&m_efds);
 
 #ifdef _WIN32
 
@@ -65,7 +67,9 @@ void MySvrConnector::run()
 	while(true)
 	{
 		fd_set rfds_cp = m_rfds;
-		int n = select(m_cur_maxfds, &rfds_cp, NULL, NULL, NULL);
+		fd_set sfds_cp = m_sfds;
+		fd_set efds_cp = m_efds;
+		int n = select(m_cur_maxfds, &rfds_cp, &sfds_cp, &efds_cp, NULL);
 
 		int cur_count = 0;
 
@@ -83,6 +87,22 @@ void MySvrConnector::run()
 			if (FD_ISSET(it->first, &rfds_cp))
 			{
 				Recv(it->first);
+				++cur_count;
+				if (n <= cur_count)
+					break;
+			}
+
+			if (FD_ISSET(it->first, &sfds_cp))
+			{
+				Send(it->first);
+				++cur_count;
+				if (n <= cur_count)
+					break;
+			}
+
+			if (FD_ISSET(it->first, &efds_cp))
+			{
+				Except(it->first);
 				++cur_count;
 				if (n <= cur_count)
 					break;
@@ -127,7 +147,7 @@ int MySvrConnector::Listen()
 	return 0;
 }
 
-int MySvrConnector::Accept(/*unsigned int nfd, const sockaddr_in* pSockaddr*/)
+int MySvrConnector::Accept()
 {
 	sockaddr_in clientAddr;
 	socklen_t len = sizeof(clientAddr);
@@ -139,28 +159,21 @@ int MySvrConnector::Accept(/*unsigned int nfd, const sockaddr_in* pSockaddr*/)
 	if(client_socket_map.size() >= m_max_connect)
 		return -1;
 
-	nfd = 1;
-
 	socket_info new_socket_info;
 	memset(&new_socket_info, 0, sizeof(new_socket_info));
 
-	
 	new_socket_info.socket = nfd;
-	//memcpy(&new_socket_info.socket_addr, &clientAddr, sizeof(new_socket_info));
-	PCSTR p = inet_ntop(AF_INET, &clientAddr.sin_addr, new_socket_info.ip, sizeof(new_socket_info.ip));
-	if (!p)
-	{
-		printf("call inet_ntop failed!\n");
-		return 0;
-	}
-
-	//new_socket_info.port = ntohs(clientAddr.sin_port);
+	memcpy(&new_socket_info.socket_addr, &clientAddr, sizeof(new_socket_info.socket_addr));			//这里最好提供memcpy_s函数
+	inet_ntop(AF_INET, &clientAddr.sin_addr, new_socket_info.ip, sizeof(new_socket_info.ip));
+	new_socket_info.port = ntohs(clientAddr.sin_port);
 	
 	client_socket_map.insert(std::make_pair(new_socket_info.socket, new_socket_info));
 
 	printf("Accept from ip:%s, port:%d, fd:%d\n", new_socket_info.ip, new_socket_info.port, new_socket_info.socket);
 
 	FD_SET(nfd, &m_rfds);
+	FD_SET(nfd, &m_sfds);
+	FD_SET(nfd, &m_efds);
 
 	return 0;
 }
@@ -184,7 +197,42 @@ int MySvrConnector::Recv(unsigned int nfd)
 	return 0;
 }
 
-int MySvrConnector::Send()
+int MySvrConnector::Send(unsigned int nfd)
 {
+	std::map<unsigned int, socket_info>::const_iterator it_fd = client_socket_map.find(nfd);
+	if (it_fd == client_socket_map.end())
+	{
+		Close(nfd);
+		return -1;
+	}
+	/*
+	int n = recv(nfd, m_recv_buf, sizeof(m_recv_buf), 0);
+	if (0 >= n)
+	{
+		return -1;
+	}
+	*/
+	printf("send data[%s],to ip:%s,port:%d, fd:%d\n", m_recv_buf, it_fd->second.ip, it_fd->second.port, it_fd->first);
+
+	return 0;
+}
+
+int MySvrConnector::Except(unsigned int nfd)
+{
+	std::map<unsigned int, socket_info>::const_iterator it_fd = client_socket_map.find(nfd);
+	if (it_fd == client_socket_map.end())
+	{
+		Close(nfd);
+		return -1;
+	}
+	/*
+	int n = recv(nfd, m_recv_buf, sizeof(m_recv_buf), 0);
+	if (0 >= n)
+	{
+		return -1;
+	}
+	*/
+	printf("send data[%s],to ip:%s,port:%d, fd:%d\n", m_recv_buf, it_fd->second.ip, it_fd->second.port, it_fd->first);
+
 	return 0;
 }

@@ -74,9 +74,10 @@ private:
 	int Socket();
 	int Bind();
 	int Listen();
-	int Accept(/*unsigned int nfd, const sockaddr_in* pSockaddr*/);
+	int Accept();
 	int Recv(unsigned int nfd);
-	int Send();
+	int Send(unsigned int nfd);
+	int Except(unsigned int nfd);
 
 private:
 	unsigned int m_listen_socket;	
@@ -85,6 +86,8 @@ private:
 	unsigned int m_cur_maxfds;		//当前连接的数量
 	
 	fd_set m_rfds;	//读fd
+	fd_set m_sfds;	//写fd
+	fd_set m_efds;	//意外fd
 
 	char m_recv_buf[1024 * 10];
 	unsigned int m_recv_bytes;		

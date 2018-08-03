@@ -15,15 +15,15 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\MySvrConnector\main.cpp">
+    <ClCompile Include="MySvrConnector\main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\MySvrConnector\MySvrConnector.cpp">
+    <ClCompile Include="MySvrConnector\MySvrConnector.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\MySvrConnector\MySvrConnector.h">
+    <ClInclude Include="MySvrConnector\MySvrConnector.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

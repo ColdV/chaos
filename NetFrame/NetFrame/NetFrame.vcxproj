@@ -18,6 +18,13 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="MySvrConnector\main.cpp" />
+    <ClCompile Include="MySvrConnector\MySvrConnector.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="MySvrConnector\MySvrConnector.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{B65385AE-F535-4A51-AC61-142870D094D7}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
@@ -93,6 +100,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <StackReserveSize>10485760</StackReserveSize>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -145,13 +153,6 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="..\..\MySvrConnector\main.cpp" />
-    <ClCompile Include="..\..\MySvrConnector\MySvrConnector.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\..\MySvrConnector\MySvrConnector.h" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
