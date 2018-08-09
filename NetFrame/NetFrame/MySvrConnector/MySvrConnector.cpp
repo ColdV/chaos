@@ -69,10 +69,26 @@ void MySvrConnector::run()
 		fd_set rfds_cp = m_rfds;
 		fd_set sfds_cp = m_sfds;
 		fd_set efds_cp = m_efds;
-		int n = select(m_cur_maxfds, &rfds_cp, &sfds_cp, &efds_cp, NULL);
+
+		int max_nfds = 0;
+#ifndef _WIN32
+		max_nfds = client_socket_map.size() + 1 + 1;	//多一个Listen socket
+#endif // _WIN32
+
+		int n = select(max_nfds, &rfds_cp, NULL, &efds_cp, NULL);			//问题  客户端发送的数据在accept之前
+
+		if (0 > n)
+		{
+			printf("select call error!\n");
+			return;
+			//printf("select result:%d\n", WSAGetLastError());
+		}
+
+		if (0 == n)
+			continue;
 
 		int cur_count = 0;
-
+		
 		if (FD_ISSET(m_listen_socket, &rfds_cp))
 		{
 			Accept();
@@ -80,10 +96,10 @@ void MySvrConnector::run()
 			if (n <= cur_count)
 				continue;
 		}
-
+		
 		for (std::map<unsigned int, socket_info>::const_iterator it = client_socket_map.begin(); it != client_socket_map.end(); ++it)
 		{
-
+			
 			if (FD_ISSET(it->first, &rfds_cp))
 			{
 				Recv(it->first);
@@ -91,7 +107,8 @@ void MySvrConnector::run()
 				if (n <= cur_count)
 					break;
 			}
-
+			
+			/*
 			if (FD_ISSET(it->first, &sfds_cp))
 			{
 				Send(it->first);
@@ -99,7 +116,9 @@ void MySvrConnector::run()
 				if (n <= cur_count)
 					break;
 			}
+			*/
 
+	
 			if (FD_ISSET(it->first, &efds_cp))
 			{
 				Except(it->first);
@@ -109,6 +128,7 @@ void MySvrConnector::run()
 			}
 		}
 	}
+	
 	
 }
 
@@ -190,10 +210,16 @@ int MySvrConnector::Recv(unsigned int nfd)
 	int n = recv(nfd, m_recv_buf, sizeof(m_recv_buf), 0);
 	if (0 >= n)
 	{
+		printf("recv client socket[%d] close msg!\n", nfd);
+		Close(nfd);
 		return -1;
 	}
 	printf("recv data[%s],from ip:%s,port:%d, fd:%d\n", m_recv_buf, it_fd->second.ip, it_fd->second.port, it_fd->first);
 
+	n = send(nfd, m_recv_buf, strlen(m_recv_buf), 0);
+	printf("send data to socket[%d] len:%d\n", nfd, n);
+	
+	memset(m_recv_buf, 0, sizeof(m_recv_buf));
 	return 0;
 }
 
@@ -205,13 +231,6 @@ int MySvrConnector::Send(unsigned int nfd)
 		Close(nfd);
 		return -1;
 	}
-	/*
-	int n = recv(nfd, m_recv_buf, sizeof(m_recv_buf), 0);
-	if (0 >= n)
-	{
-		return -1;
-	}
-	*/
 	printf("send data[%s],to ip:%s,port:%d, fd:%d\n", m_recv_buf, it_fd->second.ip, it_fd->second.port, it_fd->first);
 
 	return 0;
@@ -225,13 +244,6 @@ int MySvrConnector::Except(unsigned int nfd)
 		Close(nfd);
 		return -1;
 	}
-	/*
-	int n = recv(nfd, m_recv_buf, sizeof(m_recv_buf), 0);
-	if (0 >= n)
-	{
-		return -1;
-	}
-	*/
 	printf("send data[%s],to ip:%s,port:%d, fd:%d\n", m_recv_buf, it_fd->second.ip, it_fd->second.port, it_fd->first);
 
 	return 0;

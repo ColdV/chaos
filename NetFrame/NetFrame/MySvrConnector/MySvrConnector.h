@@ -38,21 +38,6 @@
 #endif  //_WIN32
 
 
-#ifdef _WIN32
-
-inline int Close(unsigned int nfd)
-{
-	return closesocket(nfd);
-}
-
-#else
-inline int Close(unsigned int nfd)
-{
-	return close(nfd);
-}
-
-#endif // _WIN32
-
 
 struct socket_info
 {
@@ -78,6 +63,17 @@ private:
 	int Recv(unsigned int nfd);
 	int Send(unsigned int nfd);
 	int Except(unsigned int nfd);
+	inline int Close(unsigned int nfd)
+	{
+		FD_CLR(nfd, &m_rfds);
+		FD_CLR(nfd, &m_efds);
+#ifdef _WIN32
+		return closesocket(nfd);
+#else
+		return return close(nfd);
+#endif // _WIN32
+
+	}
 
 private:
 	unsigned int m_listen_socket;	
