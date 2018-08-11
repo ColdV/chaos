@@ -70,12 +70,12 @@ void MySvrConnector::run()
 		fd_set sfds_cp = m_sfds;
 		fd_set efds_cp = m_efds;
 
-		int max_nfds = 0;
+		unsigned int max_nfds = 0;
 #ifndef _WIN32
-		max_nfds = client_socket_map.size() + 1 + 1;	//多一个Listen socket
+		max_nfds = client_socket_map.size() + 30;	//预留30个
 #endif // _WIN32
 
-		int n = select(max_nfds, &rfds_cp, NULL, &efds_cp, NULL);			//问题  客户端发送的数据在accept之前
+		int n = select(max_nfds + 1, &rfds_cp, NULL, &efds_cp, NULL);			//问题  客户端发送的数据在accept之前
 
 		if (0 > n)
 		{
@@ -147,7 +147,7 @@ int MySvrConnector::Bind()
 	
 	m_sockaddr.sin_family = AF_INET;
 	m_sockaddr.sin_port = htons(6666);
-	inet_pton(AF_INET, INADDR_ANY, (void*)&m_sockaddr.sin_addr);
+	inet_pton(AF_INET, "0.0.0.0", &m_sockaddr.sin_addr);
 
 	if(0 != bind(m_listen_socket, (sockaddr*)&m_sockaddr, sizeof(m_sockaddr)))
 		return -1;

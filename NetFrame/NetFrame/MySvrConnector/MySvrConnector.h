@@ -70,7 +70,7 @@ private:
 #ifdef _WIN32
 		return closesocket(nfd);
 #else
-		return return close(nfd);
+		return close(nfd);
 #endif // _WIN32
 
 	}

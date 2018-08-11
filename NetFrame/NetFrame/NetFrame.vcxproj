@@ -20,10 +20,22 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MySvrConnector\main.cpp" />
+    <ClCompile Include="MySvrConnector\MyEpoll.cpp" />
+    <ClCompile Include="MySvrConnector\MyIOCP.cpp" />
+    <ClCompile Include="MySvrConnector\MySelect.cpp" />
+    <ClCompile Include="MySvrConnector\MySocket.cpp" />
+    <ClCompile Include="MySvrConnector\MySocketIO.cpp" />
     <ClCompile Include="MySvrConnector\MySvrConnector.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="common\common.h" />
+    <ClInclude Include="MySvrConnector\MyEpoll.h" />
+    <ClInclude Include="MySvrConnector\MyIOCP.h" />
+    <ClInclude Include="MySvrConnector\MySelect.h" />
+    <ClInclude Include="MySvrConnector\MySocket.h" />
+    <ClInclude Include="MySvrConnector\MySocketIO.h" />
     <ClInclude Include="MySvrConnector\MySvrConnector.h" />
+    <ClInclude Include="MySvrConnector\stdafx.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{B65385AE-F535-4A51-AC61-142870D094D7}</ProjectGuid>
