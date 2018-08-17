@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <map>
+#include <queue>
 #include <string.h>
 
 #ifndef FD_SETSIZE

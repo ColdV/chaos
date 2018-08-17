@@ -13,6 +13,7 @@
 
 MySocket::MySocket()
 {
+/*
 	m_type = SKT_INVALID;
 	m_fd = 0;
 	memset(m_ip, 0, sizeof(m_ip));
@@ -26,13 +27,32 @@ MySocket::MySocket()
 		exit(0);
 	}
 #endif	// _WIN32
+*/
+	initSokcet();
 }
+
+MySocket::MySocket(int af, int type, int protocol)
+{
+	initSokcet();
+
+	m_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+}
+
 
 MySocket::~MySocket()
 {
-#ifdef _WIN32
-	WSACleanup();
-#endif	// _WIN32
+
+}
+
+
+int MySocket::initSokcet()
+{
+	m_type = SKT_INVALID;
+	m_fd = 0;
+	memset(m_ip, 0, sizeof(m_ip));
+	m_port = 0;
+
+	return 0;
 }
 
 int MySocket::Socket()

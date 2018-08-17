@@ -26,7 +26,10 @@ class MySocket
 {
 public:
 	MySocket();
+	MySocket(int af, int type, int protocol);
 	~MySocket();
+
+public:
 	int Socket();
 	int Bind(const char* strIP, const int nPort);
 	int Listen();
@@ -41,6 +44,9 @@ public:
 	uint32 getType() const { return m_type; }
 	const char* getIP() const { return m_ip; }
 	uint32 getPory() const { return m_port; }
+
+private:
+	int initSokcet();
 
 private:
 	SocketType m_type;

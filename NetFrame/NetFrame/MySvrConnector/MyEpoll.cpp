@@ -8,4 +8,10 @@
 #	Last Modified: 2018-08-10 10:12:46
 *******************************************/
 
+#ifndef _WIN32
+
+#include "MySocketIO.h"
 #include "MyEpoll.h"
+
+
+#endif // !_WIN32
