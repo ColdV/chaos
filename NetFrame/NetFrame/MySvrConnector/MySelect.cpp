@@ -95,7 +95,8 @@ void MySelect::CollectEvent(const fd_set& rfds, const fd_set& sfds, const fd_set
 	IOEvent newEvent;
 
 #ifdef _WIN32
-	for (int i = 0; i < rfds.fd_count; ++i)
+
+	for (uint32 i = 0; i < rfds.fd_count; ++i)
 	{
 		newEvent.fd = rfds.fd_array[i];
 		newEvent.sock_event = SE_READ;
@@ -103,7 +104,7 @@ void MySelect::CollectEvent(const fd_set& rfds, const fd_set& sfds, const fd_set
 		addIOEvent(newEvent);
 	}
 
-	for (int i = 0; i < sfds.fd_count; ++i)
+	for (uint32 i = 0; i < sfds.fd_count; ++i)
 	{
 		newEvent.fd = sfds.fd_array[i];
 		newEvent.sock_event = SE_WRITE;
@@ -111,7 +112,7 @@ void MySelect::CollectEvent(const fd_set& rfds, const fd_set& sfds, const fd_set
 		addIOEvent(newEvent);
 	}
 
-	for (int i = 0; i < efds.fd_count; ++i)
+	for (uint32 i = 0; i < efds.fd_count; ++i)
 	{
 		newEvent.fd = efds.fd_array[i];
 		newEvent.sock_event = SE_EXCEPT;
@@ -121,7 +122,47 @@ void MySelect::CollectEvent(const fd_set& rfds, const fd_set& sfds, const fd_set
 
 #else
 
+	for (uint32 i = 0; i < m_sockets.size(); ++i)
+	{
+		if (0 == (rfds >> i))
+			break;
 
+		if ((rfds >> i) & 1)
+		{
+			newEvent.fd = i;
+			newEvent.sock_event = SE_READ;
+
+			addIOEvent(newEvent);
+		}
+	}
+
+	for (uint32 i = 0; i < m_sockets.size(); ++i)
+	{
+		if (0 == (sfds >> i))
+			break;
+
+		if ((sfds >> i) & 1)
+		{
+			newEvent.fd = i;
+			newEvent.sock_event = SE_WRITE;
+
+			addIOEvent(newEvent);
+		}
+	}
+
+	for (uint32 i = 0; i < m_sockets.size(); ++i)
+	{
+		if (0 == (efds >> i))
+			break;
+
+		if ((efds >> i) & 1)
+		{
+			newEvent.fd = i;
+			newEvent.sock_event = SE_EXCEPT;
+
+			addIOEvent(newEvent);
+		}
+	}
 
 #endif // _WIN32
 
@@ -145,7 +186,7 @@ int MySelect::addSocket(const uint32 fd, const MySocket& ms, fd_set* rfds, fd_se
 	return 0;
 }
 
-void MySelect::delScoket(const int fd)
+void MySelect::delScoket(const uint32 fd)
 {
 	m_sockets.erase(fd);
 	FD_CLR(fd, &m_rfds);

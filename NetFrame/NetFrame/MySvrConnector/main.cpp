@@ -1,4 +1,5 @@
 #include "MySvrConnector.h"
+#include "MySelect.h"
 
 int main()
 { 

@@ -12,7 +12,7 @@
 #pragma once
 #include "../MySvrConnector/stdafx.h"
 
-inline int strncpy_safe(char* des, const int desSize, const char* src, const int srcSize)
+inline void strncpy_safe(char* des, const int desSize, const char* src, const int srcSize)
 {
 #ifdef _WIN32
 	strncpy_s(des, desSize, src, srcSize);

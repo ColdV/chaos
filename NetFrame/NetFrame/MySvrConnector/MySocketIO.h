@@ -52,7 +52,7 @@ public:
 
 	uint32 getMaxFd() const { return m_max_socket; }
 
-	int getEventSize() const { return m_event.size(); }
+	uint32 getEventSize() const { return m_event.size(); }
 
 	const IOEvent& getIOEvent() const { return m_event.front(); }
 
@@ -61,12 +61,6 @@ public:
 
 protected:
 	virtual int initIO(const char* ip, int port) = 0;
-
-	/*
-	virtual int addSocket(const uint32 fd, const MySocket& ms) {}
-
-	void delScoket(const int fd);
-	*/
 
 	virtual void addIOEvent(const IOEvent& ioEvent) { m_event.push(ioEvent); }
 

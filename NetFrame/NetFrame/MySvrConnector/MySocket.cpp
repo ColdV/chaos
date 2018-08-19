@@ -55,7 +55,7 @@ int MySocket::initSokcet()
 	return 0;
 }
 
-int MySocket::Socket()
+uint32 MySocket::Socket()
 {
 	if (FD_INVALID != m_fd)
 		return m_fd;
@@ -92,7 +92,7 @@ int MySocket::Listen()
 	return 0;
 }
 
-int MySocket::Accept()
+uint32 MySocket::Accept()
 {
 	if (SKT_LISTEN != m_type)
 		return -1;
@@ -100,7 +100,7 @@ int MySocket::Accept()
 	sockaddr_in sockAddr;
 	socklen_t len = sizeof(sockAddr);
 	memset(&sockAddr, 0, sizeof(sockAddr));
-	int nfd = accept(m_fd, (sockaddr*)&sockAddr, &len);
+	uint32 nfd = accept(m_fd, (sockaddr*)&sockAddr, &len);
 	if (0 >= nfd)
 		return nfd;
 

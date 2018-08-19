@@ -30,10 +30,10 @@ public:
 	~MySocket();
 
 public:
-	int Socket();
+	uint32 Socket();
 	int Bind(const char* strIP, const int nPort);
 	int Listen();
-	int Accept();
+	uint32 Accept();
 	int Connect(const char* strIP, const int nPort);
 	int Close();
 	int Recv(char* buf, const int size);

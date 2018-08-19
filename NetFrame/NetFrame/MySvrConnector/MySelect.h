@@ -19,12 +19,12 @@ public:
 	virtual ~MySelect();
 
 	virtual int initIO(const char* ip, int port);
-	virtual void run();
+	//virtual void run();
 	virtual void WaitEvent();
 
 protected:
 	virtual int addSocket(const uint32 fd, const MySocket& ms, fd_set* rfds, fd_set* sfds, fd_set* efds);
-	void delScoket(const int fd);
+	void delScoket(const uint32 fd);
 	void CollectEvent(const fd_set& rfds, const fd_set& sfds, const fd_set& efds);
 
 private:
