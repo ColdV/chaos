@@ -17,8 +17,19 @@
 class MyEpoll : public MySocketIO
 {
 public:
-	MyEpoll();
-	virtual ~MyEpoll();
+
+	static MyEpoll& Instance();
+
+	virtual ~MyEpoll() {}
+
+	virtual int InitIO(const char* ip, int port) { return 0; }
+
+	virtual void WaitEvent() {};
+
+	virtual void HandleEvent(const IOEvent& fdEvent) {};
+
+protected:
+	MyEpoll() {}
 };
 
 #endif // !_WIN32

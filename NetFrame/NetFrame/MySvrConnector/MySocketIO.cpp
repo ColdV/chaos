@@ -10,6 +10,9 @@
 
 
 #include "MySocketIO.h"
+#include "MySelect.h"
+#include "MyEpoll.h"
+#include "MyIOCP.h"
 
 MySocketIO::MySocketIO()
 {
@@ -35,4 +38,25 @@ MySocketIO::~MySocketIO()
 #ifdef _WIN32
 	WSACleanup();
 #endif // _WIN32
+}
+
+
+
+MySocketIO* CreateSocketIO(int max_fd, IOType ioType /*= SI_SELECT*/)
+{
+	if (FD_SETSIZE >= max_fd && SI_SELECT == ioType)
+		return &MySelect::Instance(max_fd);
+	
+	else
+	{
+#ifdef _WIN32
+		return &MyIOCP::Instance();
+
+#else
+		return &MyEpoll::Instance();
+
+#endif // _WIN32
+	}
+
+	return NULL;
 }

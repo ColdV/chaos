@@ -11,18 +11,23 @@
 #pragma once
 
 #include "MySocketIO.h"
+#include "../common/single_templete.h"
 
 class MySelect : public MySocketIO
 {
 public:
-	MySelect(int max_socket);
+	static MySelect& Instance(int max_socket);
+
 	virtual ~MySelect();
 
-	virtual int initIO(const char* ip, int port);
+	virtual int InitIO(const char* ip, int port);
 	//virtual void run();
 	virtual void WaitEvent();
+	virtual void HandleEvent(const IOEvent& ioEvent);
 
 protected:
+	MySelect(int max_socket);
+
 	virtual int addSocket(const uint32 fd, const MySocket& ms, fd_set* rfds, fd_set* sfds, fd_set* efds);
 	void delScoket(const uint32 fd);
 	void CollectEvent(const fd_set& rfds, const fd_set& sfds, const fd_set& efds);

@@ -43,25 +43,27 @@ public:
 	virtual ~MySocketIO();
 
 public:
-	virtual void run() = 0;
+	virtual int InitIO(const char* ip, int port) = 0;
 
 	virtual void WaitEvent() = 0;
 
+	virtual void HandleEvent(const IOEvent& ioEvent) = 0;
+
 public:
-	const std::map<uint32, MySocket>& getFds() const { return m_sockets; }
+	const std::map<uint32, MySocket>& GetFds() const { return m_sockets; }
 
-	uint32 getMaxFd() const { return m_max_socket; }
+	uint32 GetMaxFd() const { return m_max_socket; }
 
-	uint32 getEventSize() const { return m_event.size(); }
+	uint32 GetEventSize() const { return m_event.size(); }
 
-	const IOEvent& getIOEvent() const { return m_event.front(); }
+	bool EventEmpty() const { return m_event.empty(); }
 
-	void delIOEvent() { m_event.pop(); }
+	const IOEvent& GetIOEvent() const { return m_event.front(); }
+
+	void DelIOEvent() { m_event.pop(); }
 
 
 protected:
-	virtual int initIO(const char* ip, int port) = 0;
-
 	virtual void addIOEvent(const IOEvent& ioEvent) { m_event.push(ioEvent); }
 
 protected:
@@ -70,3 +72,6 @@ protected:
 	char m_recv_buf[MAX_RECV_BUF_SIZE];
 	std::queue<IOEvent> m_event;
 };
+
+
+MySocketIO* CreateSocketIO(int max_fd, IOType ioType  = SI_SELECT);

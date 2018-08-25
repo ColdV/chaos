@@ -12,5 +12,22 @@
 
 #pragma once
 
+#include "MySocketIO.h"
+
+class MyIOCP : public MySocketIO
+{
+public:
+	static MyIOCP& Instance();
+	~MyIOCP() {}
+
+	virtual int InitIO(const char* ip, int port) { return 0; }
+
+	virtual void WaitEvent() {};
+
+	virtual void HandleEvent(const IOEvent& fdEvent) {};
+
+protected:
+	MyIOCP() {}
+};
 
 #endif // _WIN32

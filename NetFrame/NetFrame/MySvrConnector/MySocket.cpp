@@ -92,7 +92,7 @@ int MySocket::Listen()
 	return 0;
 }
 
-uint32 MySocket::Accept()
+int MySocket::Accept(MySocket& mySocket)
 {
 	if (SKT_LISTEN != m_type)
 		return -1;
@@ -103,6 +103,13 @@ uint32 MySocket::Accept()
 	uint32 nfd = accept(m_fd, (sockaddr*)&sockAddr, &len);
 	if (0 >= nfd)
 		return nfd;
+
+	inet_ntop(AF_INET, &sockAddr.sin_addr, mySocket.getIP(), MAX_IP_SIZE);
+	mySocket.setPort(ntohs(sockAddr.sin_port));
+	mySocket.setSocket(nfd);
+	mySocket.setType(SKT_SERVER);
+
+	printf("accept from ip:%s, port:%d\n", mySocket.getIP(), mySocket.getPort());
 
 	return nfd;
 }
@@ -146,7 +153,7 @@ int MySocket::Recv(char* buf, const int size)
 	if (0 >= len)
 	{
 		printf("recv client socket[%d] close msg!\n", m_fd);
-		Close();
+		//Close();
 		return -1;
 	}
 	printf("recv data[%s],from ip:%s,port:%d, fd:%d\n", buf, m_ip, m_port, m_fd);

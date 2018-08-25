@@ -13,5 +13,11 @@
 #include "MySocketIO.h"
 #include "MyEpoll.h"
 
+MyEpoll& MyEpoll::Instance()
+{
+	static MyEpoll myEpoll_;
+	return myEpoll_;
+}
+
 
 #endif // !_WIN32

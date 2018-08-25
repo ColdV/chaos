@@ -10,7 +10,8 @@
 
 #pragma once
 
-#include "stdafx.h"
+#include "../common/stdafx.h"
+#include "../common/common.h"
 
 #define FD_INVALID 0
 
@@ -22,18 +23,20 @@ enum SocketType
 	SKT_SERVER,			//·þÎñ¶ËÌ×½Ó×Ö(Accept)
 };
 
+#define MAX_IP_SIZE	32
+
 class MySocket
 {
 public:
 	MySocket();
 	MySocket(int af, int type, int protocol);
-	~MySocket();
+	virtual ~MySocket();
 
 public:
 	uint32 Socket();
 	int Bind(const char* strIP, const int nPort);
 	int Listen();
-	uint32 Accept();
+	int Accept(MySocket& mySokcet);
 	int Connect(const char* strIP, const int nPort);
 	int Close();
 	int Recv(char* buf, const int size);
@@ -41,9 +44,17 @@ public:
 
 public:
 	uint32 getSocket() const { return m_fd; }
+	void setSocket(uint32 fd) { m_fd = fd; }
+
 	uint32 getType() const { return m_type; }
+	void setType(SocketType type) { m_type = type; }
+
 	const char* getIP() const { return m_ip; }
-	uint32 getPory() const { return m_port; }
+	char* getIP() { return m_ip; }
+	void setIP(char* ip) { strncpy_safe(m_ip, sizeof(m_ip), ip, strlen(ip)); }
+
+	uint32 getPort() const { return m_port; }
+	void setPort(uint32 port) { m_port = port; }
 
 private:
 	int initSokcet();
@@ -51,6 +62,6 @@ private:
 private:
 	SocketType m_type;
 	uint32 m_fd;
-	char m_ip[32];
+	char m_ip[MAX_IP_SIZE];
 	uint32 m_port;
 };

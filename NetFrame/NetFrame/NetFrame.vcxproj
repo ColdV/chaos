@@ -26,16 +26,24 @@
     <ClCompile Include="MySvrConnector\MySocket.cpp" />
     <ClCompile Include="MySvrConnector\MySocketIO.cpp" />
     <ClCompile Include="MySvrConnector\MySvrConnector.cpp" />
+    <ClCompile Include="MyThreadPool\MyThread.cpp" />
+    <ClCompile Include="MyThreadPool\MyThreadPool.cpp" />
+    <ClCompile Include="MyThreadPool\MyWorkThread.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common\common.h" />
+    <ClInclude Include="common\single_templete.h" />
     <ClInclude Include="MySvrConnector\MyEpoll.h" />
     <ClInclude Include="MySvrConnector\MyIOCP.h" />
     <ClInclude Include="MySvrConnector\MySelect.h" />
     <ClInclude Include="MySvrConnector\MySocket.h" />
     <ClInclude Include="MySvrConnector\MySocketIO.h" />
     <ClInclude Include="MySvrConnector\MySvrConnector.h" />
-    <ClInclude Include="MySvrConnector\stdafx.h" />
+    <ClInclude Include="common\stdafx.h" />
+    <ClInclude Include="MyThreadPool\MyThread.h" />
+    <ClInclude Include="MyThreadPool\MyThreadPool.h" />
+    <ClInclude Include="MyThreadPool\MyWorkThread.h" />
+    <ClInclude Include="MyThreadPool\stdafx.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{B65385AE-F535-4A51-AC61-142870D094D7}</ProjectGuid>

@@ -11,6 +11,15 @@
 
 #include "MySelect.h"
 
+
+MySelect& MySelect::Instance(int max_socket)
+{
+	static MySelect mySelect_(max_socket);
+
+	return mySelect_;
+}
+
+
 MySelect::MySelect(int max_socket)
 {
 	m_sockets.clear();
@@ -24,7 +33,7 @@ MySelect::~MySelect()
 {
 }
 
-int MySelect::initIO(const char* ip, int port)
+int MySelect::InitIO(const char* ip, int port)
 {
 	MySocket mSocket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	int res = 0;
@@ -37,6 +46,8 @@ int MySelect::initIO(const char* ip, int port)
 	if (0 != res)
 		return res;
 
+	printf("Begin listen port:%d\n", port);
+
 	res = addSocket(mSocket.getSocket(), mSocket, &m_rfds, NULL, NULL);
 
 	if (0 != res)
@@ -47,48 +58,25 @@ int MySelect::initIO(const char* ip, int port)
 
 void MySelect::WaitEvent()
 {
-	/*
-	while (true)
+
+	fd_set rfds = m_rfds;
+	fd_set sfds = m_sfds;
+	fd_set efds = m_efds;
+
+	int cnt = select(m_max_socket + 1, &rfds, NULL, &efds, 0);
+
+	if (0 > cnt)
 	{
-	*/
-		fd_set rfds = m_rfds;
-		fd_set sfds = m_sfds;
-		fd_set efds = m_efds;
+		printf("call select failed! code:%d\n", cnt);
+		return;
+	}
 
-		int cnt = select(m_max_socket + 1, &rfds, NULL, &efds, 0);
+	if (0 == cnt)
+		return;//continue;
 
-		if (0 > cnt)
-		{
-			printf("call select failed! code:%d\n", cnt);
-			return;
-		}
-
-		if (0 == cnt)
-			return;//continue;
-
-		CollectEvent(rfds, sfds, efds);
-		/*
-		for (std::map<uint32, MySocket>::iterator it = m_sockets.begin; it != m_sockets.end() && cnt > 0; ++it)
-		{
-			if (FD_ISSET(it->first, &rfds))
-			{
-				if (SKT_LISTEN == it->second.getType())
-					it->second.Accept();
-				else
-					it->second.Recv(m_recv_buf, MAX_RECV_BUF_SIZE);
-
-				--cnt;
-			}
-
-			else if (FD_ISSET(it->first, &efds))
-			{
-				it->second.Close();
-				--cnt;
-			}
-		}
-		*/
-	//}
+	CollectEvent(rfds, sfds, efds);
 }
+
 
 void MySelect::CollectEvent(const fd_set& rfds, const fd_set& sfds, const fd_set& efds)
 {
@@ -192,4 +180,51 @@ void MySelect::delScoket(const uint32 fd)
 	FD_CLR(fd, &m_rfds);
 	FD_CLR(fd, &m_sfds);
 	FD_CLR(fd, &m_efds);
+}
+
+
+void MySelect::HandleEvent(const IOEvent& ioEvent)
+{
+	std::map<uint32, MySocket>::iterator it = m_sockets.find(ioEvent.fd);
+
+	if (it == m_sockets.end())
+		return;
+
+	switch (ioEvent.sock_event)
+	{
+	default:
+		break;
+
+	case SE_READ:
+	{
+		if (it->second.getType() == SKT_LISTEN)
+		{
+			MySocket new_socket;
+			if (0 < it->second.Accept(new_socket))
+				addSocket(new_socket.getSocket(), new_socket, &m_rfds, NULL, NULL);
+		}
+
+		else
+		{
+			if (0 >= it->second.Recv(m_recv_buf, MAX_RECV_BUF_SIZE))
+			{
+				it->second.Close();
+				delScoket(it->first);
+			}
+		}
+	}
+		break;
+
+	case SE_WRITE:
+		break;
+
+	case SE_EXCEPT:
+		printf("socket[%d] except\n", it->first);
+		delScoket(it->first);
+		//it->second.Close();
+		break;
+
+	}
+
+	m_event.pop();
 }

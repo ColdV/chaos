@@ -12,5 +12,10 @@
 
 #include "MyIOCP.h"
 
+MyIOCP& MyIOCP::Instance()
+{
+	static MyIOCP myIOCP_;
+	return myIOCP_;
+}
 
 #endif // !_WIN32
