@@ -1,17 +1,30 @@
 #include "MyThread.h"
 
-int MyThread::Create(pThreadFunc func, void* arg)
+int MyThread::Start()
 {
-	int res = 0;
 #ifdef _WIN32
-	//_beginthreadex_proc_type
 
-	res = _beginthreadex(NULL, 0, func, arg, 0, (unsigned int*)&m_tid);
-	
+	  m_hThread = (HANDLE)_beginthreadex(NULL, 0, MyThreadProcess, this, 0, (unsigned int*)&m_tid);
+	  return m_tid;
 
 #else
-	res = pthread_create(&m_tid, NULL, func, arg);
+	return pthread_create(&m_tid, NULL, func, arg);
 
 #endif // _WIN32
-	return res;
 }
+
+
+#ifdef _WIN32
+
+unsigned int __stdcall MyThread::MyThreadProcess(void* myThread)
+{
+
+}
+
+#else
+void MyThread::MyThreadProcess(void* myThread)
+{
+
+}
+
+#endif // _WIN32

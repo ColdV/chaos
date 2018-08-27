@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <set>
+#include <map>
 
 #ifdef _WIN32
 #include <windows.h>
