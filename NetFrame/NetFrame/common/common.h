@@ -10,7 +10,6 @@
 
 
 #pragma once
-#include "../common/stdafx.h"
 
 inline void strncpy_safe(char* des, const int desSize, const char* src, const int srcSize)
 {

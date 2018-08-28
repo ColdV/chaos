@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "MyThread.h"
-#include ""
 
 class MyThreadPool
 {

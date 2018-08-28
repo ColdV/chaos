@@ -45,6 +45,18 @@
     <ClCompile Include="MyThreadPool\MyWorkThread.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="MyThreadPool\MyMutex.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MyThreadPool\MyCondition.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MyThreadPool\MyEvent.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MyThreadPool\MyThreadSyncObj.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MySvrConnector\MySvrConnector.h">
@@ -68,9 +80,6 @@
     <ClInclude Include="MySvrConnector\MySocketIO.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="MyThreadPool\MyThreadPool.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="common\stdafx.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -84,6 +93,21 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="MyThreadPool\MyWorkThread.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MyThreadPool\MyThreadPool.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MyThreadPool\MyMutex.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MyThreadPool\MyCondition.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MyThreadPool\MyEvent.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MyThreadPool\MyThreadSyncObj.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

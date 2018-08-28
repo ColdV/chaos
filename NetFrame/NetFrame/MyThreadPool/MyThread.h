@@ -13,24 +13,22 @@ typedef	void (*pThreadFunc)(void*);
 #endif // _WIN32
 
 
-#include "stdafx.h"
-
 enum ThreadStatus
 {
 	TS_RUNNING = 0,
-	TS_EXITTING,
+	TS_WAITING,
 	TS_EXIT,
-	TS_ACTIVE,
-	TS_FREE
 };
 
 class MyThread
 {
 public:
-	MyThread(): m_tid(0) {}
-	virtual ~MyThread() {}
+	MyThread();
+	virtual ~MyThread();
 
-	int Start();
+	virtual int Start();
+	
+	virtual int Stop();
 
 	virtual void Run() = 0;
 
@@ -46,7 +44,7 @@ private:
 #ifdef _WIN32
 	static unsigned int __stdcall MyThreadProcess(void* myThread);
 #else
-		static void MyThreadProcess(void* myThread);
+	static void MyThreadProcess(void* myThread);
 #endif // _WIN32
 
 private:

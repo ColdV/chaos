@@ -5,9 +5,10 @@
 #include <string.h>
 #include <set>
 #include <map>
+#include <time.h>
 
 #ifdef _WIN32
-#include <windows.h>
+#include <Windows.h>
 #include <process.h>
 
 #else

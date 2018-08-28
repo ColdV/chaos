@@ -26,8 +26,12 @@
     <ClCompile Include="MySvrConnector\MySocket.cpp" />
     <ClCompile Include="MySvrConnector\MySocketIO.cpp" />
     <ClCompile Include="MySvrConnector\MySvrConnector.cpp" />
+    <ClCompile Include="MyThreadPool\MyCondition.cpp" />
+    <ClCompile Include="MyThreadPool\MyEvent.cpp" />
+    <ClCompile Include="MyThreadPool\MyMutex.cpp" />
     <ClCompile Include="MyThreadPool\MyThread.cpp" />
     <ClCompile Include="MyThreadPool\MyThreadPool.cpp" />
+    <ClCompile Include="MyThreadPool\MyThreadSyncObj.cpp" />
     <ClCompile Include="MyThreadPool\MyWorkThread.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -40,8 +44,12 @@
     <ClInclude Include="MySvrConnector\MySocketIO.h" />
     <ClInclude Include="MySvrConnector\MySvrConnector.h" />
     <ClInclude Include="common\stdafx.h" />
+    <ClInclude Include="MyThreadPool\MyEvent.h" />
+    <ClInclude Include="MyThreadPool\MyMutex.h" />
+    <ClInclude Include="MyThreadPool\MyCondition.h" />
     <ClInclude Include="MyThreadPool\MyThread.h" />
     <ClInclude Include="MyThreadPool\MyThreadPool.h" />
+    <ClInclude Include="MyThreadPool\MyThreadSyncObj.h" />
     <ClInclude Include="MyThreadPool\MyWorkThread.h" />
     <ClInclude Include="MyThreadPool\stdafx.h" />
   </ItemGroup>
