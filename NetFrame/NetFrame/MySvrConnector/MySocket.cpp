@@ -11,6 +11,15 @@
 #include "MySocket.h"
 #include "../common/common.h"
 
+
+
+#ifdef _WIN32
+
+WsaData g_wsa = WsaData::Instance();
+
+#endif // _WIN32
+
+
 MySocket::MySocket()
 {
 /*

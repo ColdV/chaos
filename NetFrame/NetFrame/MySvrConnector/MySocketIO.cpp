@@ -20,6 +20,7 @@ MySocketIO::MySocketIO()
 	m_max_socket = 0;
 	memset(m_recv_buf, 0, MAX_RECV_BUF_SIZE);
 
+/*
 #ifdef _WIN32
 
 	static WSADATA wsa;
@@ -30,14 +31,11 @@ MySocketIO::MySocketIO()
 	}
 
 #endif // _WIN32
-
+*/
 }
 
 MySocketIO::~MySocketIO()
 {
-#ifdef _WIN32
-	WSACleanup();
-#endif // _WIN32
 }
 
 

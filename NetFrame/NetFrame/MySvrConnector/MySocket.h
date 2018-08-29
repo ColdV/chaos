@@ -65,3 +65,36 @@ private:
 	char m_ip[MAX_IP_SIZE];
 	uint32 m_port;
 };
+
+#ifdef _WIN32
+
+class WsaData
+{
+public:
+	static WsaData& Instance()
+	{
+		static WsaData wsa_;
+		return wsa_;
+	}
+
+
+	~WsaData()
+	{
+		WSACleanup();
+	}
+
+private:
+	WsaData()
+	{
+		if (0 != WSAStartup(MAKEWORD(2, 2), &m_wsa))
+		{
+			printf("initialize windows socket failed!\n");
+			exit(0);
+		}
+	}
+
+private:
+	WSADATA m_wsa;
+};
+
+#endif // _WIN32

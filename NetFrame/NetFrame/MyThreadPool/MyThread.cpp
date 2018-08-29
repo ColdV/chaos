@@ -40,7 +40,7 @@ int MyThread::Stop()
 
 void MyThread::Run()
 {
-
+	
 }
 
 
