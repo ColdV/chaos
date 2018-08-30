@@ -28,7 +28,7 @@ public:
 
 	virtual int Start();
 	
-	virtual int Stop();
+	virtual int Stop() {}
 
 	virtual void Run() = 0;
 

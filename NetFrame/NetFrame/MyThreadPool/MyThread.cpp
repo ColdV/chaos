@@ -31,18 +31,6 @@ int MyThread::Start()
 	return m_tid;
 }
 
-int MyThread::Stop()
-{
-	SetStatus(TS_EXIT);
-	return 0;
-}
-
-
-void MyThread::Run()
-{
-	
-}
-
 
 #ifdef _WIN32
 
@@ -53,20 +41,27 @@ unsigned int __stdcall MyThread::MyThreadProcess(void* myThread)
 
 	MyThread* pThread = (MyThread*)myThread;
 
-	while (true)
-	{
+	//while (true)
+	//{
 		pThread->SetStatus(TS_RUNNING);
 		pThread->Run();
-		pThread->SetStatus(TS_WAITING);
-	}
-
+		//pThread->SetStatus(TS_WAITING);
+	//}
+	pThread->SetStatus(TS_EXIT);
 	return 0;
 }
 
 #else
 void MyThread::MyThreadProcess(void* myThread)
 {
+	if (!myThread)
+		return;
 
+	MyThread* pThread = (MyThread*)myThread;
+
+	pThread->SetStatus(TS_RUNNING);
+	pThread->Run();
+	pThread->SetStatus(TS_EXIT);
 }
 
 #endif // _WIN32

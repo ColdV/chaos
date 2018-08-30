@@ -29,6 +29,7 @@
     <ClCompile Include="MyThreadPool\MyCondition.cpp" />
     <ClCompile Include="MyThreadPool\MyEvent.cpp" />
     <ClCompile Include="MyThreadPool\MyMutex.cpp" />
+    <ClCompile Include="MyThreadPool\MyTask.cpp" />
     <ClCompile Include="MyThreadPool\MyThread.cpp" />
     <ClCompile Include="MyThreadPool\MyThreadPool.cpp" />
     <ClCompile Include="MyThreadPool\MyThreadSyncObj.cpp" />
@@ -47,6 +48,7 @@
     <ClInclude Include="MyThreadPool\MyEvent.h" />
     <ClInclude Include="MyThreadPool\MyMutex.h" />
     <ClInclude Include="MyThreadPool\MyCondition.h" />
+    <ClInclude Include="MyThreadPool\MyTask.h" />
     <ClInclude Include="MyThreadPool\MyThread.h" />
     <ClInclude Include="MyThreadPool\MyThreadPool.h" />
     <ClInclude Include="MyThreadPool\MyThreadSyncObj.h" />
