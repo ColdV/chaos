@@ -1,6 +1,19 @@
+#pragma once
+
 #include "stdafx.h"
 #include "MyThread.h"
-#include "MyTask.h"
+//#include "MyTask.h"
+#include "MyMutex.h"
+
+#ifdef _WIN32
+#include "MyEvent.h"
+#else
+#include "MyCondition.h"
+#endif // _WIN32
+
+
+class MyTask;
+class MyThreadPool;
 
 class MyPoolWorkThread : public MyThread
 {
@@ -21,14 +34,14 @@ private:
 };
 
 
-
 class MyThreadPool
 {
-friend void MyPoolWorkThread::Run();
+	friend void MyPoolWorkThread::Run();
 
 public:
 	MyThreadPool() {}
 	MyThreadPool(int nThreadNum);
+
 	~MyThreadPool() {}
 
 	const std::map<unsigned long int, MyPoolWorkThread>& GetAllThreads() const { return m_all_threads; }
@@ -40,19 +53,19 @@ public:
 	const std::map<unsigned long int, MyPoolWorkThread*>& GetFreeThreads() const { return m_free_threads; }
 	int GetFreeThreadsCount() const { return m_free_threads.size(); }
 
-	const MyPoolWorkThread& FindThread(int nTid) const;
+	const MyPoolWorkThread* FindThread(int nTid) const;
 
-	void AddTask(const MyTask& task); 
+	void AddTask(const MyTask* task); 
 
 	bool IsHaveTask() const { return m_task_queue.empty(); }
 
 	int GetTaskCount() const { return m_task_queue.size(); }
 
 public:
-	static void Run();
+	//static void Run();
 
 private:
-	MyPoolWorkThread& FindThread(int nTid);
+	MyPoolWorkThread* FindThread(int nTid);
 
 	bool AddThread(const MyPoolWorkThread&);
 
@@ -62,10 +75,9 @@ private:
 
 	bool DelThread(int nTid);
 
-	MyTask& GetFrontTask() { return m_task_queue.front(); }
+	MyTask* GetFrontTask() { return m_task_queue.front(); }
 
-	void PopTask() { m_task_queue.pop(); }
-
+	void DestroyTask();	// { m_task_queue.pop(); }
 	
 
 private:
@@ -73,5 +85,14 @@ private:
 	std::map<unsigned long int, MyPoolWorkThread* > m_active_threads;
 	std::map<unsigned long int, MyPoolWorkThread*> m_free_threads;
 
-	std::queue<MyTask> m_task_queue;
+	std::queue<MyTask*> m_task_queue;
+
+	MyMutex m_mutex;
+#ifdef _WIN32
+	MyEvent	m_cond;
+#else
+	MyCondition m_cond;
+#endif // _WIN32
+
 };
+

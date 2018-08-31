@@ -8,8 +8,9 @@
 class MyEvent : public MyThreadSyncObj
 {
 public:
-	MyEvent();
+	//MyEvent();
 	MyEvent(HANDLE hEvent, char* pName = NULL, int nNameSize = 0);
+	MyEvent(bool isReset = false, bool initState = false, char* pName = NULL, int nNameSize = 0);
 	~MyEvent();
 
 	int CreateEvent(bool isReset, bool initState, char* pName = NULL, int nNameSize = 0);

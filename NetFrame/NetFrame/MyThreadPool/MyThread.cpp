@@ -5,6 +5,7 @@ MyThread::MyThread()
 {
 	m_tid = 0;
 	m_hThread = 0;
+	m_status = TS_INITIAL;
 }
 
 
@@ -17,6 +18,9 @@ MyThread::~MyThread()
 
 int MyThread::Start()
 {
+	if (TS_INITIAL != m_status)
+		return -1;
+
 #ifdef _WIN32
 
 	m_hThread = (HANDLE)_beginthreadex(NULL, 0, MyThreadProcess, this, 0, (unsigned int*)&m_tid);

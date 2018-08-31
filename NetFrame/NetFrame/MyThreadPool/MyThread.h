@@ -15,7 +15,8 @@ typedef	void (*pThreadFunc)(void*);
 
 enum ThreadStatus
 {
-	TS_RUNNING = 0,
+	TS_INITIAL = 0,
+	TS_RUNNING,
 	TS_WAITING,
 	TS_EXIT,
 };
@@ -28,7 +29,7 @@ public:
 
 	virtual int Start();
 	
-	virtual int Stop() {}
+	virtual void Stop() {}
 
 	virtual void Run() = 0;
 
