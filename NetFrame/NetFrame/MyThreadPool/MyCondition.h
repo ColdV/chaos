@@ -5,7 +5,7 @@
 #include "stdafx.h"
 #include "MyMutex.h"
 
-class MyCondition
+class MyCondition : public MyThreadSyncObj
 {
 public:
 	MyCondition();

@@ -45,6 +45,12 @@ unsigned int __stdcall MyThread::MyThreadProcess(void* myThread)
 
 	MyThread* pThread = (MyThread*)myThread;
 
+	if (!pThread)
+	{
+		printf("empty point thread\n");
+		return -1;
+	}
+
 	//while (true)
 	//{
 		pThread->SetStatus(TS_RUNNING);

@@ -1,6 +1,8 @@
 #include "MySvrConnector.h"
 #include "MySocketIO.h"
 #include <process.h>
+#include "../common/single_templete.h"
+#include "../MyThreadPool/MyThreadPool.h"
 
 void func(void* tid)
 {
@@ -10,15 +12,28 @@ void func(void* tid)
 }
 
 
+class test : public SingleTmp<test>
+{
+public:
+	//test() {}
+	~test() {}
+	void print() { printf("single test!\n"); }
+	test() {}
+};
+
 int main()
 {
+	SetConsoleTitle(L"NetFrame");
 	/*
 	MySvrConnector svr(FD_SETSIZE);
 	svr.run();
 	return 0;
 	*/
 
+	//test t1 = test::Instance();
+	//t1.print();
 	
+	/*
 	MySocketIO* p = CreateSocketIO(FD_SETSIZE);
 
 	if (!p)
@@ -40,7 +55,7 @@ int main()
 			printf("handle event! event size:%d\n", p->GetEventSize());
 		}
 	}
-	
+	*/
 
 	/*
 	uintptr_t th[2] = { 0 };
@@ -49,5 +64,16 @@ int main()
 	th[0] = _beginthread(func, 0, (void*)&prag[0]);
 	printf("_beginthread return:%d\n", th[0]);
 	*/
+
+
+	MyThreadPool pool(8);
+
+	int i = 0;
+/*
+	while (true)
+	{
+		;
+	}
+*/
 	return 0;
 }

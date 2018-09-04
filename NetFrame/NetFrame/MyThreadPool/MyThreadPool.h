@@ -33,57 +33,74 @@ private:
 	MyThreadPool* m_master;
 };
 
+/*
+class MyCheckTask : public MyTask
+{
+public:
+	MyCheckTask() {}
+	~MyCheckTask() {}
+
+	virtual void Run() {}
+};
+*/
 
 class MyThreadPool
 {
-	friend void MyPoolWorkThread::Run();
+	//friend void MyPoolWorkThread::Run();
+	friend MyPoolWorkThread;
 
 public:
-	MyThreadPool() {}
+	MyThreadPool();
 	MyThreadPool(int nThreadNum);
 
 	~MyThreadPool() {}
 
-	const std::map<unsigned long int, MyPoolWorkThread>& GetAllThreads() const { return m_all_threads; }
+	const std::map<unsigned long int, MyPoolWorkThread*>& GetAllThreads() const { return m_all_threads; }
 	int GetAllThreadCount() const { return m_all_threads.size(); }
 
 	const std::map<unsigned long int, MyPoolWorkThread*>& GetActiveThreads() const { return m_active_threads; }
 	int GetActiveThreadsCount() const { return m_active_threads.size(); }
 
-	const std::map<unsigned long int, MyPoolWorkThread*>& GetFreeThreads() const { return m_free_threads; }
-	int GetFreeThreadsCount() const { return m_free_threads.size(); }
+	const std::map<unsigned long int, MyPoolWorkThread*>& GetWaitThreads() const { return m_wait_threads; }
+	int GetWaitThreadsCount() const { return m_wait_threads.size(); }
 
 	const MyPoolWorkThread* FindThread(int nTid) const;
 
-	void AddTask(const MyTask* task); 
+	void AddTask(MyTask* task); 
 
-	bool IsHaveTask() const { return m_task_queue.empty(); }
+	bool IsHaveTask() const { return !m_task_queue.empty(); }
 
 	int GetTaskCount() const { return m_task_queue.size(); }
+
+	bool StopAllThread();
 
 public:
 	//static void Run();
 
 private:
+	void Init();
+
 	MyPoolWorkThread* FindThread(int nTid);
 
-	bool AddThread(const MyPoolWorkThread&);
+	bool AddThread(MyPoolWorkThread* work_thread);
 
-	bool AddActiveToFree(const MyPoolWorkThread&);
+	bool ActiveToWait(const unsigned long int nTid);
 
-	bool AddFreeToActive(const MyPoolWorkThread&);
+	bool WaitToActive(const unsigned long int nTid);
 
-	bool DelThread(int nTid);
+	void DelThread(int nTid);
 
-	MyTask* GetFrontTask() { return m_task_queue.front(); }
+	MyTask* FrontTask() { return m_task_queue.front(); }
 
-	void DestroyTask();	// { m_task_queue.pop(); }
+	void PopTask();	// { m_task_queue.pop(); }
+
+	void DestroyTask(MyTask* pTask);
 	
 
 private:
-	std::map<unsigned long int, MyPoolWorkThread> m_all_threads;
+	std::map<unsigned long int, MyPoolWorkThread*> m_all_threads;
 	std::map<unsigned long int, MyPoolWorkThread* > m_active_threads;
-	std::map<unsigned long int, MyPoolWorkThread*> m_free_threads;
+	std::map<unsigned long int, MyPoolWorkThread*> m_wait_threads;
 
 	std::queue<MyTask*> m_task_queue;
 
