@@ -1,16 +1,20 @@
 #include "MySvrConnector.h"
 #include "MySocketIO.h"
-#include <process.h>
 #include "../common/single_templete.h"
 #include "../MyThreadPool/MyThreadPool.h"
 
+#ifdef _WIN32
+#include <process.h>
+#endif // _WIN32
+
+/*
 void func(void* tid)
 {
 	int i = *(int*)tid;
 	printf("i am thread:%d\n", GetCurrentThreadId());
 	return;
 }
-
+*/
 
 class test : public SingleTmp<test>
 {
@@ -23,7 +27,7 @@ public:
 
 int main()
 {
-	SetConsoleTitle(L"NetFrame");
+	//SetConsoleTitle(L"NetFrame");
 	/*
 	MySvrConnector svr(FD_SETSIZE);
 	svr.run();
@@ -33,7 +37,6 @@ int main()
 	//test t1 = test::Instance();
 	//t1.print();
 	
-	/*
 	MySocketIO* p = CreateSocketIO(FD_SETSIZE);
 
 	if (!p)
@@ -49,30 +52,26 @@ int main()
 		p->WaitEvent();
 		printf("wait event!event size:%d\n", p->GetEventSize());
 
+		
 		while (!p->EventEmpty())
 		{
 			p->HandleEvent(p->GetIOEvent());
 			printf("handle event! event size:%d\n", p->GetEventSize());
 		}
+		
 	}
-	*/
-
-	/*
-	uintptr_t th[2] = { 0 };
-	int prag[2] = { 1,2 };
-	unsigned long int tid[2] = { 0 };
-	th[0] = _beginthread(func, 0, (void*)&prag[0]);
-	printf("_beginthread return:%d\n", th[0]);
-	*/
+	
 
 
-	MyThreadPool pool(8);
+/*
+	MyThreadPool pool(4);
 
 	int i = 0;
-/*
+	Sleep(5000);
+
 	while (true)
 	{
-		;
+		printf("running\n");
 	}
 */
 	return 0;

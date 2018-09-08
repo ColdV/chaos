@@ -17,6 +17,8 @@ inline void strncpy_safe(char* des, const int desSize, const char* src, const in
 	strncpy_s(des, desSize, src, srcSize);
 
 #else
+	int size = desSize >= srcSize ? srcSize : desSize;
+
 	strncpy(des, src, size);
 
 #endif // _WIN32

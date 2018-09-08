@@ -29,7 +29,7 @@ public:
 
 	virtual int Start();
 	
-	virtual void Stop() {}
+	virtual void Stop();
 
 	virtual void Run() = 0;
 
@@ -45,7 +45,7 @@ private:
 #ifdef _WIN32
 	static unsigned int __stdcall MyThreadProcess(void* myThread);
 #else
-	static void MyThreadProcess(void* myThread);
+	static void* MyThreadProcess(void* myThread);
 #endif // _WIN32
 
 private:

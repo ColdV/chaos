@@ -1,5 +1,7 @@
 #ifndef _WIN32
 
+#include "MyCondition.h"
+
 MyCondition::MyCondition()
 {
 	m_cond = PTHREAD_COND_INITIALIZER;
@@ -7,7 +9,7 @@ MyCondition::MyCondition()
 
 MyCondition::~MyCondition()
 {
-	Destroy();
+	CondDestroy();
 }
 
 int MyCondition::CondInit(const pthread_condattr_t* attr)
@@ -24,13 +26,13 @@ int MyCondition::CondDestroy()
 
 int MyCondition::CondWait(MyMutex& mutex)
 {
-	m_error = pthread_cond_wait(&m_cond, mutex);
+	m_error = pthread_cond_wait(&m_cond, &mutex.m_mutex);
 	return m_error;
 }
 
 int MyCondition::CondTimeWait(MyMutex& mutex, const timespec* abstime)
 {
-	m_error = pthread_cond_timedwait(&m_cond, mutex, abstime);
+	m_error = pthread_cond_timedwait(&m_cond, &mutex.m_mutex, abstime);
 	return m_error;
 }
 

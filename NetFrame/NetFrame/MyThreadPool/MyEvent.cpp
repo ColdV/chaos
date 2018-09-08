@@ -1,3 +1,5 @@
+#ifdef _WIN32
+
 #include "MyEvent.h"
 #include "../common/common.h"
 
@@ -56,3 +58,5 @@ int MyEvent::WaitEvent(DWORD dwMilliseconds /*= INFINITE*/)
 {
 	return WaitForSingleObject(m_event, dwMilliseconds);
 }
+
+#endif

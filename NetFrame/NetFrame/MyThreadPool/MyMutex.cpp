@@ -48,6 +48,6 @@ void MyMutex::Destroy()
 #ifdef _WIN32
 	CloseHandle(m_mutex);
 #else
-	pthread_destroy(&m_mutex);
+	pthread_mutex_destroy(&m_mutex);
 #endif // _WIN32
 }

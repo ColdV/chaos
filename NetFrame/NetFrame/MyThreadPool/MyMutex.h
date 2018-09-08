@@ -3,10 +3,11 @@
 #include "stdafx.h"
 #include "MyThreadSyncObj.h"
 
+class MyCondition;
 class MyMutex : public MyThreadSyncObj
 {
-public:
-	
+friend MyCondition;
+public:	
 	MyMutex();
 	~MyMutex();
 

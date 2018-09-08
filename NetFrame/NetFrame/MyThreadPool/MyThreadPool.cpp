@@ -1,23 +1,28 @@
 #include "MyThreadPool.h"
 #include "MyTask.h"
 
+
 void MyPoolWorkThread::Run()
 {
+	printf("进入Run!\n");
+
 	while (true)
 	{
+		//printf("这里一直在执行！\n");
+		/*
 		if (!m_master)
 			continue;
-
+		*/
 		if (m_master->IsHaveTask())
 		{
+			m_master->m_mutex.Lock();
 
 #ifdef _WIN32
 			m_master->m_cond.WaitEvent();
 #else
-			m_master->CondWait(m_master->m_mutex);
+			m_master->m_cond.CondWait(m_master->m_mutex);
 #endif // _WIN32
-			m_master->m_mutex.Lock();
-
+			
 			printf("是不是这里!\n");
 			MyTask* pTask = m_master->FrontTask();
 			m_master->PopTask();
@@ -29,7 +34,12 @@ void MyPoolWorkThread::Run()
 			m_master->DestroyTask(pTask);
 		}
 		
+		//printf("i am thread:%d\n", GetCurrentThreadId());
+		//Sleep(100000);
 	}
+
+	printf("这里退出了！\n");
+	
 }
 
 /*
@@ -69,6 +79,12 @@ MyThreadPool::MyThreadPool(int nThreadNum)
 }
 
 
+MyThreadPool::~MyThreadPool()
+{
+	
+	ClearUp();
+}
+
 void MyThreadPool::PopTask()
 {
 	//m_mutex.Lock();
@@ -107,8 +123,9 @@ bool MyThreadPool::AddThread(MyPoolWorkThread* work_thread)
 
 	m_wait_threads.insert(std::make_pair(work_thread->GetTid(), it->second));
 
+#ifdef _WIN32
 	m_cond.SetEvent();
-
+#endif
 	return true;
 }
 
@@ -176,4 +193,19 @@ void MyThreadPool::Init()
 	m_active_threads.clear();
 	m_wait_threads.clear();
 	//m_task_queue.clear();
+}
+
+bool MyThreadPool::StopAllThread()
+{
+	return true;
+}
+
+void MyThreadPool::ClearUp()
+{
+	for (auto it = m_all_threads.begin(); it != m_all_threads.end(); ++it)
+	{
+		//it->second->Stop();
+		delete it->second;
+		
+	}
 }

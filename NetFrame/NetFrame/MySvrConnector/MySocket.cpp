@@ -11,32 +11,13 @@
 #include "MySocket.h"
 #include "../common/common.h"
 
-
-
 #ifdef _WIN32
-
-WsaData g_wsa = WsaData::Instance();
-
+	WsaData g_wsa = WsaData::Instance();
 #endif // _WIN32
 
 
 MySocket::MySocket()
 {
-/*
-	m_type = SKT_INVALID;
-	m_fd = 0;
-	memset(m_ip, 0, sizeof(m_ip));
-	m_port = 0;
-
-#ifdef _WIN32
-	static WSADATA wsa;
-	if (0 != WSAStartup(MAKEWORD(2, 2), &wsa))
-	{
-		printf("initialize windows socket failed!\n");
-		exit(0);
-	}
-#endif	// _WIN32
-*/
 	initSokcet();
 }
 
@@ -103,6 +84,7 @@ int MySocket::Listen()
 
 int MySocket::Accept(MySocket& mySocket)
 {
+	//printf("开始接受新的连接!\n");
 	if (SKT_LISTEN != m_type)
 		return -1;
 
@@ -118,7 +100,7 @@ int MySocket::Accept(MySocket& mySocket)
 	mySocket.setSocket(nfd);
 	mySocket.setType(SKT_SERVER);
 
-	printf("accept from ip:%s, port:%d\n", mySocket.getIP(), mySocket.getPort());
+	printf("accept from ip:%s, port:%d, new socket:%d\n", mySocket.getIP(), mySocket.getPort(), nfd);
 
 	return nfd;
 }
@@ -158,7 +140,8 @@ int MySocket::Close()
 
 int MySocket::Recv(char* buf, const int size)
 {
-	int len = recv(m_fd, buf, size, 0);
+	//printf("开始接受数据！\n");
+	int len = recv(m_fd, buf, size, 0); //MSG_PEEK
 	if (0 >= len)
 	{
 		printf("recv client socket[%d] close msg!\n", m_fd);

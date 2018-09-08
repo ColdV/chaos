@@ -1,11 +1,13 @@
 #include "MyThread.h"
-
+#include "stdafx.h"
 
 MyThread::MyThread()
 {
 	m_tid = 0;
-	m_hThread = 0;
 	m_status = TS_INITIAL;
+#ifdef _WIN32
+	m_hThread = 0;
+#endif
 }
 
 
@@ -36,6 +38,14 @@ int MyThread::Start()
 }
 
 
+void MyThread::Stop()
+{
+#ifdef _WIN32
+	int ret = TerminateThread(m_hThread, 0);
+	printf("提前结束线程%d\n", ret);
+#endif
+}
+
 #ifdef _WIN32
 
 unsigned int __stdcall MyThread::MyThreadProcess(void* myThread)
@@ -62,16 +72,18 @@ unsigned int __stdcall MyThread::MyThreadProcess(void* myThread)
 }
 
 #else
-void MyThread::MyThreadProcess(void* myThread)
+void* MyThread::MyThreadProcess(void* myThread)
 {
 	if (!myThread)
-		return;
+		return 0;
 
 	MyThread* pThread = (MyThread*)myThread;
 
 	pThread->SetStatus(TS_RUNNING);
 	pThread->Run();
 	pThread->SetStatus(TS_EXIT);
+
+	return 0;
 }
 
 #endif // _WIN32

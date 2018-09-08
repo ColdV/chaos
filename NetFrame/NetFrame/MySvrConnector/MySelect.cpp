@@ -25,7 +25,7 @@ MySelect::MySelect(int max_socket)
 	m_sockets.clear();
 	m_max_socket = max_socket;	 
 	FD_ZERO(&m_rfds);
-	FD_ZERO(&m_sfds);
+	FD_ZERO(&m_wfds);
 	FD_ZERO(&m_efds);
 }
 
@@ -60,7 +60,7 @@ void MySelect::WaitEvent()
 {
 
 	fd_set rfds = m_rfds;
-	fd_set sfds = m_sfds;
+	fd_set wfds = m_wfds;
 	fd_set efds = m_efds;
 
 	int cnt = select(m_max_socket + 1, &rfds, NULL, &efds, 0);
@@ -74,11 +74,11 @@ void MySelect::WaitEvent()
 	if (0 == cnt)
 		return;//continue;
 
-	CollectEvent(rfds, sfds, efds);
+	CollectEvent(rfds, wfds, efds);
 }
 
 
-void MySelect::CollectEvent(const fd_set& rfds, const fd_set& sfds, const fd_set& efds)
+void MySelect::CollectEvent(const fd_set& rfds, const fd_set& wfds, const fd_set& efds)
 {
 	IOEvent newEvent;
 
@@ -92,9 +92,9 @@ void MySelect::CollectEvent(const fd_set& rfds, const fd_set& sfds, const fd_set
 		addIOEvent(newEvent);
 	}
 
-	for (uint32 i = 0; i < sfds.fd_count; ++i)
+	for (uint32 i = 0; i < wfds.fd_count; ++i)
 	{
-		newEvent.fd = sfds.fd_array[i];
+		newEvent.fd = wfds.fd_array[i];
 		newEvent.sock_event = SE_WRITE;
 
 		addIOEvent(newEvent);
@@ -109,27 +109,39 @@ void MySelect::CollectEvent(const fd_set& rfds, const fd_set& sfds, const fd_set
 	}
 
 #else
-
-	for (uint32 i = 0; i < m_sockets.size(); ++i)
+	/*
+	//for (uint32 i = 0; i < m_sockets.size(); ++i)
+	for(auto it = m_sockets.begin(); it != m_sockets.end(); ++it)
 	{
-		if (0 == (rfds >> i))
-			break;
+		//if (0 == (rfds >> i))
+		//	break;
 
-		if ((rfds >> i) & 1)
+		//if ((rfds >> i) & 1)
+		
+		uint32 fd = it->first;
+		
+		if(FD_ISSET(fd, &rfds))
 		{
 			newEvent.fd = i;
 			newEvent.sock_event = SE_READ;
 
 			addIOEvent(newEvent);
 		}
+	
+		if(FD_ISSET(it->first, &sfds))
+		{
+			newEvent.fd = i
+		}
 	}
 
-	for (uint32 i = 0; i < m_sockets.size(); ++i)
+//	for (uint32 i = 0; i < m_sockets.size(); ++i)
+	for(auto it = m_sockets.begin(); it != m_sockets.end(); ++it)
 	{
-		if (0 == (sfds >> i))
-			break;
+		//if (0 == (sfds >> i))
+		//	break;
 
-		if ((sfds >> i) & 1)
+		//if ((sfds >> i) & 1)
+		if(FD_ISSET(it->first, &sfds))
 		{
 			newEvent.fd = i;
 			newEvent.sock_event = SE_WRITE;
@@ -138,7 +150,8 @@ void MySelect::CollectEvent(const fd_set& rfds, const fd_set& sfds, const fd_set
 		}
 	}
 
-	for (uint32 i = 0; i < m_sockets.size(); ++i)
+	//for (uint32 i = 0; i < m_sockets.size(); ++i)
+	for (auto it = m_soc)
 	{
 		if (0 == (efds >> i))
 			break;
@@ -150,6 +163,27 @@ void MySelect::CollectEvent(const fd_set& rfds, const fd_set& sfds, const fd_set
 
 			addIOEvent(newEvent);
 		}
+	}
+*/	
+	
+	for (auto it = m_sockets.begin(); it != m_sockets.end(); ++it)
+	{
+		uint32 fd = it->first;
+
+		if(FD_ISSET(fd, &rfds))
+			newEvent.sock_event = SE_READ;
+
+		else if(FD_ISSET(fd, &wfds))	
+			newEvent.sock_event = SE_WRITE;
+
+		else if(FD_ISSET(fd, &efds))
+			newEvent.sock_event = SE_EXCEPT;	
+		
+		else
+			continue;
+
+		newEvent.fd = fd;
+		addIOEvent(newEvent);
 	}
 
 #endif // _WIN32
@@ -178,13 +212,15 @@ void MySelect::delScoket(const uint32 fd)
 {
 	m_sockets.erase(fd);
 	FD_CLR(fd, &m_rfds);
-	FD_CLR(fd, &m_sfds);
+	FD_CLR(fd, &m_wfds);
 	FD_CLR(fd, &m_efds);
 }
 
 
 void MySelect::HandleEvent(const IOEvent& ioEvent)
 {
+
+	//printf("发生事件的FD:%d, 事件类型:%d\n", ioEvent.fd, ioEvent.sock_event);
 	std::map<uint32, MySocket>::iterator it = m_sockets.find(ioEvent.fd);
 
 	if (it == m_sockets.end())
@@ -202,6 +238,10 @@ void MySelect::HandleEvent(const IOEvent& ioEvent)
 			MySocket new_socket;
 			if (0 < it->second.Accept(new_socket))
 				addSocket(new_socket.getSocket(), new_socket, &m_rfds, NULL, NULL);
+			else
+			{
+				printf("accept 失败!\n");
+			}
 		}
 
 		else
@@ -226,5 +266,5 @@ void MySelect::HandleEvent(const IOEvent& ioEvent)
 
 	}
 
-	m_event.pop();
+	DelIOEvent();
 }

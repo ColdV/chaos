@@ -53,7 +53,7 @@ public:
 	MyThreadPool();
 	MyThreadPool(int nThreadNum);
 
-	~MyThreadPool() {}
+	~MyThreadPool();
 
 	const std::map<unsigned long int, MyPoolWorkThread*>& GetAllThreads() const { return m_all_threads; }
 	int GetAllThreadCount() const { return m_all_threads.size(); }
@@ -95,6 +95,8 @@ private:
 	void PopTask();	// { m_task_queue.pop(); }
 
 	void DestroyTask(MyTask* pTask);
+
+	void ClearUp();
 	
 
 private:

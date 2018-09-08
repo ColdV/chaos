@@ -28,12 +28,12 @@ public:
 protected:
 	MySelect(int max_socket);
 
-	virtual int addSocket(const uint32 fd, const MySocket& ms, fd_set* rfds, fd_set* sfds, fd_set* efds);
+	virtual int addSocket(const uint32 fd, const MySocket& ms, fd_set* rfds, fd_set* wfds, fd_set* efds);
 	void delScoket(const uint32 fd);
-	void CollectEvent(const fd_set& rfds, const fd_set& sfds, const fd_set& efds);
+	void CollectEvent(const fd_set& rfds, const fd_set& wfds, const fd_set& efds);
 
 private:
 	fd_set m_rfds;
-	fd_set m_sfds;
+	fd_set m_wfds;
 	fd_set m_efds;
 };
