@@ -51,7 +51,7 @@ public:
 	virtual ~MySocketIO();
 
 public:
-	virtual int InitIO(const char* ip, int port) = 0;
+	virtual int InitIO(const char* ip, int port, uint32 max_fd) = 0;
 
 	virtual void WaitEvent() = 0;
 
@@ -90,6 +90,8 @@ public:
 
 protected:
 	virtual void addIOEvent(const IOEvent& ioEvent) { m_event.push(ioEvent); }
+
+	virtual void delScoket(const uint32 fd) {}
 
 	//virtual bool InitIOThread();
 

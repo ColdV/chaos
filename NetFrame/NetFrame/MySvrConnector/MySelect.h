@@ -20,7 +20,7 @@ public:
 
 	virtual ~MySelect();
 
-	virtual int InitIO(const char* ip, int port);
+	virtual int InitIO(const char* ip, int port, uint32 max_fd);
 	//virtual void run();
 	virtual void WaitEvent();
 	virtual void HandleEvent(const IOEvent& ioEvent);

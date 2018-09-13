@@ -13,6 +13,8 @@
 #pragma once
 
 #include "MySocketIO.h"
+#include <sys/epoll.h>
+
 
 class MyEpoll : public MySocketIO
 {
@@ -22,14 +24,23 @@ public:
 
 	virtual ~MyEpoll() {}
 
-	virtual int InitIO(const char* ip, int port) { return 0; }
+	virtual int InitIO(const char* ip, int port, uint32 max_fd);
 
-	virtual void WaitEvent() {};
+	virtual void WaitEvent();
 
-	virtual void HandleEvent(const IOEvent& fdEvent) {};
+	virtual void HandleEvent(const IOEvent& ioEvent);
+
+	int AddSocket(const MySocket& s);
 
 protected:
-	MyEpoll() {}
+	MyEpoll();
+
+	virtual void delScoket(const uint32 fd);
+
+private:
+	int m_max_fd;
+	int m_epfd;
+	epoll_event* m_events;
 };
 
 #endif // !_WIN32

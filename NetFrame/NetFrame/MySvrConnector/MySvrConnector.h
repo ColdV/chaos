@@ -82,7 +82,7 @@ private:
 	unsigned int m_cur_maxfds;		//当前连接的数量
 	
 	fd_set m_rfds;	//读fd
-	fd_set m_sfds;	//写fd
+	fd_set m_wfds;	//写fd
 	fd_set m_efds;	//意外fd
 
 	char m_recv_buf[1024 * 10];

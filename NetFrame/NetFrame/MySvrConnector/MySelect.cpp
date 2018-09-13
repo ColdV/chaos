@@ -33,7 +33,7 @@ MySelect::~MySelect()
 {
 }
 
-int MySelect::InitIO(const char* ip, int port)
+int MySelect::InitIO(const char* ip, int port, uint32 max_fd)
 {
 	MySocket mSocket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	int res = 0;
@@ -128,7 +128,7 @@ void MySelect::CollectEvent(const fd_set& rfds, const fd_set& wfds, const fd_set
 			addIOEvent(newEvent);
 		}
 	
-		if(FD_ISSET(it->first, &sfds))
+		if(FD_ISSET(it->first, &wfds))
 		{
 			newEvent.fd = i
 		}
@@ -137,11 +137,11 @@ void MySelect::CollectEvent(const fd_set& rfds, const fd_set& wfds, const fd_set
 //	for (uint32 i = 0; i < m_sockets.size(); ++i)
 	for(auto it = m_sockets.begin(); it != m_sockets.end(); ++it)
 	{
-		//if (0 == (sfds >> i))
+		//if (0 == (wfds >> i))
 		//	break;
 
-		//if ((sfds >> i) & 1)
-		if(FD_ISSET(it->first, &sfds))
+		//if ((wfds >> i) & 1)
+		if(FD_ISSET(it->first, &wfds))
 		{
 			newEvent.fd = i;
 			newEvent.sock_event = SE_WRITE;
@@ -191,7 +191,7 @@ void MySelect::CollectEvent(const fd_set& rfds, const fd_set& wfds, const fd_set
 }
 
 
-int MySelect::addSocket(const uint32 fd, const MySocket& ms, fd_set* rfds, fd_set* sfds, fd_set* efds)
+int MySelect::addSocket(const uint32 fd, const MySocket& ms, fd_set* rfds, fd_set* wfds, fd_set* efds)
 {
 	if (!m_sockets.insert(std::make_pair(fd, ms)).second)
 		return -1;
@@ -199,10 +199,10 @@ int MySelect::addSocket(const uint32 fd, const MySocket& ms, fd_set* rfds, fd_se
 	if (NULL != rfds)
 		FD_SET(fd, rfds);
 
-	if (NULL != sfds)
-		FD_SET(fd, sfds);
+	if (NULL != wfds)
+		FD_SET(fd, wfds);
 
-	if (NULL != sfds)
+	if (NULL != wfds)
 		FD_SET(fd, efds);
 
 	return 0;

@@ -22,7 +22,7 @@ MySvrConnector::MySvrConnector(int nMaxConnect)
 	memset(m_send_buf, 0, sizeof(m_send_buf));
 	client_socket_map.clear();	
 	FD_ZERO(&m_rfds);
-	FD_ZERO(&m_sfds);
+	FD_ZERO(&m_wfds);
 	FD_ZERO(&m_efds);
 
 #ifdef _WIN32
@@ -67,7 +67,7 @@ void MySvrConnector::run()
 	while(true)
 	{
 		fd_set rfds_cp = m_rfds;
-		fd_set sfds_cp = m_sfds;
+		fd_set wfds_cp = m_wfds;
 		fd_set efds_cp = m_efds;
 
 		unsigned int max_nfds = 0;
@@ -109,7 +109,7 @@ void MySvrConnector::run()
 			}
 			
 			/*
-			if (FD_ISSET(it->first, &sfds_cp))
+			if (FD_ISSET(it->first, &wfds_cp))
 			{
 				Send(it->first);
 				++cur_count;
@@ -192,7 +192,7 @@ int MySvrConnector::Accept()
 	printf("Accept from ip:%s, port:%d, fd:%d\n", new_socket_info.ip, new_socket_info.port, new_socket_info.socket);
 
 	FD_SET(nfd, &m_rfds);
-	FD_SET(nfd, &m_sfds);
+	FD_SET(nfd, &m_wfds);
 	FD_SET(nfd, &m_efds);
 
 	return 0;

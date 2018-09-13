@@ -37,7 +37,7 @@ int main()
 	//test t1 = test::Instance();
 	//t1.print();
 	
-	MySocketIO* p = CreateSocketIO(FD_SETSIZE);
+	MySocketIO* p = CreateSocketIO(FD_SETSIZE, SI_EPOLL);
 
 	if (!p)
 	{
@@ -45,12 +45,14 @@ int main()
 		return 0;
 	}
 
-	p->InitIO("0.0.0.0", 6666);
+	p->InitIO("0.0.0.0", 6666, FD_SETSIZE);
 
 	while (true)
 	{
 		p->WaitEvent();
-		printf("wait event!event size:%d\n", p->GetEventSize());
+
+		if(0 < p->GetEventSize())
+			printf("wait event!event size:%d\n", p->GetEventSize());
 
 		
 		while (!p->EventEmpty())
