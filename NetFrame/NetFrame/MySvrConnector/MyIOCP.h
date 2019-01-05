@@ -20,7 +20,7 @@ public:
 	static MyIOCP& Instance();
 	~MyIOCP() {}
 
-	virtual int InitIO(const char* ip, int port) { return 0; }
+	virtual int InitIO(const char* ip, int port, uint32 max_fd) { return 0; }
 
 	virtual void WaitEvent() {};
 

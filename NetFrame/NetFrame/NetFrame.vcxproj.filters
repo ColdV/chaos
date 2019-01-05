@@ -116,5 +116,8 @@
     <ClInclude Include="MyThreadPool\MyTask.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="common\WebSocket.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
