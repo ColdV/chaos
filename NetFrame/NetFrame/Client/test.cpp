@@ -21,7 +21,7 @@
 #include <sys/select.h>
 
 #define MAX_FD	10
-#define IP	"192.168.2.109"
+#define IP	"10.246.60.179" //"192.168.2.109"
 
 int main()
 {

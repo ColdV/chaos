@@ -31,7 +31,7 @@ MySocket::MySocket(int af, int type, int protocol)
 
 MySocket::~MySocket()
 {
-
+    //Close();
 }
 
 
@@ -74,12 +74,17 @@ int MySocket::Bind(const char* strIP, const int nPort)
 
 int MySocket::Listen()
 {
-	if (0 != listen(m_fd, 5))
-		return -1;
+    //靠靠縧isten socket
+    int oldFlags = fcntl(m_fd, F_GETFL);
+    fcntl(m_fd, F_SETFL, oldFlags | O_NONBLOCK);
+
+    int res = listen(m_fd, 5);
+	if(0 != res) //if (0 != listen(m_fd, 5))
+		return res;
 
 	m_type = SKT_LISTEN;
 
-	return 0;
+	return res;
 }
 
 int MySocket::Accept(MySocket& mySocket)
@@ -88,12 +93,20 @@ int MySocket::Accept(MySocket& mySocket)
 	if (SKT_LISTEN != m_type)
 		return -1;
 
+    int n = 0;
+    if(ioctl(m_fd, FIONREAD, &n) >= 0)
+        printf("listen socket[%d] ready accept msg:%d\n", m_fd, n);
+
 	sockaddr_in sockAddr;
 	socklen_t len = sizeof(sockAddr);
 	memset(&sockAddr, 0, sizeof(sockAddr));
 	uint32 nfd = accept(m_fd, (sockaddr*)&sockAddr, &len);
 	if (0 >= nfd)
 		return nfd;
+
+    if(ioctl(m_fd, FIONREAD, &n) >= 0)
+        printf("listen socket[%d] left accept msg:%d\n", m_fd, n);
+
 
 	inet_ntop(AF_INET, &sockAddr.sin_addr, mySocket.getIP(), MAX_IP_SIZE);
 	mySocket.setPort(ntohs(sockAddr.sin_port));
@@ -141,21 +154,33 @@ int MySocket::Close()
 int MySocket::Recv(char* buf, const int size)
 {
 	//printf("开始接受数据！\n");
+	int n = 0;
+    if(ioctl(m_fd, FIONREAD, &n) >= 0)
+        printf("socket[%d] ready recv msg len:%d\n", m_fd, n);
+
 	int len = recv(m_fd, buf, size, 0); //MSG_PEEK
+    printf("socket[%d] already recv msg len:%d\n", m_fd, len);
+
 	if (0 >= len)
 	{
 		printf("recv client socket[%d] close msg!\n", m_fd);
 		//Close();
 		return -1;
 	}
+    
+    if(8 == m_fd)
+    {
+        //sleep(5);
+    }
+
 	printf("recv data[%s],from ip:%s,port:%d, fd:%d\n", buf, m_ip, m_port, m_fd);
 
-	/*
-	n = send(m_fd, m_recv_buf, strlen(m_recv_buf), 0);
-	printf("send data to socket[%d] len:%d\n", nfd, n);
+	
+	len = send(m_fd, buf, strlen(buf), 0);
+	printf("send data to socket[%d] len:%d\n", m_fd, len);
 
-	memset(m_recv_buf, 0, sizeof(m_recv_buf));
-	*/
+	//memset(m_recv_buf, 0, sizeof(m_recv_buf));
+	
 	return len;
 }
 

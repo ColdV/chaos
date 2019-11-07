@@ -35,7 +35,7 @@ public:
 protected:
 	MyEpoll();
 
-	virtual void delScoket(const uint32 fd);
+	virtual void delSocket(const uint32 fd);
 
 private:
 	int m_max_fd;

@@ -28,7 +28,7 @@ enum IOType
 
 enum
 {
-	MAX_RECV_BUF_SIZE = 1024 * 10,
+	MAX_RECV_BUF_SIZE = 10, //24 * 10,
 };
 
 enum SockEvent
@@ -91,7 +91,7 @@ public:
 protected:
 	virtual void addIOEvent(const IOEvent& ioEvent) { m_event.push(ioEvent); }
 
-	virtual void delScoket(const uint32 fd) {}
+	virtual void delSocket(const uint32 fd) {}
 
 	//virtual bool InitIOThread();
 

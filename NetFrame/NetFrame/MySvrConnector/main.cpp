@@ -7,6 +7,8 @@
 #include <process.h>
 #endif // _WIN32
 
+const char IP[] = "10.246.60.179";
+
 /*
 void func(void* tid)
 {
@@ -37,6 +39,12 @@ int main()
 	//test t1 = test::Instance();
 	//t1.print();
 	
+#ifndef _WIN32
+    if(signal(SIGPIPE, SIG_IGN) == SIG_ERR)
+        return -1;
+#endif
+
+
 	MySocketIO* p = CreateSocketIO(FD_SETSIZE, SI_EPOLL);
 
 	if (!p)
@@ -45,7 +53,7 @@ int main()
 		return 0;
 	}
 
-	p->InitIO("0.0.0.0", 6666, FD_SETSIZE);
+	p->InitIO(IP, 6666, FD_SETSIZE);
 
 	while (true)
 	{

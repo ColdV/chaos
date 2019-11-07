@@ -35,6 +35,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/select.h>
+#include <sys/ioctl.h>
+#include <fcntl.h>
+#include <signal.h>
 
 #endif  //_WIN32
 

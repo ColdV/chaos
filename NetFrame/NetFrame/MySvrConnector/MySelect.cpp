@@ -208,7 +208,7 @@ int MySelect::addSocket(const uint32 fd, const MySocket& ms, fd_set* rfds, fd_se
 	return 0;
 }
 
-void MySelect::delScoket(const uint32 fd)
+void MySelect::delSocket(const uint32 fd)
 {
 	m_sockets.erase(fd);
 	FD_CLR(fd, &m_rfds);
@@ -249,7 +249,7 @@ void MySelect::HandleEvent(const IOEvent& ioEvent)
 			if (0 >= it->second.Recv(m_recv_buf, MAX_RECV_BUF_SIZE))
 			{
 				it->second.Close();
-				delScoket(it->first);
+				delSocket(it->first);
 			}
 		}
 	}
@@ -260,7 +260,7 @@ void MySelect::HandleEvent(const IOEvent& ioEvent)
 
 	case SE_EXCEPT:
 		printf("socket[%d] except\n", it->first);
-		delScoket(it->first);
+		delSocket(it->first);
 		//it->second.Close();
 		break;
 

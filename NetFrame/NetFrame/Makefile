@@ -1,4 +1,4 @@
-cc = g++
+cc = g++ -std=c++11 -g
 prom = NetFrame
 deps = $(shell find ./ -name "*.h")
 src = $(shell find ./ -name "*.cpp" -o -name "*.c")

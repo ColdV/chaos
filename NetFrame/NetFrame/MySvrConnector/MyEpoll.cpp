@@ -116,21 +116,54 @@ void MyEpoll::HandleEvent(const IOEvent& ioEvent)
 		if (it->second.getType() == SKT_LISTEN)
 		{
 			MySocket new_socket;
-			if (0 < it->second.Accept(new_socket))
-				AddSocket(new_socket);
-			else
-			{
-				printf("accept Ê§°Ü!\n");
-			}
+            int acceptNum = 0;
+            while(true)
+            {
+                int ret = it->second.Accept(new_socket);
+                if (0 < ret)
+                    AddSocket(new_socket);
+
+                else if(0 > ret && EAGAIN == errno)
+                {
+                    printf("accept connect:%d\n", acceptNum);
+                    break;
+                }                
+
+                else
+                {
+                    printf("accept Ê§°Ü!\n");
+                    break;
+                }
+                ++ acceptNum;
+            }
 		}
 
 		else
 		{
-			if (0 >= it->second.Recv(m_recv_buf, MAX_RECV_BUF_SIZE))
+            int n = 0;
+            int totalLen = 0;
+            int len = 0;
+            ioctl(it->second.getSocket(), FIONREAD, &n);
+
+            totalLen = it->second.Recv(m_recv_buf, MAX_RECV_BUF_SIZE);
+            if(0 >= totalLen) 
+            {
+                it->second.Close();
+                delSocket(it->first);
+            }           
+
+            while(n - totalLen > 0)
+            {
+                len = it->second.Recv(m_recv_buf, MAX_RECV_BUF_SIZE);
+			    //if (0 >= it->second.Recv(m_recv_buf, MAX_RECV_BUF_SIZE))
+			   if(0 >= len)
 			{
 				it->second.Close();
-				delScoket(it->first);
+				delSocket(it->first);
+                break;
 			}
+                totalLen += len;
+            }
 		}
 	}
 	break;
@@ -140,7 +173,7 @@ void MyEpoll::HandleEvent(const IOEvent& ioEvent)
 
 	case SE_EXCEPT:
 		printf("socket[%d] except\n", it->first);
-		delScoket(it->first);
+		delSocket(it->first);
 		//it->second.Close();
 		break;
 
@@ -149,7 +182,7 @@ void MyEpoll::HandleEvent(const IOEvent& ioEvent)
 	DelIOEvent();
 }
 
-void MyEpoll::delScoket(const uint32 fd)
+void MyEpoll::delSocket(const uint32 fd)
 {
 	m_sockets.erase(fd);
 	epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, NULL);
