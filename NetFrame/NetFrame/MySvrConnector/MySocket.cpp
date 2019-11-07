@@ -75,8 +75,19 @@ int MySocket::Bind(const char* strIP, const int nPort)
 int MySocket::Listen()
 {
     //靠靠縧isten socket
-    int oldFlags = fcntl(m_fd, F_GETFL);
-    fcntl(m_fd, F_SETFL, oldFlags | O_NONBLOCK);
+#ifdef _WIN32
+	u_long mode = 1;
+	if (SOCKET_ERROR == ioctlsocket(m_fd, FIONBIO, &mode))
+	{
+		printf("set socket nonblock failed!\n");
+		return -1;
+	}
+
+#else
+	int oldFlags = fcntl(m_fd, F_GETFL);
+	fcntl(m_fd, F_SETFL, oldFlags | O_NONBLOCK);
+
+#endif // _WIN32
 
     int res = listen(m_fd, 5);
 	if(0 != res) //if (0 != listen(m_fd, 5))
@@ -93,20 +104,12 @@ int MySocket::Accept(MySocket& mySocket)
 	if (SKT_LISTEN != m_type)
 		return -1;
 
-    int n = 0;
-    if(ioctl(m_fd, FIONREAD, &n) >= 0)
-        printf("listen socket[%d] ready accept msg:%d\n", m_fd, n);
-
 	sockaddr_in sockAddr;
 	socklen_t len = sizeof(sockAddr);
 	memset(&sockAddr, 0, sizeof(sockAddr));
 	uint32 nfd = accept(m_fd, (sockaddr*)&sockAddr, &len);
 	if (0 >= nfd)
 		return nfd;
-
-    if(ioctl(m_fd, FIONREAD, &n) >= 0)
-        printf("listen socket[%d] left accept msg:%d\n", m_fd, n);
-
 
 	inet_ntop(AF_INET, &sockAddr.sin_addr, mySocket.getIP(), MAX_IP_SIZE);
 	mySocket.setPort(ntohs(sockAddr.sin_port));
@@ -154,9 +157,18 @@ int MySocket::Close()
 int MySocket::Recv(char* buf, const int size)
 {
 	//printf("开始接受数据！\n");
+
+#ifdef _WIN32
+	unsigned long n = 0;
+	if (ioctlsocket(m_fd, FIONREAD, &n) < 0)
+		printf("socket[%d] ready recv msg len:%d\n", m_fd, n);
+
+#else
 	int n = 0;
-    if(ioctl(m_fd, FIONREAD, &n) >= 0)
-        printf("socket[%d] ready recv msg len:%d\n", m_fd, n);
+	if (ioctl(m_fd, FIONREAD, &n) >= 0)
+		printf("socket[%d] ready recv msg len:%d\n", m_fd, n);
+
+#endif // _WIN32
 
 	int len = recv(m_fd, buf, size, 0); //MSG_PEEK
     printf("socket[%d] already recv msg len:%d\n", m_fd, len);
