@@ -131,7 +131,7 @@ void MyEpoll::HandleEvent(const IOEvent& ioEvent)
 
                 else
                 {
-                    printf("accept Ê§°Ü!\n");
+                    printf("accept failed!\n");
                     break;
                 }
                 ++ acceptNum;

@@ -19,8 +19,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/select.h>
+#include <sys/epoll.h>
 
-#define MAX_FD	10
+#define MAX_FD	10000
 #define IP	"10.246.60.179" //"192.168.2.109"
 
 int main()
@@ -28,9 +29,34 @@ int main()
 
 	fd_set fds;
 	FD_ZERO(&fds);
-	int nfds[MAX_FD] = {0};
+	//int nfds[MAX_FD] = {0};
+	int* nfds = new int[MAX_FD];
 	char recvBuf[1024] = {0};
 	int maxFd = 0;
+    int epFd = 0;
+
+#ifndef _WIN32
+    epFd = epoll_create(MAX_FD);
+    if(0 >= epFd)
+    {
+        printf("create epoll fd failed:%d\n", epFd);
+    }
+    
+    epoll_event* pEvents = new epoll_event[MAX_FD];    
+
+
+//    for(int i = 0; i < sizeof(nfds) / sizeof(nfds[0]); ++i)
+//    {
+//        nfds[i] = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+//        if(0 >= nfds[i])
+//        {
+//            printf("create socket failed! fds[%d]:%d\n", i, nfds[i]);
+//            continue;
+//        }
+//
+//    }
+
+#endif
 
 	for(int i = 0; i < sizeof(nfds) / sizeof(nfds[0]); ++i)
 	{
@@ -57,9 +83,19 @@ int main()
 			printf("connect failed! fds[%d]:%d\n", i, nfds[i]);
 			continue;
 		}
+
+#ifndef _WIN32
+
+        epoll_event epEvent;
+        epEvent.data.fd = nfds[i];
+        epEvent.events = EPOLLIN | EPOLLET;
+        epoll_ctl(epFd, EPOLL_CTL_ADD, nfds[i], &epEvent);
+        
+#else
 		FD_SET(nfds[i], &fds);
 		if(nfds[i] > maxFd)
 			maxFd = nfds[i];
+#endif
 		printf("connect sucess fd:%d\n", nfds[i]);
 	}
 
@@ -77,6 +113,37 @@ int main()
 	
 	while(true)
 	{
+
+#ifndef _WIN32
+        
+        int cnt = epoll_wait(epFd, pEvents, MAX_FD, 1);
+        if(0 > cnt)
+        {
+            printf("calld epoll_wait failed! err:%d\n", cnt);
+            return 0;
+        }
+
+        for(int i = 0; i < cnt; ++i)
+        {
+            if(pEvents[i].events & EPOLLIN)
+            {
+                int len = recv(pEvents[i].data.fd, recvBuf, sizeof(recvBuf), 0);
+                if(0 < len)
+                {
+                    printf("socket[%d] recv msg:%s\n", pEvents[i].data.fd, recvBuf);
+                }
+                else
+                {
+                    printf("recv close msg len:%d\n", len);
+                    close(pEvents[i].data.fd);
+                    epoll_ctl(epFd, EPOLL_CTL_DEL, pEvents[i].data.fd, NULL);
+                }
+
+                memset(recvBuf, 0, sizeof(recvBuf));
+            }
+        }
+
+#else
 		fd_set fd_copy = fds;
 
 		//printf("inter main loop socket[%d], fd_set[%d], src_fd[%d]\n", nfds[0], fd_copy.fds_bits[0], fds.fds_bits[0]);
@@ -124,6 +191,7 @@ int main()
 				memset(recvBuf, 0, sizeof(recvBuf));
 			}
 		}
+#endif
 	}
 	
 	/*
@@ -132,5 +200,7 @@ int main()
 		close(nfds[i]);
 	}
 	*/
+
+    delete[] nfds;
 	return 0;
 }
