@@ -96,6 +96,36 @@ unsigned int __stdcall MySocketIO::ReadThreadProcess(void* param)
 */
 
 
+SocketIOEvent* MySocketIO::GetEvent(uint32 fd)
+{
+	auto it = m_events.find(fd);
+	if (it != m_events.end())
+		return &it->second;
+
+	return NULL;
+}
+
+
+void MySocketIO::AddEvent(uint32 fd, EventCb readCb, EventCb writeCb, EventCb listenCb, EventCb errCb, void* userData)
+{
+	SocketIOEvent ev;
+	ev.eventHandler.readCb = readCb;
+	ev.eventHandler.writeCb = writeCb;
+	ev.eventHandler.errCb = errCb;
+	ev.eventHandler.listenCb = listenCb;
+	ev.fd = fd;
+	ev.pUserData = userData;
+
+	m_events.insert(std::make_pair(fd, ev));
+}
+
+
+void MySocketIO::ProcessEvent()
+{
+	
+}
+
+
 MySocketIO* CreateSocketIO(int max_fd, IOType ioType /*= SI_SELECT*/)
 {
 	if (FD_SETSIZE >= max_fd && SI_SELECT == ioType)

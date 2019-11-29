@@ -7,7 +7,9 @@
 #include <process.h>
 #endif // _WIN32
 
-const char IP[] = "10.246.60.179";
+#include "EventMaster.h"
+
+const char IP[] = "10.246.60.164";//"0.0.0.0";//"10.246.60.179";
 
 /*
 void func(void* tid)
@@ -27,6 +29,7 @@ public:
 	test() {}
 };
 
+
 int main()
 {
 	//SetConsoleTitle(L"NetFrame");
@@ -44,7 +47,7 @@ int main()
         return -1;
 #endif
 
-
+	/*
 	MySocketIO* p = CreateSocketIO(FD_SETSIZE, SI_EPOLL);
 
 	if (!p)
@@ -70,9 +73,11 @@ int main()
 		}
 		
 	}
+	*/
 	
-
-
+	EventMaster em;
+	em.Init(IP, 6666);
+	em.Loop();
 /*
 	MyThreadPool pool(4);
 
@@ -83,6 +88,6 @@ int main()
 	{
 		printf("running\n");
 	}
-*/
+	*/
 	return 0;
 }

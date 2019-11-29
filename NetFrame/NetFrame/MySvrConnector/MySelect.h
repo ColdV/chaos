@@ -24,6 +24,7 @@ public:
 	//virtual void run();
 	virtual void WaitEvent();
 	virtual void HandleEvent(const IOEvent& ioEvent);
+	virtual void HandleEvent();
 
 protected:
 	MySelect(int max_socket);

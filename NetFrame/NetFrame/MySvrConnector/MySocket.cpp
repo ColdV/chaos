@@ -89,7 +89,7 @@ int MySocket::Listen()
 
 #endif // _WIN32
 
-    int res = listen(m_fd, 5);
+    int res = listen(m_fd, 1024);
 	if(0 != res) //if (0 != listen(m_fd, 5))
 		return res;
 

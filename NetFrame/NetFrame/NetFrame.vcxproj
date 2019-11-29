@@ -19,7 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MySvrConnector\EventMaster.cpp" />
     <ClCompile Include="MySvrConnector\main.cpp" />
+    <ClCompile Include="MySvrConnector\MsgChain.cpp" />
     <ClCompile Include="MySvrConnector\MyEpoll.cpp" />
     <ClCompile Include="MySvrConnector\MyIOCP.cpp" />
     <ClCompile Include="MySvrConnector\MySelect.cpp" />
@@ -39,6 +41,8 @@
     <ClInclude Include="common\common.h" />
     <ClInclude Include="common\single_templete.h" />
     <ClInclude Include="common\WebSocket.h" />
+    <ClInclude Include="MySvrConnector\EventMaster.h" />
+    <ClInclude Include="MySvrConnector\MsgChain.h" />
     <ClInclude Include="MySvrConnector\MyEpoll.h" />
     <ClInclude Include="MySvrConnector\MyIOCP.h" />
     <ClInclude Include="MySvrConnector\MySelect.h" />
@@ -60,32 +64,32 @@
     <ProjectGuid>{B65385AE-F535-4A51-AC61-142870D094D7}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>NetFrame</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>

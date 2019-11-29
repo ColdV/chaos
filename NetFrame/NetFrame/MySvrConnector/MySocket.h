@@ -64,6 +64,7 @@ private:
 	uint32 m_fd;
 	char m_ip[MAX_IP_SIZE];
 	uint32 m_port;
+
 };
 
 #ifdef _WIN32

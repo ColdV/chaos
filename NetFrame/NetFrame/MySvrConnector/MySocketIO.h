@@ -44,6 +44,24 @@ struct IOEvent
 	SockEvent sock_event;
 };
 
+typedef void (*EventCb)(MySocket ev, void* userData);
+
+struct EventHandler
+{
+	EventCb		listenCb;
+	EventCb		readCb;
+	EventCb		writeCb;
+	EventCb		errCb;
+};
+
+struct SocketIOEvent
+{
+	uint32			fd;
+	//char			evBuffer[1024];
+	EventHandler	eventHandler;
+	void*			pUserData;
+};
+
 class MySocketIO
 {
 public:
@@ -57,12 +75,19 @@ public:
 
 	virtual void HandleEvent(const IOEvent& ioEvent) = 0;
 
+	virtual void HandleEvent() {}
+
 public:
 	const std::map<uint32, MySocket>& GetFds() const { return m_sockets; }
 
 	uint32 GetMaxFd() const { return m_max_socket; }
 
 	uint32 GetEventSize() { return m_event.size(); }
+
+	SocketIOEvent* GetEvent(uint32 fd);
+
+	void AddEvent(uint32 fd, EventCb readCb, EventCb writeCb, EventCb listenCb, EventCb errCb, void* userData);
+
 	/*{ 
 		//LockReadQueue();  
 		int event_size = m_event.size() + m_r_event.size() + m_w_event.size(); 
@@ -75,6 +100,8 @@ public:
 	bool EventEmpty() const { return m_event.empty(); }
 	const IOEvent& GetIOEvent() const { return m_event.front(); }
 	void DelIOEvent() { m_event.pop(); }
+
+	void ProcessEvent();
 
 	/*
 	void LockReadQueue() { m_r_mutex.Lock(); }
@@ -109,6 +136,7 @@ protected:
 
 protected:
 	std::map<uint32, MySocket>	m_sockets;
+	std::map<uint32, SocketIOEvent> m_events;
 	uint32 m_max_socket;
 	char m_recv_buf[MAX_RECV_BUF_SIZE];
 	std::queue<IOEvent> m_event;
