@@ -13,6 +13,12 @@ EventMaster::~EventMaster()
 }
 
 
+int EventMaster::Init()
+{
+	return Init("0.0.0.0", 6666);
+}
+
+
 int EventMaster::Init(const char* ip, int port)
 {
 	m_base = CreateSocketIO(FD_SETSIZE, SI_SELECT);
@@ -68,6 +74,9 @@ void EventMaster::RegisterEvent(uint32 fd, EventCb readCb, EventCb writeCb, Even
 
 void EventMaster::ProcessEvenet()
 {
+	/*
 	while(!m_base->EventEmpty())
 		m_base->HandleEvent(m_base->GetIOEvent());
+	*/
+	m_base->ProcessEvent();
 }

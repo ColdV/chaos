@@ -54,11 +54,21 @@ struct EventHandler
 	EventCb		errCb;
 };
 
+//struct Event
+//{
+//	uint32 fd;
+//	int	ev;
+//	EventCb cb;
+//	void* pUserData;
+//};
+
+//fd -> event
+
 struct SocketIOEvent
 {
 	uint32			fd;
 	//char			evBuffer[1024];
-	EventHandler	eventHandler;
+	EventHandler	eventHandler;	
 	void*			pUserData;
 };
 
@@ -103,6 +113,11 @@ public:
 
 	void ProcessEvent();
 
+	void ProcessListen(MySocket& sk);
+	void ProcessRead(MySocket& sk);
+	void ProcessWrite(MySocket& sk);
+	void ProcessErr(MySocket& sk);
+
 	/*
 	void LockReadQueue() { m_r_mutex.Lock(); }
 	void UnLockReadQueue() { m_r_mutex.UnLock(); }
@@ -119,6 +134,10 @@ protected:
 	virtual void addIOEvent(const IOEvent& ioEvent) { m_event.push(ioEvent); }
 
 	virtual void delSocket(const uint32 fd) {}
+
+	virtual int AddSocket(uint32 fd) { return -1; }
+
+	virtual int DelSocket(uint32 fd) { return -1; }
 
 	//virtual bool InitIOThread();
 
@@ -140,6 +159,7 @@ protected:
 	uint32 m_max_socket;
 	char m_recv_buf[MAX_RECV_BUF_SIZE];
 	std::queue<IOEvent> m_event;
+	int m_ioType;
 
 	/*
 	std::queue<IOEvent> m_r_event;

@@ -76,7 +76,7 @@ int main()
 	*/
 	
 	EventMaster em;
-	em.Init(IP, 6666);
+	em.Init();
 	em.Loop();
 /*
 	MyThreadPool pool(4);

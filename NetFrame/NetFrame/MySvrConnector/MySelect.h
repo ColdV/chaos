@@ -33,6 +33,9 @@ protected:
 	void delSocket(const uint32 fd);
 	void CollectEvent(const fd_set& rfds, const fd_set& wfds, const fd_set& efds);
 
+	virtual int AddSocket(uint32 fd);
+	virtual int DelSocket(uint32 fd);
+
 private:
 	fd_set m_rfds;
 	fd_set m_wfds;

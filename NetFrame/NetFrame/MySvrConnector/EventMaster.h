@@ -27,6 +27,8 @@ public:
 	EventMaster();
 	~EventMaster();
 
+	int Init();
+
 	int Init(const char* ip, int port);
 
 	int Loop();

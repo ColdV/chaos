@@ -37,6 +37,10 @@ protected:
 
 	virtual void delSocket(const uint32 fd);
 
+	virtual int AddSocket(uint32 fd);
+
+	virtual int DelSocket(uint32 fd);
+
 private:
 	int m_max_fd;
 	int m_epfd;

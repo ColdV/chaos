@@ -49,6 +49,7 @@ int MySelect::InitIO(const char* ip, int port, uint32 max_fd)
 	printf("Begin listen port:%d\n", port);
 
 	res = addSocket(mSocket.getSocket(), mSocket, &m_rfds, NULL, NULL);
+	//res = AddSocket(mSocket.getSocket());
 
 	if (0 != res)
 		return res;
@@ -204,6 +205,24 @@ int MySelect::addSocket(const uint32 fd, const MySocket& ms, fd_set* rfds, fd_se
 
 	if (NULL != wfds)
 		FD_SET(fd, efds);
+
+	return 0;
+}
+
+
+int MySelect::AddSocket(uint32 fd)
+{
+	FD_SET(fd, &m_rfds);
+	FD_SET(fd, &m_efds);
+
+	return 0;
+}
+
+int MySelect::DelSocket(uint32 fd)
+{
+	FD_CLR(fd, &m_rfds);
+	FD_CLR(fd, &m_wfds);
+	FD_CLR(fd, &m_efds);
 
 	return 0;
 }

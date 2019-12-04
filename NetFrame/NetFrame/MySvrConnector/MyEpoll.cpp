@@ -51,6 +51,7 @@ int MyEpoll::InitIO(const char* ip, int port, uint32 max_fd)
 	if(0 != res)
 		return res;
 
+	m_ioType = SI_EPOLL;
 	return res;
 }
 
@@ -67,6 +68,27 @@ int MyEpoll::AddSocket(const MySocket& s)
 
 	return 0;
 }
+
+
+int MyEpoll::AddSocket(uint32 fd)
+{
+	epoll_event ep_event;
+	ep_event.data.fd = fd;
+	ep_event.events = EPOLLIN | EPOLLET;
+
+	epoll_ctl(m_epfd, EPOLL_CTL_ADD, fd, &ep_event);
+
+	return 0;
+}
+
+
+int MyEpoll::DelSocket(uint32 fd)
+{
+	epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, NULL);
+
+	reutrn 0;
+}
+
 
 void MyEpoll::WaitEvent()
 {
