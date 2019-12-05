@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClCompile Include="MySvrConnector\EventMaster.cpp" />
     <ClCompile Include="MySvrConnector\main.cpp" />
+    <ClCompile Include="MySvrConnector\MinHeap.cpp" />
     <ClCompile Include="MySvrConnector\MsgChain.cpp" />
     <ClCompile Include="MySvrConnector\MyEpoll.cpp" />
     <ClCompile Include="MySvrConnector\MyIOCP.cpp" />
@@ -42,6 +43,7 @@
     <ClInclude Include="common\single_templete.h" />
     <ClInclude Include="common\WebSocket.h" />
     <ClInclude Include="MySvrConnector\EventMaster.h" />
+    <ClInclude Include="MySvrConnector\MinHeap.h" />
     <ClInclude Include="MySvrConnector\MsgChain.h" />
     <ClInclude Include="MySvrConnector\MyEpoll.h" />
     <ClInclude Include="MySvrConnector\MyIOCP.h" />

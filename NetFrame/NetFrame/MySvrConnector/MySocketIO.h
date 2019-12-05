@@ -38,13 +38,6 @@ enum SockEvent
 	SE_EXCEPT = 1 << 2,
 };
 
-struct IOEvent
-{
-	uint32 fd;
-	SockEvent sock_event;
-};
-
-typedef void (*EventCb)(MySocket ev, void* userData);
 
 struct EventHandler
 {
@@ -53,6 +46,16 @@ struct EventHandler
 	EventCb		writeCb;
 	EventCb		errCb;
 };
+
+
+struct IOEvent
+{
+	uint32 fd;
+	SockEvent sock_event;
+};
+
+typedef void (*EventCb)(MySocket ev, void* userData);
+
 
 //struct Event
 //{
