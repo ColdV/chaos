@@ -43,11 +43,11 @@ int main()
 	//t1.print();
 	
 #ifndef _WIN32
-    if(signal(SIGPIPE, SIG_IGN) == SIG_ERR)
-        return -1;
+    //if(signal(SIGPIPE, SIG_IGN) == SIG_ERR)
+    //   return -1;
 #endif
 
-	/*
+	
 	MySocketIO* p = CreateSocketIO(FD_SETSIZE, SI_EPOLL);
 
 	if (!p)
@@ -73,11 +73,14 @@ int main()
 		}
 		
 	}
-	*/
-	
+
+
+/*	
 	EventMaster em;
 	em.Init();
 	em.Loop();
+*/
+
 /*
 	MyThreadPool pool(4);
 

@@ -23,6 +23,7 @@
 
 #define MAX_FD	10000
 #define IP	"10.246.60.179" //"192.168.2.109"
+#define PORT 6666
 
 int main()
 {
@@ -58,7 +59,7 @@ int main()
 
 #endif
 
-	for(int i = 0; i < sizeof(nfds) / sizeof(nfds[0]); ++i)
+	for(int i = 0; i < MAX_FD; ++i)
 	{
 		nfds[i] = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 		if(0 >= nfds[i])
@@ -72,14 +73,15 @@ int main()
 	memset(&clientAddr, 0, sizeof(clientAddr));
 
 	clientAddr.sin_family = AF_INET;
-	clientAddr.sin_port = htons(6666);
+	clientAddr.sin_port = htons(PORT);
 	inet_pton(AF_INET, IP, (void*)&clientAddr.sin_addr);
 
-	for(int i = 0; i < sizeof(nfds) / sizeof(nfds[0]); ++i)
+	for(int i = 0; i < MAX_FD; ++i)
 	{
 		int res = connect(nfds[i], (sockaddr*)&clientAddr, sizeof(clientAddr));
 		if(0 != res)
 		{
+            nfds[i] = 0;
 			printf("connect failed! fds[%d]:%d\n", i, nfds[i]);
 			continue;
 		}
@@ -102,8 +104,11 @@ int main()
 	char send_buf[128] = {0};
 
 	
-	for(int i = 0; i < sizeof(nfds) / sizeof(nfds[0]); ++i)
+	for(int i = 0; i < MAX_FD; ++i)
 	{
+        if (0 >= nfds[i])
+            continue;
+
 		sprintf(send_buf, "%si am socket[%d]", "hello world!", nfds[i]);
 		int res = send(nfds[i], send_buf, strlen(send_buf), 0);
 		printf("socket[%d] send msg len:%d\n",nfds[i],  res);

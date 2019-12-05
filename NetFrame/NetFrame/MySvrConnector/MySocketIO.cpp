@@ -171,7 +171,7 @@ void MySocketIO::ProcessListen(MySocket& sk)
 	while (loop)
 	{
 		int ret = sk.Accept(newSocket);
-		if (ret)//(0 < sk.Accept(newSocket))//;
+		if (0 < ret)//(0 < sk.Accept(newSocket))//;
 		{
 			m_sockets.insert(std::make_pair(newSocket.getSocket(), newSocket));
 			AddSocket(newSocket.getSocket());

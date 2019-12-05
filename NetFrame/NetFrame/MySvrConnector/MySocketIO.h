@@ -28,7 +28,7 @@ enum IOType
 
 enum
 {
-	MAX_RECV_BUF_SIZE = 10, //24 * 10,
+	MAX_RECV_BUF_SIZE = 1024 * 10,
 };
 
 enum SockEvent

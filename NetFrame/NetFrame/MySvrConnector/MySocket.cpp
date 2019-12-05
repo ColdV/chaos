@@ -58,10 +58,11 @@ uint32 MySocket::Socket()
 int MySocket::Bind(const char* strIP, const int nPort)
 {
 	sockaddr_in sockAddr;
+    memset(&sockAddr, 0, sizeof(sockAddr));
 
 	sockAddr.sin_family = AF_INET;
 	sockAddr.sin_port = htons(nPort);
-	inet_pton(AF_INET, strIP, &sockAddr.sin_addr);
+	//inet_pton(AF_INET, strIP, &sockAddr.sin_addr);
 
 	if (0 != bind(m_fd, (sockaddr*)&sockAddr, sizeof(sockaddr)))
 		return -1;
@@ -89,7 +90,7 @@ int MySocket::Listen()
 
 #endif // _WIN32
 
-    int res = listen(m_fd, 1024);
+    int res = listen(m_fd, 128);
 	if(0 != res) //if (0 != listen(m_fd, 5))
 		return res;
 
@@ -107,7 +108,7 @@ int MySocket::Accept(MySocket& mySocket)
 	sockaddr_in sockAddr;
 	socklen_t len = sizeof(sockAddr);
 	memset(&sockAddr, 0, sizeof(sockAddr));
-	uint32 nfd = accept(m_fd, (sockaddr*)&sockAddr, &len);
+	uint32 nfd = accept4(m_fd, (sockaddr*)&sockAddr, &len, 2048);
 	if (0 >= nfd)
 		return nfd;
 

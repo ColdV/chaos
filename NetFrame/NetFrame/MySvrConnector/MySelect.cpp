@@ -68,7 +68,7 @@ void MySelect::WaitEvent()
 
 	if (0 > cnt)
 	{
-		printf("call select failed! code:%d, sys err:%d\n", cnt, GetLastError());
+		printf("call select failed! code:%d\n", cnt);
 		return;
 	}
 
