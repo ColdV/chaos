@@ -86,7 +86,7 @@ int MyEpoll::DelSocket(uint32 fd)
 {
 	epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, NULL);
 
-	reutrn 0;
+	return 0;
 }
 
 

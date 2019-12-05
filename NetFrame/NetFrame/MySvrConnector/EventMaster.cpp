@@ -21,7 +21,7 @@ int EventMaster::Init()
 
 int EventMaster::Init(const char* ip, int port)
 {
-	m_base = CreateSocketIO(FD_SETSIZE, SI_SELECT);
+	m_base = CreateSocketIO(FD_SETSIZE, SI_EPOLL);
 	if (!m_base)
 		return -1;
 
