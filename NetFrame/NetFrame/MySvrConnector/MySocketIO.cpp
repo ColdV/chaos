@@ -251,7 +251,7 @@ MySocketIO* CreateSocketIO(int max_fd, IOType ioType /*= SI_SELECT*/)
 	else
 	{
 #ifdef _WIN32
-		return &MyIOCP::Instance();
+		return &MySelect::Instance(max_fd);
 
 #else
 		return &MyEpoll::Instance();

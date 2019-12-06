@@ -48,38 +48,38 @@ int main()
 #endif
 
 	
-	MySocketIO* p = CreateSocketIO(FD_SETSIZE, SI_EPOLL);
+	//MySocketIO* p = CreateSocketIO(FD_SETSIZE, SI_EPOLL);
 
-	if (!p)
-	{
-		printf("no found suitable IO\n");
-		return 0;
-	}
+	//if (!p)
+	//{
+	//	printf("no found suitable IO\n");
+	//	return 0;
+	//}
 
-	p->InitIO(IP, 6666, FD_SETSIZE);
+	//p->InitIO(IP, 6666, FD_SETSIZE);
 
-	while (true)
-	{
-		p->WaitEvent();
+	//while (true)
+	//{
+	//	p->WaitEvent();
 
-		if(0 < p->GetEventSize())
-			printf("wait event!event size:%d\n", p->GetEventSize());
+	//	if(0 < p->GetEventSize())
+	//		printf("wait event!event size:%d\n", p->GetEventSize());
 
-		
-		while (!p->EventEmpty())
-		{
-			p->HandleEvent(p->GetIOEvent());
-			printf("handle event! event size:%d\n", p->GetEventSize());
-		}
-		
-	}
+	//	
+	//	while (!p->EventEmpty())
+	//	{
+	//		p->HandleEvent(p->GetIOEvent());
+	//		printf("handle event! event size:%d\n", p->GetEventSize());
+	//	}
+	//	
+	//}
 
 
-/*	
+	
 	EventMaster em;
 	em.Init();
 	em.Loop();
-*/
+
 
 /*
 	MyThreadPool pool(4);

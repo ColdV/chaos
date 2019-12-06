@@ -38,6 +38,7 @@ enum SockEvent
 	SE_EXCEPT = 1 << 2,
 };
 
+typedef void (*EventCb)(MySocket ev, void* userData);
 
 struct EventHandler
 {
@@ -52,9 +53,8 @@ struct IOEvent
 {
 	uint32 fd;
 	SockEvent sock_event;
+	EventCb evcb;
 };
-
-typedef void (*EventCb)(MySocket ev, void* userData);
 
 
 //struct Event
@@ -159,6 +159,7 @@ protected:
 protected:
 	std::map<uint32, MySocket>	m_sockets;
 	std::map<uint32, SocketIOEvent> m_events;
+	std::multimap<uint32, IOEvent>	m_ioEvents;
 	uint32 m_max_socket;
 	char m_recv_buf[MAX_RECV_BUF_SIZE];
 	std::queue<IOEvent> m_event;

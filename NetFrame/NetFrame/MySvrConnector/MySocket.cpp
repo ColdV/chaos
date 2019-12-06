@@ -108,7 +108,12 @@ int MySocket::Accept(MySocket& mySocket)
 	sockaddr_in sockAddr;
 	socklen_t len = sizeof(sockAddr);
 	memset(&sockAddr, 0, sizeof(sockAddr));
+
+#ifdef _WIN32
+	uint32 nfd = accept(m_fd, (sockaddr*)&sockAddr, &len);
+#else
 	uint32 nfd = accept4(m_fd, (sockaddr*)&sockAddr, &len, 2048);
+#endif
 	if (0 >= nfd)
 		return nfd;
 
