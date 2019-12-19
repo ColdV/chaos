@@ -139,13 +139,7 @@ bool MinHeap<T, Cmp>::Push(T* node)
 template<typename T, typename Cmp>
 T* MinHeap<T, Cmp>::Pop()
 {
-	T* node = m_heap[0];
-	m_heap[0] = m_heap[m_curSize - 1];
-	m_curSize -= 1;
-
-	ShiftDown(1);
-
-	return node;
+	return Erase(1);
 }
 
 template<typename T, typename Cmp>
@@ -158,7 +152,7 @@ T* MinHeap<T, Cmp>::Erase(int pos)
 	m_heap[pos - 1] = m_heap[m_curSize - 1];
 	m_curSize -= 1;
 
-	ShiftDown(1);
+	ShiftDown(pos);
 
 	return node;
 }
