@@ -29,17 +29,19 @@ public:
 
 	int GetRightPos(int pos) { return pos * 2 + 1; }
 
-	bool Push(T* node);
+	int Push(T* node);
 
 	T* Pop();
 
+	const T* Top() const { return m_heap[0]; }
+
 	T* Erase(int pos);
 
-	T* Erase(const T* node);
+	//T* Erase(const T* node);
 
-	int GetPos(const T* node);
+	//int GetPos(const T* node);
 
-	void ShiftUp(int pos);
+	int ShiftUp(int pos);
 
 	void ShiftDown(int pos);
 
@@ -47,14 +49,14 @@ public:
 
 	T* Compare(T* left, T* right) const;
 
-	int GetCurSize() const { return m_curSize; }
+	int GetSize() const { return m_curSize; }
 
 	int GetTotalSize() const { return m_totalSize; }
 
 private:
 	T** m_heap;
-	unsigned int m_totalSize;
-	unsigned int m_curSize;
+	int m_totalSize;
+	int m_curSize;
 
 	Cmp m_cmp;
 };
@@ -123,17 +125,16 @@ T* MinHeap<T, Cmp>::Right(int pos)
 
 
 template<typename T, typename Cmp>
-bool MinHeap<T, Cmp>::Push(T* node)
+int MinHeap<T, Cmp>::Push(T* node)
 {
 	if (m_curSize >= m_totalSize && !Expand())
-		return false;
+		return -1;
 
 	m_curSize += 1;
 	m_heap[m_curSize - 1] = node;
-	printf("push node:%d\n", *node);
-	ShiftUp(m_curSize);
+	//ShiftUp(m_curSize);
 
-	return true;
+	return ShiftUp(m_curSize);
 }
 
 template<typename T, typename Cmp>
@@ -158,35 +159,35 @@ T* MinHeap<T, Cmp>::Erase(int pos)
 }
 
 
-template<typename T, typename Cmp>
-T* MinHeap<T, Cmp>::Erase(const T* node)
-{
-	return Erase(GetPos(node));
-}
+//template<typename T, typename Cmp>
+//T* MinHeap<T, Cmp>::Erase(const T* node)
+//{
+//	return Erase(GetPos(node));
+//}
+//
+//
+//template<typename T, typename Cmp>
+//int MinHeap<T, Cmp>::GetPos(const T* node)
+//{
+//	for (int i = 0; i < m_curSize; ++i)
+//	{
+//		if (!m_cmp(node, m_heap[i]) && !m_cmp(m_heap[i], node))
+//			return i + 1;
+//	}
+//
+//	return 0;
+//}
 
 
 template<typename T, typename Cmp>
-int MinHeap<T, Cmp>::GetPos(const T* node)
-{
-	for (int i = 0; i < m_curSize; ++i)
-	{
-		if (!m_cmp(node, m_heap[i]) && !m_cmp(m_heap[i], node))
-			return i + 1;
-	}
-
-	return 0;
-}
-
-
-template<typename T, typename Cmp>
-void MinHeap<T, Cmp>::ShiftUp(int pos)
+int MinHeap<T, Cmp>::ShiftUp(int pos)
 {
 	if (0 >= pos || pos > m_curSize)
-		return;
+		return -1;
 
 	T* node = m_heap[pos - 1];
 	if (!node)
-		return;
+		return -1;
 
 	while (pos >= 1)
 	{
@@ -205,6 +206,8 @@ void MinHeap<T, Cmp>::ShiftUp(int pos)
 	}
 
 	m_heap[pos - 1] = node;
+
+	return pos;
 }
 
 
@@ -255,8 +258,8 @@ T** MinHeap<T, Cmp>::Expand()
 		m_totalSize = 32;		//init 1/2 size;
 
 	m_totalSize *= 2;
-	if (0 >= m_totalSize || 0xFFFFFFFF < m_totalSize)
-		m_totalSize = 0xFFFFFFFF;
+	if (0 >= m_totalSize || 0x7FFFFFFF < m_totalSize)
+		m_totalSize = 0x7FFFFFFF;
 
 	T** pHeap = new T * [m_totalSize];	//expand double;
 	if (!pHeap)
@@ -264,8 +267,11 @@ T** MinHeap<T, Cmp>::Expand()
 
 	memset(pHeap, 0, sizeof(T*) * m_totalSize);
 
-	if(m_heap)
+	if (m_heap)
+	{
 		memcpy(pHeap, m_heap, sizeof(T*) * m_curSize);
+		delete[] m_heap;
+	}
 
 	m_heap = pHeap;
 
