@@ -2,13 +2,30 @@
 
 #include "MySocket.h"
 #include "MySocketIO.h"
+#include "MinHeap.h"
+#include "Timer.h"
+#include "map"
 
 
-union Event
+struct SocketCmp
 {
-	SocketIOEvent fdEvent;
+	bool operator()(const MySocket& l, const MySocket& r) const
+	{
+		return l.getSocket() < r.getSocket();
+	}
 };
 
+union EventOld
+{
+	SocketIOEvent fdEvent;
+	TimerEvent	timerEvent;
+};
+
+//struct TimerEvent;
+
+class IOEevntMgr;
+ 
+class EventMgr;
 
 class EventMaster
 {
@@ -24,7 +41,7 @@ public:
 	//	EventCb		errCb;
 	//};
 
-	EventMaster();
+	EventMaster();			
 	~EventMaster();
 
 	int Init();
@@ -35,25 +52,28 @@ public:
 
 	int Stop();
 
-	//void SetListenCb(EventCb listenCb) { m_listenCb = listenCb; }
-	//void SetReadCb(EventCb readCb) { m_readCb = readCb; }
-	//void SetWriteCb(EventCb writeCb) { m_writeCb = writeCb; }
-	//void SetErrCb(EventCb errCb) { m_errCb = errCb; }
-
 	void RegisterEvent(uint32 fd, EventCb readCb, EventCb writeCb, EventCb listenCb, EventCb errCb, void* userArg);
 
+	int AddEvent(Event& ev);
+
 	void ProcessEvenet();
+
+	void EraseEvent(Event& ev);
 
 	//void ProcessFdRead(MySocket* pSocket);
 
 	//void ProcessFdWrite(MySocket* pSocket);
 
-private:
 
+	//ev为该mgr感兴趣的事件通过“|”的组合
+	void AddEventMgr(int ev, EventMgr& evMgr);
+
+
+private:
 	MySocketIO*	m_base;
-	//std::queue<Event> m_active;
-	//EventCb		m_listenCb;
-	//EventCb		m_readCb;
-	//EventCb		m_writeCb;
-	//EventCb		m_errCb;
+	MySocketIO* m_scheduler;
+	Timer		m_timer;
+	std::multimap<int, Event> m_ioEvents;
+	std::multimap<MySocket, Event, SocketCmp> m_;
+	std::multimap<int, EventMgr> m_evMgr;		
 };

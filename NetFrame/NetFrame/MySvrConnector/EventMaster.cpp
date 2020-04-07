@@ -80,3 +80,37 @@ void EventMaster::ProcessEvenet()
 	*/
 	m_base->ProcessEvent();
 }
+
+
+int EventMaster::AddEvent(Event& ev)
+{
+	if (ev.ev & (EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT))
+		m_ioEvents.insert(std::make_pair(ev.Ev.evSocket.fd, ev));
+
+	else if (ev.ev & EV_TIMEOUT)
+		m_timer.AddTimer(&ev, ev.Ev.evTimer.timeOut, ev.evCb);
+
+	return 0;
+}
+
+
+void EventMaster::EraseEvent(Event& ev)
+{
+	if (ev.ev & (EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT))
+	{
+		auto end_it = m_ioEvents.upper_bound(ev.Ev.evSocket.fd);
+		for (auto it = m_ioEvents.lower_bound(ev.Ev.evSocket.fd); it != end_it; ++it)
+		{
+			if (it->second.ev & ev.ev)
+			{
+				it = m_ioEvents.erase(it);
+				break;
+			}
+		}
+	}
+
+	else if (ev.ev & EV_TIMEOUT)
+	{
+		m_timer.DelTimer(ev.Ev.evTimer.timerID);
+	}
+}

@@ -50,7 +50,6 @@ public:
 	void setType(SocketType type) { m_type = type; }
 
 	const char* getIP() const { return m_ip; }
-	char* getIP() { return m_ip; }
 	void setIP(char* ip) { strncpy_safe(m_ip, sizeof(m_ip), ip, strlen(ip)); }
 
 	uint32 getPort() const { return m_port; }

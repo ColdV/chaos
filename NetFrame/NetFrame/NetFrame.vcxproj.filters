@@ -66,7 +66,10 @@
     <ClCompile Include="MySvrConnector\EventMaster.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="MySvrConnector\MinHeap.cpp">
+    <ClCompile Include="MySvrConnector\Timer.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MySvrConnector\IOEventMgr.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -135,6 +138,15 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="MySvrConnector\MinHeap.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MySvrConnector\Timer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MySvrConnector\Event.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MySvrConnector\IOEventMgr.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

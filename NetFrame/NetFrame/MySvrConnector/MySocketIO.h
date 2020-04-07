@@ -12,6 +12,7 @@
 #include "MySocket.h"
 #include "../MyThreadPool/MyMutex.h"
 
+
 #ifdef _WIN32
 typedef unsigned int(__stdcall *ThreadProcess)(void*);
 #else
@@ -57,15 +58,6 @@ struct IOEvent
 };
 
 
-//struct Event
-//{
-//	uint32 fd;
-//	int	ev;
-//	EventCb cb;
-//	void* pUserData;
-//};
-
-//fd -> event
 
 struct SocketIOEvent
 {
@@ -90,11 +82,13 @@ public:
 
 	virtual void HandleEvent() {}
 
+	static MySocketIO* CreateSocketIO(int max_fd, IOType ioType = SI_SELECT);
+
 public:
 	const std::map<uint32, MySocket>& GetFds() const { return m_sockets; }
 
 	uint32 GetMaxFd() const { return m_max_socket; }
-
+	
 	uint32 GetEventSize() { return m_event.size(); }
 
 	SocketIOEvent* GetEvent(uint32 fd);

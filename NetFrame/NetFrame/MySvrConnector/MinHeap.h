@@ -1,5 +1,7 @@
 #pragma once
 
+#include "stdio.h"
+
 template <typename T = void>
 struct Less
 {
@@ -15,7 +17,27 @@ class MinHeap
 {
 public:
 	MinHeap();
-	~MinHeap();
+	virtual ~MinHeap();
+
+	int Push(const T& node);
+
+	void Pop();
+
+	T* Top() { return &m_heap[0]; }
+
+	void Erase(int pos);
+
+	//T* Erase(const T* node);
+
+	//int GetPos(const T* node);
+
+	int GetSize() const { return m_curSize; }
+
+	int GetTotalSize() const { return m_totalSize; }
+
+
+protected:
+	const T* GetHeap() const { return m_heap; }
 
 	T* Parent(int pos);
 
@@ -29,32 +51,16 @@ public:
 
 	int GetRightPos(int pos) { return pos * 2 + 1; }
 
-	int Push(T* node);
-
-	T* Pop();
-
-	const T* Top() const { return m_heap[0]; }
-
-	T* Erase(int pos);
-
-	//T* Erase(const T* node);
-
-	//int GetPos(const T* node);
-
 	int ShiftUp(int pos);
 
 	void ShiftDown(int pos);
 
-	T** Expand();
+	T* Expand();
 
 	T* Compare(T* left, T* right) const;
 
-	int GetSize() const { return m_curSize; }
-
-	int GetTotalSize() const { return m_totalSize; }
-
 private:
-	T** m_heap;
+	T* m_heap;
 	int m_totalSize;
 	int m_curSize;
 
@@ -91,7 +97,7 @@ T* MinHeap<T, Cmp>::Parent(int pos)
 	if (pos / 2 - 1 < 0)	//root node
 		return NULL;
 
-	return m_heap[pos / 2 - 1];
+	return &m_heap[pos / 2 - 1];
 }
 
 template<typename T, typename Cmp>
@@ -105,7 +111,7 @@ T* MinHeap<T, Cmp>::Left(int pos)
 
 	//tree left node pos = pos * 2;
 	//in array idx need pos - 1
-	return m_heap[pos * 2 - 1];
+	return &m_heap[pos * 2 - 1];
 }
 
 
@@ -120,42 +126,45 @@ T* MinHeap<T, Cmp>::Right(int pos)
 
 	//tree right node pos = pos * 2 + 1;
 	//in array idx need pos - 1
-	return m_heap[pos * 2];
+	return &m_heap[pos * 2];
 }
 
 
 template<typename T, typename Cmp>
-int MinHeap<T, Cmp>::Push(T* node)
+int MinHeap<T, Cmp>::Push(const T& node)
 {
 	if (m_curSize >= m_totalSize && !Expand())
 		return -1;
 
 	m_curSize += 1;
-	m_heap[m_curSize - 1] = node;
+	//m_heap[m_curSize - 1] = node;
+	memcpy(&m_heap[m_curSize - 1], &node, sizeof(T));
 	//ShiftUp(m_curSize);
 
 	return ShiftUp(m_curSize);
 }
 
 template<typename T, typename Cmp>
-T* MinHeap<T, Cmp>::Pop()
+void MinHeap<T, Cmp>::Pop()
 {
-	return Erase(1);
+	Erase(1);
+	//return Erase(1);
 }
 
 template<typename T, typename Cmp>
-T* MinHeap<T, Cmp>::Erase(int pos)
+void MinHeap<T, Cmp>::Erase(int pos)
 {
 	if (0 >= pos || pos > m_curSize)
-		return NULL;
+		return;
 
-	T* node = m_heap[pos - 1];
-	m_heap[pos - 1] = m_heap[m_curSize - 1];
+	//T* node = &m_heap[pos - 1];
+	//m_heap[pos - 1] = m_heap[m_curSize - 1];
+	memcpy(&m_heap[pos - 1], &m_heap[m_curSize - 1], sizeof(T));
 	m_curSize -= 1;
 
 	ShiftDown(pos);
 
-	return node;
+	//return NULL;
 }
 
 
@@ -185,9 +194,12 @@ int MinHeap<T, Cmp>::ShiftUp(int pos)
 	if (0 >= pos || pos > m_curSize)
 		return -1;
 
-	T* node = m_heap[pos - 1];
+	/*T* node = &m_heap[pos - 1];
 	if (!node)
-		return -1;
+		return -1;*/
+	T node;
+	memcpy(&node, &m_heap[pos - 1], sizeof(T));
+
 
 	while (pos >= 1)
 	{
@@ -195,9 +207,10 @@ int MinHeap<T, Cmp>::ShiftUp(int pos)
 		if (!parent)
 			break;
 
-		if (m_cmp(*node, *parent))
+		if (m_cmp(node, *parent))
 		{
-			m_heap[pos - 1] = parent;
+			//m_heap[pos - 1] = parent;
+			memcpy(&m_heap[pos - 1], parent, sizeof(T));
 			pos /= 2;
 			continue;
 		}
@@ -205,7 +218,8 @@ int MinHeap<T, Cmp>::ShiftUp(int pos)
 		break;
 	}
 
-	m_heap[pos - 1] = node;
+	//m_heap[pos - 1] = node;
+	memcpy(&m_heap[pos - 1], &node, sizeof(T));
 
 	return pos;
 }
@@ -217,7 +231,9 @@ void MinHeap<T, Cmp>::ShiftDown(int pos)
 	if (0 >= pos || pos > m_curSize)
 		return;
 
-	T* node = m_heap[pos - 1];
+	//T* node = &m_heap[pos - 1];
+	T node;
+	memcpy(&node, &m_heap[pos - 1], sizeof(T));
 
 	while (pos <= m_curSize)
 	{
@@ -229,14 +245,15 @@ void MinHeap<T, Cmp>::ShiftDown(int pos)
 		/*if (!right)
 			break;*/
 
-		T* cmpNode = Compare(left, right);
-		if (!cmpNode)
+		T* child = Compare(left, right);
+		if (!child)
 			break;
 
-		if (m_cmp(*cmpNode, *node))
+		if (m_cmp(*child, node))
 		{
-			m_heap[pos - 1] = cmpNode;
-			if (cmpNode == left)
+			//m_heap[pos - 1] = child;
+			memcpy(&m_heap[pos - 1], child, sizeof(T));
+			if (child == left)
 				pos *= 2;
 			else
 				pos = pos * 2 + 1;
@@ -247,12 +264,13 @@ void MinHeap<T, Cmp>::ShiftDown(int pos)
 		break;
 	}
 
-	m_heap[pos - 1] = node;
+	//m_heap[pos - 1] = node;
+	memcpy(&m_heap[pos - 1], &node, sizeof(T));
 }
 
 
 template<typename T, typename Cmp>
-T** MinHeap<T, Cmp>::Expand()
+T* MinHeap<T, Cmp>::Expand()
 {
 	if (0 >= m_totalSize)
 		m_totalSize = 32;		//init 1/2 size;
@@ -261,15 +279,15 @@ T** MinHeap<T, Cmp>::Expand()
 	if (0 >= m_totalSize || 0x7FFFFFFF < m_totalSize)
 		m_totalSize = 0x7FFFFFFF;
 
-	T** pHeap = new T * [m_totalSize];	//expand double;
+	T* pHeap = new T[m_totalSize];	//expand double;
 	if (!pHeap)
 		return NULL;
 
-	memset(pHeap, 0, sizeof(T*) * m_totalSize);
+	memset(pHeap, 0, sizeof(T) * m_totalSize);
 
 	if (m_heap)
 	{
-		memcpy(pHeap, m_heap, sizeof(T*) * m_curSize);
+		memcpy(pHeap, m_heap, sizeof(T) * m_curSize);
 		delete[] m_heap;
 	}
 

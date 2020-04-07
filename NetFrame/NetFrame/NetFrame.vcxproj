@@ -20,8 +20,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MySvrConnector\EventMaster.cpp" />
+    <ClCompile Include="MySvrConnector\IOEventMgr.cpp" />
     <ClCompile Include="MySvrConnector\main.cpp" />
-    <ClCompile Include="MySvrConnector\MinHeap.cpp" />
     <ClCompile Include="MySvrConnector\MsgChain.cpp" />
     <ClCompile Include="MySvrConnector\MyEpoll.cpp" />
     <ClCompile Include="MySvrConnector\MyIOCP.cpp" />
@@ -29,6 +29,7 @@
     <ClCompile Include="MySvrConnector\MySocket.cpp" />
     <ClCompile Include="MySvrConnector\MySocketIO.cpp" />
     <ClCompile Include="MySvrConnector\MySvrConnector.cpp" />
+    <ClCompile Include="MySvrConnector\Timer.cpp" />
     <ClCompile Include="MyThreadPool\MyCondition.cpp" />
     <ClCompile Include="MyThreadPool\MyEvent.cpp" />
     <ClCompile Include="MyThreadPool\MyMutex.cpp" />
@@ -42,7 +43,9 @@
     <ClInclude Include="common\common.h" />
     <ClInclude Include="common\single_templete.h" />
     <ClInclude Include="common\WebSocket.h" />
+    <ClInclude Include="MySvrConnector\Event.h" />
     <ClInclude Include="MySvrConnector\EventMaster.h" />
+    <ClInclude Include="MySvrConnector\IOEventMgr.h" />
     <ClInclude Include="MySvrConnector\MinHeap.h" />
     <ClInclude Include="MySvrConnector\MsgChain.h" />
     <ClInclude Include="MySvrConnector\MyEpoll.h" />
@@ -52,6 +55,7 @@
     <ClInclude Include="MySvrConnector\MySocketIO.h" />
     <ClInclude Include="MySvrConnector\MySvrConnector.h" />
     <ClInclude Include="common\stdafx.h" />
+    <ClInclude Include="MySvrConnector\Timer.h" />
     <ClInclude Include="MyThreadPool\MyEvent.h" />
     <ClInclude Include="MyThreadPool\MyMutex.h" />
     <ClInclude Include="MyThreadPool\MyCondition.h" />
