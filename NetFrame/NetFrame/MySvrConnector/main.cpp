@@ -8,6 +8,9 @@
 #endif // _WIN32
 
 #include "EventMaster.h"
+#include "MinHeap.h"
+#include <map>
+
 
 const char IP[] = "10.246.60.164";//"0.0.0.0";//"10.246.60.179";
 
@@ -30,6 +33,24 @@ public:
 };
 
 
+template<class T = void>
+void print(T a)
+{
+	if (T == void)
+	{
+		printf("non T!\n");
+		return;
+
+	}
+
+	printf("%d\n", a);
+}
+
+void timecb(unsigned int timeid, void* userData)
+{
+	printf("timeid:%u, time:%lld\n", timeid, time(NULL));
+}
+
 int main()
 {
 	//SetConsoleTitle(L"NetFrame");
@@ -41,13 +62,12 @@ int main()
 
 	//test t1 = test::Instance();
 	//t1.print();
-	
+
 #ifndef _WIN32
-    //if(signal(SIGPIPE, SIG_IGN) == SIG_ERR)
-    //   return -1;
+	//if(signal(SIGPIPE, SIG_IGN) == SIG_ERR)
+	//   return -1;
 #endif
 
-	
 	//MySocketIO* p = CreateSocketIO(FD_SETSIZE, SI_EPOLL);
 
 	//if (!p)
@@ -75,10 +95,10 @@ int main()
 	//}
 
 
-	
-	EventMaster em;
-	em.Init();
-	em.Loop();
+
+	//EventMaster em;
+	//em.Init();
+	//em.Loop();
 
 
 /*
@@ -91,6 +111,82 @@ int main()
 	{
 		printf("running\n");
 	}
-	*/
+*/
+
+	//typedef void (*TimerCallback)(unsigned int timeID, void* userData);
+
+
+	//struct TimeEv
+	//{
+	//	unsigned int timeID;
+	//	time_t dispatchTime;
+	//	TimerCallback cb;
+	//};
+
+
+	//struct TimeEvCmp
+	//{
+	//	bool operator ()(TimeEv& left, TimeEv& right) const
+	//	{
+	//		return left.dispatchTime < right.dispatchTime;
+	//	}
+	//};
+
+	//MinHeap<TimeEv, TimeEvCmp> minHeap;
+	//srand(time(NULL));
+
+	//TimeEv t;
+	//t.timeID = 1;
+	//t.dispatchTime = 3;// +time(NULL);
+	//t.cb = timecb;
+
+	//minHeap.Push(&t);
+
+	//time_t lastTime = time(NULL);
+	//while (true)
+	//{
+	//	while(minHeap.Top()->dispatchTime <= time(NULL) - lastTime)
+	//	//if (minHeap.Top()->dispatchTime <= time(NULL))
+	//	{
+	//		TimeEv* pT = minHeap.Pop();
+	//		pT->cb(pT->timeID, NULL);
+	//		++pT->timeID;
+	//		minHeap.Push(pT);
+	//		lastTime = time(NULL);
+	//	}
+
+	//	Sleep(minHeap.Top()->dispatchTime * 1000);
+
+	//	//lastTime = time(NULL);
+	//}
+	
+
+	MinHeap<int> min;
+
+	const int SIZE = 100;
+
+	int ary[100];// = { 5,0,7,8,4,9,1,3,2,6 };
+
+	for (int i = 0; i < SIZE; ++i)
+	{
+		ary[i] = rand();
+	}
+
+	for (int i = 0; i < SIZE; ++i)
+	{
+		min.Push(ary[i]);
+	}
+
+	printf("size:%d\n", min.GetSize());
+
+
+	for (int i = 0; i < SIZE; ++i)
+	{
+		printf("pop:%d\n", *min.Top());
+		min.Pop();
+	}
+
+	printf("size:%d\n", min.GetSize());
 	return 0;
 }
+
