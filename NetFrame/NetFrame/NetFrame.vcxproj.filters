@@ -72,6 +72,9 @@
     <ClCompile Include="MySvrConnector\IOEventMgr.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="MySvrConnector\Event.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MySvrConnector\MySvrConnector.h">

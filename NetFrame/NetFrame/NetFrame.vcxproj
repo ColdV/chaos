@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MySvrConnector\Event.cpp" />
     <ClCompile Include="MySvrConnector\EventMaster.cpp" />
     <ClCompile Include="MySvrConnector\IOEventMgr.cpp" />
     <ClCompile Include="MySvrConnector\main.cpp" />
