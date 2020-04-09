@@ -75,8 +75,15 @@ namespace EventFrame
 {
 	class EventHandler;
 	class Event;
+	class Socket;
 
 	typedef std::map<Event*, EventHandler*> EventMap;
+
+
+	class Socket
+	{
+	};
+
 
 	//抽象事件(资源类)
 	class Event
@@ -141,7 +148,7 @@ namespace EventFrame
 		int ProcessReadyEvent();
 
 	private:
-		EventMap m_ioEvs;			//IOMasterEvent->AllIOEvent
+		EventMap m_netEvs;			//IOMasterEvent->AllIOEvent
 		//EventHandler* m_pIOHandler;
 		IOEventDispatcher* m_pIOHandler;
 
@@ -167,14 +174,39 @@ namespace EventFrame
 	};
 
 
-	//IO事件调度器
-	class IOEventDispatcher
+	//网络事件调度器
+	class NetEventDispatcher
 	{
 	public:
-		IOEventDispatcher();
-		virtual ~IOEventDispatcher() = 0;
+		NetEventDispatcher();
+		virtual ~NetEventDispatcher() = 0;
 
 		virtual void Init() = 0;
+	};
+
+
+	class NetEvent : public Event
+	{
+	public:
+		NetEvent(Socket* pSocket) { pSocket = m_pSocket; }
+		~NetEvent()
+		{
+			if (m_pSocket)
+				delete m_pSocket;
+		}
+
+	private:
+		Socket* m_pSocket;
+	};
+
+
+	class NetEventHandler : public EventHandler
+	{
+	public:
+		NetEventHandler();
+		~NetEventHandler();
+
+		virtual void Handle(Event* pEv);
 	};
 
 }	//namespace EventFrame

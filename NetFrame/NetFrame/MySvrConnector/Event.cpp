@@ -77,7 +77,7 @@ namespace EventFrame
 		uint32 iEv = ev->GetEv();
 
 		if (iEv & (EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT))
-			m_ioEvs.insert(std::make_pair(ev, pHandler));
+			m_netEvs.insert(std::make_pair(ev, pHandler));
 		else if (iEv & EV_TIMEOUT)
 			m_timerEvs.insert(std::make_pair(ev, pHandler));
 		

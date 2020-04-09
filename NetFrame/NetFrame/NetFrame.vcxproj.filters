@@ -83,6 +83,9 @@
     <ClInclude Include="MySvrConnector\MyEpoll.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="MySvrConnector\MySocket.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="common\common.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -147,9 +150,6 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="MySvrConnector\IOEventMgr.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="MySvrConnector\MySocket.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
