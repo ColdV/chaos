@@ -74,6 +74,9 @@ protected:
 namespace EventFrame
 {
 	class EventHandler;
+	class Event;
+
+	typedef std::map<Event*, EventHandler*> EventMap;
 
 	//抽象事件(资源类)
 	class Event
@@ -85,8 +88,16 @@ namespace EventFrame
 		void SetID(uint32 id) { m_id = id; }
 		uint32 GetID() { return m_id; }
 
+		void SetLoop(bool isLoop) { m_isLoop = isLoop; }
+		bool IsLoop() { return m_isLoop; }
+
+		void SetEv(uint32 ev) { m_ev = ev; }
+		uint32 GetEv() { return m_ev; }
+
 	private:
 		uint32 m_id;
+		bool m_isLoop;
+		uint32 m_ev;
 		//EventHandler* m_handler;
 	};
 
@@ -102,6 +113,8 @@ namespace EventFrame
 	//};
 
 
+	class IOEventDispatcher;
+
 	//事件的注册、销毁、分发
 	class EventCentre
 	{
@@ -111,17 +124,34 @@ namespace EventFrame
 
 		int Init();
 
-		void Run();
+		void EventLoop();
 
-		int RegisterEvent(Event* ev, EventHandler* pHandler);
+		int RegisterEvent(Event* ev, EventHandler* pHandler, bool isReady);
 
 		int CancelEvent(Event* ev);
 
 		int DispatchEvent();
 
+		int IOEventDispatch();
+
+		int SignalDispatch();
+
+		int TimerDispatch();
+
+		int ProcessReadyEvent();
+
 	private:
-		std::map<Event*, EventHandler*> m_events;
-		std::map<Event*, EventHandler*> m_readyEv;
+		EventMap m_ioEvs;			//IOMasterEvent->AllIOEvent
+		//EventHandler* m_pIOHandler;
+		IOEventDispatcher* m_pIOHandler;
+
+		EventMap m_timerEvs;
+		//EventHandler* m_pTimerHandler;
+
+		EventMap m_signalEvs;
+
+		//EventMap m_events;
+		EventMap m_readyEv;
 	};
 
 
@@ -131,10 +161,20 @@ namespace EventFrame
 	{
 	public:
 		EventHandler() {}
-		virtual ~EventHandler() {}
+		virtual ~EventHandler() = 0;
 
 		virtual void Handle(Event* pEv) = 0;
 	};
 
+
+	//IO事件调度器
+	class IOEventDispatcher
+	{
+	public:
+		IOEventDispatcher();
+		virtual ~IOEventDispatcher() = 0;
+
+		virtual void Init() = 0;
+	};
 
 }	//namespace EventFrame
