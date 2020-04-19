@@ -35,7 +35,7 @@ MySelect::~MySelect()
 
 int MySelect::InitIO(const char* ip, int port, uint32 max_fd)
 {
-	MySocket mSocket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	Socket mSocket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	int res = 0;
 
 	res = mSocket.Bind(ip, port);
@@ -192,7 +192,7 @@ void MySelect::CollectEvent(const fd_set& rfds, const fd_set& wfds, const fd_set
 }
 
 
-int MySelect::addSocket(const uint32 fd, const MySocket& ms, fd_set* rfds, fd_set* wfds, fd_set* efds)
+int MySelect::addSocket(const uint32 fd, const Socket& ms, fd_set* rfds, fd_set* wfds, fd_set* efds)
 {
 	if (!m_sockets.insert(std::make_pair(fd, ms)).second)
 		return -1;
@@ -240,7 +240,7 @@ void MySelect::HandleEvent(const IOEvent& ioEvent)
 {
 
 	//printf("发生事件的FD:%d, 事件类型:%d\n", ioEvent.fd, ioEvent.sock_event);
-	std::map<uint32, MySocket>::iterator it = m_sockets.find(ioEvent.fd);
+	std::map<uint32, Socket>::iterator it = m_sockets.find(ioEvent.fd);
 
 	if (it == m_sockets.end())
 		return;
@@ -254,7 +254,7 @@ void MySelect::HandleEvent(const IOEvent& ioEvent)
 	{
 		if (it->second.getType() == SKT_LISTEN)
 		{
-			MySocket new_socket;
+			Socket new_socket;
 			if (0 < it->second.Accept(new_socket))
 				addSocket(new_socket.getSocket(), new_socket, &m_rfds, NULL, NULL);
 			else

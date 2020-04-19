@@ -30,7 +30,7 @@ public:
 
 	virtual void HandleEvent(const IOEvent& ioEvent);
 
-	int AddSocket(const MySocket& s);
+	int AddSocket(const Socket& s);
 
 protected:
 	MyEpoll();

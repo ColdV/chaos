@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MySocket.h"
+#include "Socket.h"
 #include "NetDrive.h"
 #include "MinHeap.h"
 #include "Timer.h"
@@ -9,7 +9,7 @@
 
 struct SocketCmp
 {
-	bool operator()(const MySocket& l, const MySocket& r) const
+	bool operator()(const Socket& l, const Socket& r) const
 	{
 		return l.getSocket() < r.getSocket();
 	}
@@ -30,11 +30,11 @@ class EventMgr;
 class EventMaster
 {
 public:
-	//typedef void (*EventCb)(MySocket ev, void* userData);
+	//typedef void (*EventCb)(Socket ev, void* userData);
 
 	//struct EventHandle
 	//{
-	//	MySocket*	evSrc;
+	//	Socket*	evSrc;
 	//	EventCb		listenCb;
 	//	EventCb		readCb;
 	//	EventCb		writeCb;
@@ -60,9 +60,9 @@ public:
 
 	void EraseEvent(Event& ev);
 
-	//void ProcessFdRead(MySocket* pSocket);
+	//void ProcessFdRead(Socket* pSocket);
 
-	//void ProcessFdWrite(MySocket* pSocket);
+	//void ProcessFdWrite(Socket* pSocket);
 
 
 	//ev为该mgr感兴趣的事件通过“|”的组合
@@ -74,6 +74,6 @@ private:
 	NetDrive* m_scheduler;
 	Timer		m_timer;
 	std::multimap<int, Event> m_ioEvents;
-	std::multimap<MySocket, Event, SocketCmp> m_;
+	std::multimap<Socket, Event, SocketCmp> m_;
 	std::multimap<int, EventMgr> m_evMgr;		
 };

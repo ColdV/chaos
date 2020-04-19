@@ -42,9 +42,6 @@
     <ClCompile Include="MySvrConnector\MySelect.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="MySvrConnector\MySocket.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="MySvrConnector\MySvrConnector.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -76,6 +73,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="MySvrConnector\NetDrive.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MySvrConnector\Socket.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -113,9 +113,6 @@
     <ClInclude Include="MySvrConnector\MySelect.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="MySvrConnector\MySocket.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="MySvrConnector\MySvrConnector.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -150,6 +147,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="MySvrConnector\NetDrive.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MySvrConnector\Socket.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

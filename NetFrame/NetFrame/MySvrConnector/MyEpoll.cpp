@@ -25,7 +25,7 @@ MyEpoll::MyEpoll()
 
 int MyEpoll::InitIO(const char* ip, int port, uint32 max_fd)
 {
-	MySocket mSocket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	Socket mSocket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	int res = 0;
 
 	res = mSocket.Bind(ip, port);
@@ -55,7 +55,7 @@ int MyEpoll::InitIO(const char* ip, int port, uint32 max_fd)
 	return res;
 }
 
-int MyEpoll::AddSocket(const MySocket& s)
+int MyEpoll::AddSocket(const Socket& s)
 {
 	if (!m_sockets.insert(std::make_pair(s.getSocket(), s)).second)
 		return -1;
@@ -124,7 +124,7 @@ void MyEpoll::WaitEvent()
 
 void MyEpoll::HandleEvent(const IOEvent& ioEvent)
 {
-	std::map<uint32, MySocket>::iterator it = m_sockets.find(ioEvent.fd);
+	std::map<uint32, Socket>::iterator it = m_sockets.find(ioEvent.fd);
 
 	if (it == m_sockets.end())
 		return;
@@ -138,7 +138,7 @@ void MyEpoll::HandleEvent(const IOEvent& ioEvent)
 	{
 		if (it->second.getType() == SKT_LISTEN)
 		{
-			MySocket new_socket;
+			Socket new_socket;
             int acceptNum = 0;
             while(true)
             {

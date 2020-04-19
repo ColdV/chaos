@@ -29,7 +29,7 @@ public:
 protected:
 	MySelect(int max_socket);
 
-	virtual int addSocket(const uint32 fd, const MySocket& ms, fd_set* rfds, fd_set* wfds, fd_set* efds);
+	virtual int addSocket(const uint32 fd, const Socket& ms, fd_set* rfds, fd_set* wfds, fd_set* efds);
 	void delSocket(const uint32 fd);
 	void CollectEvent(const fd_set& rfds, const fd_set& wfds, const fd_set& efds);
 

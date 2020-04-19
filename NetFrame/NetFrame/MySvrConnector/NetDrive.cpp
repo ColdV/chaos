@@ -131,7 +131,7 @@ void NetDrive::ProcessEvent()
 		if (it == m_sockets.end())
 			break;
 
-		MySocket& sk = it->second;
+		Socket& sk = it->second;
 
 		switch (ev.sock_event)
 		{
@@ -163,9 +163,9 @@ void NetDrive::ProcessEvent()
 
 
 
-void NetDrive::ProcessListen(MySocket& sk)
+void NetDrive::ProcessListen(Socket& sk)
 {
-	MySocket newSocket;
+	Socket newSocket;
 	bool loop = true;
 	int acceptNum = 0;
 	while (loop)
@@ -200,7 +200,7 @@ void NetDrive::ProcessListen(MySocket& sk)
 }
 
 
-void NetDrive::ProcessRead(MySocket& sk)
+void NetDrive::ProcessRead(Socket& sk)
 {
 	bool loop = true;
 	int n = 0;
@@ -230,12 +230,12 @@ void NetDrive::ProcessRead(MySocket& sk)
 }
 
 
-void NetDrive::ProcessWrite(MySocket& sk)
+void NetDrive::ProcessWrite(Socket& sk)
 {
 
 }
 
-void NetDrive::ProcessErr(MySocket& sk)
+void NetDrive::ProcessErr(Socket& sk)
 {
 	printf("socket[%d] err!\n", sk.getSocket());
 	DelSocket(sk.getSocket());

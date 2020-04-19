@@ -7,33 +7,12 @@ namespace EventFrame
 		while (true)
 		{
 			DispatchEvent();
-			
-			//timer events dispatch -- to ready
-
-			//signal events dispatch -- to ready
-
-			//io events dispatch	-- to ready
 		}
 	}
 
 
 	int EventCentre::DispatchEvent()
 	{
-		//for (auto it = m_readyEv.begin(); it != m_readyEv.end(); ++it)
-		//{
-		//	if (!it->first)
-		//	{
-		//		it = m_readyEv.erase(it);
-		//		break;
-		//	}
-
-		//	if(it->second && it->first)
-		//		it->second->Handle(it->first);
-
-		//	if (!it->first->IsLoop())
-		//		CancelEvent(it->first);
-		//}
-
 		TimerDispatch();
 
 		NetEventDispatch();

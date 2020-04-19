@@ -153,7 +153,7 @@
     <ClCompile Include="MySvrConnector\MyEpoll.cpp" />
     <ClCompile Include="MySvrConnector\MyIOCP.cpp" />
     <ClCompile Include="MySvrConnector\MySelect.cpp" />
-    <ClCompile Include="MySvrConnector\MySocket.cpp" />
+    <ClCompile Include="MySvrConnector\Socket.cpp" />
     <ClCompile Include="MySvrConnector\NetDrive.cpp" />
     <ClCompile Include="MySvrConnector\MySvrConnector.cpp" />
     <ClCompile Include="MySvrConnector\Timer.cpp" />
@@ -178,7 +178,7 @@
     <ClInclude Include="MySvrConnector\MyEpoll.h" />
     <ClInclude Include="MySvrConnector\MyIOCP.h" />
     <ClInclude Include="MySvrConnector\MySelect.h" />
-    <ClInclude Include="MySvrConnector\MySocket.h" />
+    <ClInclude Include="MySvrConnector\Socket.h" />
     <ClInclude Include="MySvrConnector\NetDrive.h" />
     <ClInclude Include="MySvrConnector\MySvrConnector.h" />
     <ClInclude Include="MySvrConnector\Timer.h" />

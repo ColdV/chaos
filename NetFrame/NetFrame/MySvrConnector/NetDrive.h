@@ -9,7 +9,7 @@
 *******************************************/
 
 #pragma once
-#include "MySocket.h"
+#include "Socket.h"
 #include "../MyThreadPool/MyMutex.h"
 
 
@@ -39,7 +39,7 @@ enum SockEvent
 	SE_EXCEPT = 1 << 2,
 };
 
-typedef void (*EventCb)(MySocket ev, void* userData);
+typedef void (*EventCb)(Socket ev, void* userData);
 
 struct EventHandler
 {
@@ -85,7 +85,7 @@ public:
 	static NetDrive* CreateSocketIO(int max_fd, IOType ioType = SI_SELECT);
 
 public:
-	const std::map<uint32, MySocket>& GetFds() const { return m_sockets; }
+	const std::map<uint32, Socket>& GetFds() const { return m_sockets; }
 
 	uint32 GetMaxFd() const { return m_max_socket; }
 	
@@ -110,10 +110,10 @@ public:
 
 	void ProcessEvent();
 
-	void ProcessListen(MySocket& sk);
-	void ProcessRead(MySocket& sk);
-	void ProcessWrite(MySocket& sk);
-	void ProcessErr(MySocket& sk);
+	void ProcessListen(Socket& sk);
+	void ProcessRead(Socket& sk);
+	void ProcessWrite(Socket& sk);
+	void ProcessErr(Socket& sk);
 
 	/*
 	void LockReadQueue() { m_r_mutex.Lock(); }
@@ -151,7 +151,7 @@ protected:
 */
 
 protected:
-	std::map<uint32, MySocket>	m_sockets;
+	std::map<uint32, Socket>	m_sockets;
 	std::map<uint32, SocketIOEvent> m_events;
 	std::multimap<uint32, IOEvent>	m_ioEvents;
 	uint32 m_max_socket;
