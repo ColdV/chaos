@@ -1,0 +1,156 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="源文件">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="头文件">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="资源文件">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Client\test.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MySvrConnector\Event.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MySvrConnector\EventMaster.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MySvrConnector\IOEventMgr.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MySvrConnector\main.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MySvrConnector\MsgChain.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MySvrConnector\MyEpoll.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MySvrConnector\MyIOCP.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MySvrConnector\MySelect.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MySvrConnector\MySocket.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MySvrConnector\MySvrConnector.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MySvrConnector\Timer.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MyThreadPool\MyCondition.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MyThreadPool\MyEvent.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MyThreadPool\MyMutex.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MyThreadPool\MyTask.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MyThreadPool\MyThread.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MyThreadPool\MyThreadPool.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MyThreadPool\MyThreadSyncObj.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MyThreadPool\MyWorkThread.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MySvrConnector\NetDrive.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="common\common.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="common\single_templete.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="common\stdafx.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MySvrConnector\Event.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MySvrConnector\EventMaster.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MySvrConnector\IOEventMgr.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MySvrConnector\MinHeap.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MySvrConnector\MsgChain.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MySvrConnector\MyEpoll.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MySvrConnector\MyIOCP.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MySvrConnector\MySelect.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MySvrConnector\MySocket.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MySvrConnector\MySvrConnector.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MySvrConnector\Timer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MyThreadPool\MyCondition.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MyThreadPool\MyEvent.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MyThreadPool\MyMutex.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MyThreadPool\MyTask.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MyThreadPool\MyThread.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MyThreadPool\MyThreadPool.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MyThreadPool\MyThreadSyncObj.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MyThreadPool\MyWorkThread.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MyThreadPool\stdafx.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MySvrConnector\NetDrive.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
