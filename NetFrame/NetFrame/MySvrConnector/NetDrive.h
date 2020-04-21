@@ -19,156 +19,124 @@ typedef unsigned int(__stdcall *ThreadProcess)(void*);
 typedef void(*ThreadProcess)(void*);
 #endif // _WIN32
 
-
-enum IOType
+namespace NetFrame
 {
-	SI_SELECT = 1,
-	SI_EPOLL = 2,
-	SI_IOCP = 3
-};
 
-enum
-{
-	MAX_RECV_BUF_SIZE = 1024 * 10,
-};
+	enum IOType
+	{
+		SI_SELECT = 1,
+		SI_EPOLL = 2,
+		SI_IOCP = 3
+	};
 
-enum SockEvent
-{
-	SE_READ = 1,
-	SE_WRITE = 1 << 1,
-	SE_EXCEPT = 1 << 2,
-};
+	enum
+	{
+		MAX_RECV_BUF_SIZE = 1024 * 10,
+	};
 
-typedef void (*EventCb)(Socket ev, void* userData);
+	enum SockEvent
+	{
+		SE_READ = 1,
+		SE_WRITE = 1 << 1,
+		SE_EXCEPT = 1 << 2,
+	};
 
-struct EventHandler
-{
-	EventCb		listenCb;
-	EventCb		readCb;
-	EventCb		writeCb;
-	EventCb		errCb;
-};
+	typedef void (*EventCb)(Socket ev, void* userData);
 
-
-struct IOEvent
-{
-	uint32 fd;
-	SockEvent sock_event;
-	EventCb evcb;
-};
+	struct EventHandler
+	{
+		EventCb		listenCb;
+		EventCb		readCb;
+		EventCb		writeCb;
+		EventCb		errCb;
+	};
 
 
-
-struct SocketIOEvent
-{
-	uint32			fd;
-	//char			evBuffer[1024];
-	EventHandler	eventHandler;	
-	void*			pUserData;
-};
-
-class NetDrive
-{
-public:
-	NetDrive();
-	virtual ~NetDrive();
-
-public:
-	virtual int InitIO(const char* ip, int port, uint32 max_fd) = 0;
-
-	virtual void WaitEvent() = 0;
-
-	virtual void HandleEvent(const IOEvent& ioEvent) = 0;
-
-	virtual void HandleEvent() {}
-
-	static NetDrive* CreateSocketIO(int max_fd, IOType ioType = SI_SELECT);
-
-public:
-	const std::map<uint32, Socket>& GetFds() const { return m_sockets; }
-
-	uint32 GetMaxFd() const { return m_max_socket; }
-	
-	uint32 GetEventSize() { return m_event.size(); }
-
-	SocketIOEvent* GetEvent(uint32 fd);
-
-	void AddEvent(uint32 fd, EventCb readCb, EventCb writeCb, EventCb listenCb, EventCb errCb, void* userData);
-
-	/*{ 
-		//LockReadQueue();  
-		int event_size = m_event.size() + m_r_event.size() + m_w_event.size(); 
-		//UnLockReadQueue(); 
-
-		return event_size;
-	}
-	*/
-
-	bool EventEmpty() const { return m_event.empty(); }
-	const IOEvent& GetIOEvent() const { return m_event.front(); }
-	void DelIOEvent() { m_event.pop(); }
-
-	void ProcessEvent();
-
-	void ProcessListen(Socket& sk);
-	void ProcessRead(Socket& sk);
-	void ProcessWrite(Socket& sk);
-	void ProcessErr(Socket& sk);
-
-	/*
-	void LockReadQueue() { m_r_mutex.Lock(); }
-	void UnLockReadQueue() { m_r_mutex.UnLock(); }
-	bool ReadEventEmpty() const { return m_r_event.empty(); }
-	const IOEvent& GetReadEvent() const{ return m_r_event.front(); }
-	void PopReadEvent() { printf("„h³ýÊÂ¼þ!\n"); m_r_event.pop(); }
-	
-
-	void LockWriteQueue() { m_w_mutex.Lock(); }
-	void UnLockWriteQueue() { m_w_mutex.UnLock(); }
-	*/
-
-protected:
-	virtual void addIOEvent(const IOEvent& ioEvent) { m_event.push(ioEvent); }
-
-	virtual void delSocket(const uint32 fd) {}
-
-	virtual int AddSocket(uint32 fd) { return -1; }
-
-	virtual int DelSocket(uint32 fd) { return -1; }
-
-	//virtual bool InitIOThread();
-
-/*
-#ifdef _WIN32
-	static unsigned int __stdcall ReadThreadProcess(void*);
-
-	static unsigned int __stdcall WriteThreadProcess(void*);
-#else
-	static void ReadThreadProcess(void*);
-
-	static void WriteThreadProcess(void*);
-#endif // _WIN32
-*/
-
-protected:
-	std::map<uint32, Socket>	m_sockets;
-	std::map<uint32, SocketIOEvent> m_events;
-	std::multimap<uint32, IOEvent>	m_ioEvents;
-	uint32 m_max_socket;
-	char m_recv_buf[MAX_RECV_BUF_SIZE];
-	std::queue<IOEvent> m_event;
-	int m_ioType;
-
-	/*
-	std::queue<IOEvent> m_r_event;
-	MyMutex	m_r_mutex;
-	unsigned long int m_r_tid;
-
-	std::queue<IOEvent>	m_w_event;
-	MyMutex m_w_mutex;
-	unsigned long int m_w_tid;
-	*/
-};
+	struct IOEvent
+	{
+		uint32 fd;
+		SockEvent sock_event;
+		EventCb evcb;
+	};
 
 
-NetDrive* CreateSocketIO(int max_fd, IOType ioType  = SI_SELECT);
+
+	struct SocketIOEvent
+	{
+		uint32			fd;
+		//char			evBuffer[1024];
+		EventHandler	eventHandler;
+		void* pUserData;
+	};
+
+	class NetDrive
+	{
+	public:
+		virtual ~NetDrive();
+
+	protected:
+		NetDrive();
+
+	public:
+		//virtual int InitIO(const char* ip, int port, uint32 max_fd) = 0;
+
+		//virtual void WaitEvent() = 0;
+
+		//virtual void HandleEvent(const IOEvent& ioEvent) = 0;
+
+		//virtual void HandleEvent() {}
+
+		virtual int Init() = 0;
+
+		virtual void Launch() = 0;
+
+		static NetDrive* CreateSocketIO(int max_fd, IOType ioType = SI_SELECT);
+
+		static NetDrive* AdapterNetDrive(int maxFd);
+
+	public:
+		//const std::map<uint32, Socket>& GetFds() const { return m_sockets; }
+
+		//uint32 GetMaxFd() const { return m_max_socket; }
+
+		//uint32 GetEventSize() { return m_event.size(); }
+
+		//SocketIOEvent* GetEvent(uint32 fd);
+
+		//void AddEvent(uint32 fd, EventCb readCb, EventCb writeCb, EventCb listenCb, EventCb errCb, void* userData);
+
+		//bool EventEmpty() const { return m_event.empty(); }
+		//const IOEvent& GetIOEvent() const { return m_event.front(); }
+		//void DelIOEvent() { m_event.pop(); }
+
+		//void ProcessEvent();
+
+		//void ProcessListen(Socket& sk);
+		//void ProcessRead(Socket& sk);
+		//void ProcessWrite(Socket& sk);
+		//void ProcessErr(Socket& sk);
+
+
+	protected:
+		//virtual void addIOEvent(const IOEvent& ioEvent) { m_event.push(ioEvent); }
+
+		//virtual void delSocket(const uint32 fd) {}
+
+		//virtual int AddSocket(uint32 fd) { return -1; }
+
+		//virtual int DelSocket(uint32 fd) { return -1; }
+
+
+	protected:
+		//std::map<uint32, Socket>	m_sockets;
+		//std::map<uint32, SocketIOEvent> m_events;
+		//std::multimap<uint32, IOEvent>	m_ioEvents;
+		//uint32 m_max_socket;
+		//char m_recv_buf[MAX_RECV_BUF_SIZE];
+		//std::queue<IOEvent> m_event;
+		//int m_ioType;
+	};
+
+
+	NetDrive* CreateSocketIO(int max_fd, IOType ioType = SI_SELECT);
+}

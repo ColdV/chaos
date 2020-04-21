@@ -19,16 +19,20 @@ namespace NetFrame
 #endif // _WIN32
 
 
-	Socket::Socket(uint32 fd)
-		:m_fd(fd)
+	Socket::Socket(uint32 fd):
+		m_type(SKT_INVALID),
+		m_fd(fd),
+		m_port(0),
+		m_ip{0}
 	{
-		initSokcet();
 	}
 
-	Socket::Socket(int af, int type, int protocol)
+	Socket::Socket(int af, int type, int protocol):
+		m_type(SKT_INVALID),
+		m_port(0),
+		m_ip{ 0 }
 	{
-		initSokcet();
-
+		/*Init();*/
 		m_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	}
 
@@ -39,25 +43,15 @@ namespace NetFrame
 	}
 
 
-	int Socket::initSokcet()
+	int Socket::Init()
 	{
 		m_type = SKT_INVALID;
-		m_fd = 0;
 		memset(m_ip, 0, sizeof(m_ip));
 		m_port = 0;
 
 		return 0;
 	}
 
-	/*uint32 Socket::Socket()
-	{
-		if (FD_INVALID != m_fd)
-			return m_fd;
-
-		m_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-
-		return m_fd;
-	}*/
 
 	int Socket::Bind(const char* strIP, const int nPort)
 	{

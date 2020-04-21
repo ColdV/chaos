@@ -51,8 +51,30 @@ void timecb(unsigned int timeid, void* userData)
 	printf("timeid:%u, time:%lld\n", timeid, time(NULL));
 }
 
+
+class TestNonCpy
+{
+public:
+	TestNonCpy(const TestNonCpy&) = delete;
+	void operator=(TestNonCpy&) = delete;
+	TestNonCpy(int value) :m_value(value)
+	{}
+	~TestNonCpy() {}
+
+private:
+	int m_value;
+};
+
+void testNonCpy(TestNonCpy cpy)
+{
+	;
+}
+
 int main()
 {
+
+	TestNonCpy c(1);
+	testNonCpy(c);
 	//SetConsoleTitle(L"NetFrame");
 	/*
 	MySvrConnector svr(FD_SETSIZE);
@@ -67,7 +89,6 @@ int main()
 	//if(signal(SIGPIPE, SIG_IGN) == SIG_ERR)
 	//   return -1;
 #endif
-
 	//NetDrive* p = CreateSocketIO(FD_SETSIZE, SI_EPOLL);
 
 	//if (!p)
