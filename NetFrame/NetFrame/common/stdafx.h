@@ -49,6 +49,15 @@ typedef unsigned int	uint32;
 typedef long long int	int64;
 typedef unsigned long long int uint64;
 
+#ifdef WIN32
+typedef SOCKET socket_t;
+
+#else
+typedef int socket_t;
+
+#endif // WIN32
+
+
 const int MAX_INT = 0x7FFFFFFF;
 
 

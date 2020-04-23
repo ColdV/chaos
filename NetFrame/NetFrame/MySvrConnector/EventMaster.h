@@ -1,5 +1,8 @@
 #pragma once
 
+
+#if 0
+
 #include "Socket.h"
 #include "NetDrive.h"
 #include "MinHeap.h"
@@ -77,3 +80,5 @@ private:
 	std::multimap<Socket, Event, SocketCmp> m_;
 	std::multimap<int, EventMgr> m_evMgr;		
 };
+
+#endif

@@ -1,8 +1,8 @@
 #pragma once
 #include "NetDrive.h"
-struct Event;
+//struct Event;
 
-typedef void (*EventCallback)(Event* pEvent, void* userData);
+//typedef void (*EventCallback)(Event* pEvent, void* userData);
 
 #include "../common/stdafx.h"
 #include <map>
@@ -17,74 +17,68 @@ enum
 	EV_SIGNAL = 1 << 4,
 };
 
-struct TimerEvent
-{
-	unsigned int timerID;
-	int timeOut;
-	//TimerCallback cb;
-};
+//struct TimerEvent
+//{
+//	unsigned int timerID;
+//	int timeOut;
+//	//TimerCallback cb;
+//};
+//
+//
+//struct SocketEvent		//need scoketEvMgr
+//{
+//	unsigned int fd;
+//	int size;
+//	int totalSize;
+//	char* buffer;
+//};
+//
+//
+//struct Event
+//{
+//	int evID;
+//	int ev;
+//
+//	union
+//	{
+//		TimerEvent		evTimer;
+//		SocketEvent		evSocket;
+//	} Ev;
+//
+//	EventCallback	evCb;
+//	bool isLoop;
+//	void* userData;
+//};
+//
+//
+//class EventNew
+//{
+//public:
+//	virtual ~EventNew() = 0;
+//
+//protected:
+//	EventNew() {};
+//
+//	EventNew* NewEvent(short ev, EventCallback evCb, bool isLoop) {};
+//
+//protected:
+//	unsigned int m_id;
+//	short m_ev;
+//	EventCallback m_evCb;
+//	bool m_isLoop;
+//
+//	static unsigned int m_increment;
+//	static std::set<unsigned int> m_readyId;
+//};
 
 
-struct SocketEvent		//need scoketEvMgr
-{
-	unsigned int fd;
-	int size;
-	int totalSize;
-	char* buffer;
-};
-
-
-struct Event
-{
-	int evID;
-	int ev;
-
-	union
-	{
-		TimerEvent		evTimer;
-		SocketEvent		evSocket;
-	} Ev;
-
-	EventCallback	evCb;
-	bool isLoop;
-	void* userData;
-};
-
-
-class EventNew
-{
-public:
-	virtual ~EventNew() = 0;
-
-protected:
-	EventNew() {};
-
-	EventNew* NewEvent(short ev, EventCallback evCb, bool isLoop) {};
-
-protected:
-	unsigned int m_id;
-	short m_ev;
-	EventCallback m_evCb;
-	bool m_isLoop;
-
-	static unsigned int m_increment;
-	static std::set<unsigned int> m_readyId;
-};
-
-
-namespace EventFrame
+namespace NetFrame
 {
 	class EventHandler;
 	class Event;
 	class Socket;
 
 	typedef std::map<Event*, EventHandler*> EventMap;
-
-
-	class Socket
-	{
-	};
-
 
 	//抽象事件(资源类)
 	class Event
@@ -111,19 +105,6 @@ namespace EventFrame
 		EventHandler* m_pHandler;
 	};
 
-
-	////事件启动器
-	//class EventLauncher
-	//{
-	//public:
-	//	EventLauncher() {}
-	//	virtual ~EventLauncher() = 0;
-
-	//	virtual void Run() = 0;
-	//};
-
-
-	class IOEventDispatcher;
 
 	//事件的注册、销毁、分发
 	class EventCentre
@@ -210,4 +191,4 @@ namespace EventFrame
 		virtual void Handle(Event* pEv);
 	};
 
-}	//namespace EventFrame
+}	//namespace NetFrame

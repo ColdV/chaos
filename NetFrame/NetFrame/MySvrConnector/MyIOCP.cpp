@@ -12,10 +12,15 @@
 
 #include "MyIOCP.h"
 
-MyIOCP& MyIOCP::Instance()
+namespace NetFrame
 {
-	static MyIOCP myIOCP_;
-	return myIOCP_;
+
+	MyIOCP& MyIOCP::Instance()
+	{
+		static MyIOCP myIOCP_;
+		return myIOCP_;
+	}
+
 }
 
 #endif // !_WIN32

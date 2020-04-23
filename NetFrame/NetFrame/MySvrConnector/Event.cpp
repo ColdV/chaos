@@ -1,7 +1,15 @@
 #include "Event.h"
 
-namespace EventFrame
+namespace NetFrame
 {
+
+	int EventCentre::Init()
+	{
+		m_pNetDrive = NetDrive::AdapterNetDrive();
+
+		return;
+	}
+
 	void EventCentre::EventLoop()
 	{
 		while (true)

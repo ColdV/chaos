@@ -30,7 +30,7 @@ namespace NetFrame
 	class Socket
 	{
 	public:
-		explicit Socket(uint32 fd);
+		explicit Socket(socket_t fd);
 		Socket(int af, int type, int protocol);
 		~Socket();
 
@@ -39,7 +39,7 @@ namespace NetFrame
 
 		int Listen();
 
-		int Accept(Socket& sock);
+		int Accept(/*Socket& sock*/);
 
 		int Connect(const char* strIP, const int nPort);
 
@@ -50,7 +50,7 @@ namespace NetFrame
 		int Send(const char* buf, const int size);
 
 	public:
-		uint32 GetFd() const { return m_fd; }
+		socket_t GetFd() const { return m_fd; }
 
 		uint32 GetFdType() const { return m_type; }
 
@@ -63,10 +63,12 @@ namespace NetFrame
 
 	private:
 		SocketType m_type;
-		uint32 m_fd;
+		socket_t m_fd;
 		int m_port;
 		char m_ip[MAX_IP_SIZE];
 	};
+
+
 
 #ifdef _WIN32
 

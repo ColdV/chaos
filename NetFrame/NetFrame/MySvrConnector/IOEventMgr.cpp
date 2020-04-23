@@ -1,5 +1,6 @@
 #include "IOEventMgr.h"
 
+#if 0
 IOEventMgr::IOEventMgr()
 {
 }
@@ -29,3 +30,5 @@ void IOEventMgr::DelIOEvent(const Event& ev)
 		}
 	}
 }
+
+#endif

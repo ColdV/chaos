@@ -14,20 +14,26 @@
 
 #include "NetDrive.h"
 
-class MyIOCP : public NetDrive
+namespace NetFrame
 {
-public:
-	static MyIOCP& Instance();
-	~MyIOCP() {}
 
-	virtual int InitIO(const char* ip, int port, uint32 max_fd) { return 0; }
+	class MyIOCP : public NetDrive
+	{
+	public:
+		static MyIOCP& Instance();
+		~MyIOCP() {}
 
-	virtual void WaitEvent() {};
+		virtual int InitIO(const char* ip, int port, uint32 max_fd) { return 0; }
 
-	virtual void HandleEvent(const IOEvent& fdEvent) {};
+		virtual void WaitEvent() {};
 
-protected:
-	MyIOCP() {}
-};
+		virtual void HandleEvent(const IOEvent& fdEvent) {};
+
+	protected:
+		MyIOCP() {}
+	};
+
+}
+
 
 #endif // _WIN32

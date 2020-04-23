@@ -1,5 +1,7 @@
 #include "EventMaster.h"
 
+
+#if 0
 EventMaster::EventMaster() :m_base(NULL)
 //, m_readCb(NULL)
 //, m_writeCb(NULL)
@@ -114,3 +116,5 @@ void EventMaster::EraseEvent(Event& ev)
 		m_timer.DelTimer(ev.Ev.evTimer.timerID);
 	}
 }
+
+#endif 
