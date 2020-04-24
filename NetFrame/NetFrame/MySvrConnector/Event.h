@@ -1,12 +1,10 @@
 #pragma once
-#include "NetDrive.h"
-//struct Event;
 
-//typedef void (*EventCallback)(Event* pEvent, void* userData);
 
 #include "../common/stdafx.h"
 #include <map>
 #include <set>
+#include "NetDrive.h"
 
 enum
 {
@@ -76,9 +74,20 @@ namespace NetFrame
 {
 	class EventHandler;
 	class Event;
-	class Socket;
 
-	typedef std::map<Event*, EventHandler*> EventMap;
+	typedef std::map<socket_t, Event*> NetEventMap;
+	typedef std::map<int, Event*>	TimerEventMap;
+	typedef std::map<int, Event*>	SignalEventMap;
+	typedef std::list<Event*>	ActiveEventList;
+
+
+	union EventKey
+	{
+		socket_t	netEvKey;
+		int			timerEvKey;
+		int			signalEvKey;
+	};
+
 
 	//抽象事件(资源类)
 	class Event
@@ -87,62 +96,20 @@ namespace NetFrame
 		Event() {}
 		virtual ~Event() = 0;
 
-		void SetID(uint32 id) { m_id = id; }
-		uint32 GetID() { return m_id; }
-
-		void SetLoop(bool isLoop) { m_isLoop = isLoop; }
-		bool IsLoop() { return m_isLoop; }
-
 		void SetEv(uint32 ev) { m_ev = ev; }
-		uint32 GetEv() { return m_ev; }
+		uint32 GetEv() const { return m_ev; }
 
 		void SetHandler(EventHandler* pHandler) { m_pHandler = pHandler; }
 
+		void Handle() { if (!m_pHandler) return; m_pHandler->Handle(this); }
+
+		const EventKey& GetEvKey() const { return m_evKey; }
+
 	private:
-		uint32 m_id;
-		bool m_isLoop;
 		uint32 m_ev;
 		EventHandler* m_pHandler;
+		EventKey	m_evKey;
 	};
-
-
-	//事件的注册、销毁、分发
-	class EventCentre
-	{
-	public:
-		EventCentre() {}
-		~EventCentre() {}
-
-		int Init();
-
-		void EventLoop();
-
-		int RegisterEvent(Event* ev, EventHandler* pHandler, bool isReady);
-
-		int CancelEvent(Event* ev);
-
-		int DispatchEvent();
-
-		int NetEventDispatch();
-
-		int SignalDispatch();
-
-		int TimerDispatch();
-
-		int ProcessReadyEvent();
-
-	private:
-		EventMap m_netEvs;			//IOMasterEvent->AllIOEvent
-
-		NetDrive* m_pNetDrive;
-
-		EventMap m_timerEvs;
-
-		EventMap m_signalEvs;
-
-		EventMap m_readyEv;
-	};
-
 
 
 	//抽象事件处理器
@@ -156,15 +123,54 @@ namespace NetFrame
 	};
 
 
-	//网络事件调度器
-	class NetEventDispatcher
+	//事件的注册、销毁、分发
+	class EventCentre
 	{
 	public:
-		NetEventDispatcher();
-		virtual ~NetEventDispatcher() = 0;
+		EventCentre();
+		~EventCentre();
 
-		virtual void Init() = 0;
+		int Init();
+
+		void EventLoop();
+
+		int RegisterEvent(Event* ev, EventHandler* pHandler);
+
+		int CancelEvent(Event* ev);
+
+		int DispatchEvent();
+
+		int NetEventDispatch();
+
+		int SignalDispatch();
+
+		int TimerDispatch();
+
+		int ProcessActiveEvent();
+
+	private:
+		NetEventMap m_netEvs;			//IOMasterEvent->AllIOEvent
+
+		NetDrive* m_pNetDrive;
+
+		TimerEventMap m_timerEvs;
+
+		SignalEventMap m_signalEvs;
+
+		ActiveEventList m_activeEvs;
 	};
+
+
+
+	////网络事件调度器
+	//class NetEventDispatcher
+	//{
+	//public:
+	//	NetEventDispatcher();
+	//	virtual ~NetEventDispatcher() = 0;
+
+	//	virtual void Init() = 0;
+	//};
 
 
 	class NetEvent : public Event

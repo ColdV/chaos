@@ -114,7 +114,7 @@ namespace NetFrame
 			fdEv.fd = rfds.fd_array[i];
 			fdEv.ev = EV_IOREAD;
 
-			PushReadyFd(fdEv);
+			PushActiveFd(fdEv);
 		}
 
 		for (uint32 i = 0; i < wfds.fd_count; ++i)
@@ -127,7 +127,7 @@ namespace NetFrame
 			fdEv.fd = rfds.fd_array[i];
 			fdEv.ev = EV_IOWRITE;
 
-			PushReadyFd(fdEv);
+			PushActiveFd(fdEv);
 		}
 
 		for (uint32 i = 0; i < efds.fd_count; ++i)
@@ -140,7 +140,7 @@ namespace NetFrame
 			fdEv.fd = rfds.fd_array[i];
 			fdEv.ev = EV_IOEXCEPT;
 
-			PushReadyFd(fdEv);
+			PushActiveFd(fdEv);
 		}
 
 #else
@@ -183,7 +183,7 @@ namespace NetFrame
 				continue;
 
 			fdEv.fd = fd;
-			PushReadyFd(fdEv);
+			PushActiveFd(fdEv);
 		}
 
 

@@ -12,7 +12,7 @@
 #include "Socket.h"
 #include "../MyThreadPool/MyMutex.h"
 #include <list>
-
+#include "Event.h"
 
 #ifdef _WIN32
 typedef unsigned int(__stdcall *ThreadProcess)(void*);
@@ -87,7 +87,7 @@ namespace NetFrame
 		virtual ~NetDrive();
 
 	protected:
-		NetDrive() { m_fds.clear(); m_readyFd.clear(); };
+		NetDrive() { m_fds.clear(); m_activeFd.clear(); };
 
 	public:
 		//virtual int InitIO(const char* ip, int port, uint32 max_fd) = 0;
@@ -106,7 +106,9 @@ namespace NetFrame
 
 		void DelFd(socket_t fd, short ev) { m_fds.erase(fd); CancelFd(fd, ev); }
 
-		//static NetDrive* CreateSocketIO(int max_fd, IOType ioType = SI_SELECT);
+		const std::list<FdEvent>& GetActives() const { return m_activeFd; }
+
+		void ResetActives() { m_activeFd.clear(); }
 
 		static NetDrive* AdapterNetDrive();
 
@@ -142,11 +144,11 @@ namespace NetFrame
 
 		//virtual int DelSocket(uint32 fd) { return -1; }
 
-		virtual void RegistFd(uint32 fd, short ev) {}
+		virtual void RegistFd(socket_t fd, short ev) {}
 
 		virtual void CancelFd(socket_t fd, short ev) {}
 
-		void PushReadyFd(const FdEvent& fdEv) { m_readyFd.push_back(fdEv); }
+		void PushActiveFd(const FdEvent& fdEv) { m_activeFd.insert(fdEv); }
 
 		std::set<socket_t>* GetFds() { return &m_fds; }
 
@@ -160,7 +162,7 @@ namespace NetFrame
 		//int m_ioType;
 
 		std::set<socket_t> m_fds;
-		std::list<FdEvent> m_readyFd;
+		std::list<FdEvent> m_activeFd;
 	};
 
 
