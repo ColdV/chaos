@@ -1,5 +1,7 @@
 #include "Event.h"
 
+
+
 namespace NetFrame
 {
 
@@ -66,7 +68,7 @@ namespace NetFrame
 
 		uint32 iEv = ev->GetEv();
 
-		ev->SetHandler(pHandler);
+		//ev->SetHandler(pHandler);
 
 		const EventKey& evKey = ev->GetEvKey();
 
@@ -137,5 +139,16 @@ namespace NetFrame
 	int EventCentre::TimerDispatch()
 	{
 		return 0;
+	}
+}
+
+
+
+
+namespace NetFrame
+{
+	void NetEvent::Handle()
+	{
+
 	}
 }

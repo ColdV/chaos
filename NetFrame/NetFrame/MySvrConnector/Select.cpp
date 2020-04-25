@@ -9,16 +9,16 @@
 *******************************************/
 
 
-#include "MySelect.h"
+#include "Select.h"
 
 namespace NetFrame
 {
 
 	Select& Select::Instance(int max_socket)
 	{
-		static Select mySelect_(max_socket);
+		static Select s_select(max_socket);
 
-		return mySelect_;
+		return s_select;
 	}
 
 

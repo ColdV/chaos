@@ -1,6 +1,6 @@
 /************C++ Header File****************
 #
-#	Filename: MyEpoll.h
+#	Filename: Epoll.h
 #
 #	Author: H`W
 #	Description: ---
@@ -16,13 +16,13 @@
 #include <sys/epoll.h>
 
 
-class MyEpoll : public NetDrive
+class Epoll : public NetDrive
 {
 public:
 
-	static MyEpoll& Instance();
+	static Epoll& Instance();
 
-	virtual ~MyEpoll() {}
+	virtual ~Epoll() {}
 
 	virtual int InitIO(const char* ip, int port, uint32 max_fd);
 
@@ -33,7 +33,7 @@ public:
 	int AddSocket(const Socket& s);
 
 protected:
-	MyEpoll();
+	Epoll();
 
 	virtual void delSocket(const uint32 fd);
 

@@ -1,6 +1,6 @@
 /************C++ Source File****************
 #
-#	Filename: MyIOCP.cpp
+#	Filename: IOCP.cpp
 #
 #	Author: H`W
 #	Description: ---
@@ -10,15 +10,15 @@
 
 #ifdef _WIN32
 
-#include "MyIOCP.h"
+#include "IOCP.h"
 
 namespace NetFrame
 {
 
-	MyIOCP& MyIOCP::Instance()
+	IOCP& IOCP::Instance()
 	{
-		static MyIOCP myIOCP_;
-		return myIOCP_;
+		static IOCP s_iocp;
+		return s_iocp;
 	}
 
 }

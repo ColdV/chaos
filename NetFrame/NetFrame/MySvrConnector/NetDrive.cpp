@@ -10,9 +10,9 @@
 
 
 #include "NetDrive.h"
-#include "MySelect.h"
-#include "MyEpoll.h"
-#include "MyIOCP.h"
+#include "Select.h"
+#include "Epoll.h"
+#include "IOCP.h"
 
 namespace NetFrame
 {
@@ -249,15 +249,15 @@ namespace NetFrame
 //	NetDrive* CreateSocketIO(int max_fd, IOType ioType /*= SI_SELECT*/)
 //	{
 //		if (FD_SETSIZE >= max_fd && SI_SELECT == ioType)
-//			return &MySelect::Instance(max_fd);
+//			return &Select::Instance(max_fd);
 //
 //		else
 //		{
 //#ifdef _WIN32
-//			return &MySelect::Instance(max_fd);
+//			return &Select::Instance(max_fd);
 //
 //#else
-//			return &MyEpoll::Instance();
+//			return &Epoll::Instance();
 //
 //#endif // _WIN32
 //		}
@@ -270,7 +270,7 @@ namespace NetFrame
 #ifdef _WIN32
 		return &Select::Instance(1);
 #else
-		return &MyEpoll:Instance(1);
+		return &Epoll:Instance(1);
 #endif
 
 	}

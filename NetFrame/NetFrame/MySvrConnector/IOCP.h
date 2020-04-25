@@ -1,6 +1,6 @@
 /************C++ Header File****************
 #
-#	Filename: MyIOCP.h
+#	Filename: IOCP.h
 #
 #	Author: H`W
 #	Description: ---
@@ -17,11 +17,11 @@
 namespace NetFrame
 {
 
-	class MyIOCP : public NetDrive
+	class IOCP : public NetDrive
 	{
 	public:
-		static MyIOCP& Instance();
-		~MyIOCP() {}
+		static IOCP& Instance();
+		~IOCP() {}
 
 		virtual int InitIO(const char* ip, int port, uint32 max_fd) { return 0; }
 
@@ -30,7 +30,7 @@ namespace NetFrame
 		virtual void HandleEvent(const IOEvent& fdEvent) {};
 
 	protected:
-		MyIOCP() {}
+		IOCP() {}
 	};
 
 }

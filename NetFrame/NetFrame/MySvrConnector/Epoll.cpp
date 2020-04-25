@@ -1,6 +1,6 @@
 /************C++ Source File****************
 #
-#	Filename: MyEpoll.cpp
+#	Filename: Epoll.cpp
 #
 #	Author: H`W
 #	Description: ---
@@ -10,20 +10,20 @@
 
 #ifndef _WIN32
 
-#include "MyEpoll.h"
+#include "Epoll.h"
 
-MyEpoll& MyEpoll::Instance()
+Epoll& Epoll::Instance()
 {
-	static MyEpoll myEpoll_;
-	return myEpoll_;
+	static Epoll s_epoll;
+	return s_epoll;
 }
 
-MyEpoll::MyEpoll()
+Epoll::Epoll()
 {
 }
 
 
-int MyEpoll::InitIO(const char* ip, int port, uint32 max_fd)
+int Epoll::InitIO(const char* ip, int port, uint32 max_fd)
 {
 	Socket mSocket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	int res = 0;
@@ -55,7 +55,7 @@ int MyEpoll::InitIO(const char* ip, int port, uint32 max_fd)
 	return res;
 }
 
-int MyEpoll::AddSocket(const Socket& s)
+int Epoll::AddSocket(const Socket& s)
 {
 	if (!m_sockets.insert(std::make_pair(s.getSocket(), s)).second)
 		return -1;
@@ -70,7 +70,7 @@ int MyEpoll::AddSocket(const Socket& s)
 }
 
 
-int MyEpoll::AddSocket(uint32 fd)
+int Epoll::AddSocket(uint32 fd)
 {
 	epoll_event ep_event;
 	ep_event.data.fd = fd;
@@ -82,7 +82,7 @@ int MyEpoll::AddSocket(uint32 fd)
 }
 
 
-int MyEpoll::DelSocket(uint32 fd)
+int Epoll::DelSocket(uint32 fd)
 {
 	epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, NULL);
 
@@ -90,7 +90,7 @@ int MyEpoll::DelSocket(uint32 fd)
 }
 
 
-void MyEpoll::WaitEvent()
+void Epoll::WaitEvent()
 {
 	int cnt = epoll_wait(m_epfd, m_events, m_max_fd, 1);
 	if (0 > cnt)
@@ -122,7 +122,7 @@ void MyEpoll::WaitEvent()
 	}
 }
 
-void MyEpoll::HandleEvent(const IOEvent& ioEvent)
+void Epoll::HandleEvent(const IOEvent& ioEvent)
 {
 	std::map<uint32, Socket>::iterator it = m_sockets.find(ioEvent.fd);
 
@@ -205,7 +205,7 @@ void MyEpoll::HandleEvent(const IOEvent& ioEvent)
 	DelIOEvent();
 }
 
-void MyEpoll::delSocket(const uint32 fd)
+void Epoll::delSocket(const uint32 fd)
 {
 	m_sockets.erase(fd);
 	epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, NULL);

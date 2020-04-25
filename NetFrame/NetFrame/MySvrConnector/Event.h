@@ -96,18 +96,21 @@ namespace NetFrame
 		Event() {}
 		virtual ~Event() = 0;
 
+
+		virtual void Handle() = 0;
+
 		void SetEv(uint32 ev) { m_ev = ev; }
 		uint32 GetEv() const { return m_ev; }
 
-		void SetHandler(EventHandler* pHandler) { m_pHandler = pHandler; }
+		//void SetHandler(EventHandler* pHandler) { m_pHandler = pHandler; }
 
-		void Handle() { if (!m_pHandler) return; m_pHandler->Handle(this); }
+		//void Handle() { if (!m_pHandler) return; m_pHandler->Handle(this); }
 
 		const EventKey& GetEvKey() const { return m_evKey; }
 
 	private:
 		uint32 m_ev;
-		EventHandler* m_pHandler;
+		//EventHandler* m_pHandler;
 		EventKey	m_evKey;
 	};
 
@@ -176,12 +179,17 @@ namespace NetFrame
 	class NetEvent : public Event
 	{
 	public:
-		NetEvent(Socket* pSocket) { pSocket = m_pSocket; }
+		NetEvent(Socket* pSocket):m_pSocket(pSocket)
+		{ 
+		}
+
 		~NetEvent()
 		{
 			if (m_pSocket)
 				delete m_pSocket;
 		}
+
+		virtual void Handle() override;
 
 	private:
 		Socket* m_pSocket;

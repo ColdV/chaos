@@ -150,9 +150,9 @@
     <ClCompile Include="MySvrConnector\IOEventMgr.cpp" />
     <ClCompile Include="MySvrConnector\main.cpp" />
     <ClCompile Include="MySvrConnector\MsgChain.cpp" />
-    <ClCompile Include="MySvrConnector\MyEpoll.cpp" />
-    <ClCompile Include="MySvrConnector\MyIOCP.cpp" />
-    <ClCompile Include="MySvrConnector\MySelect.cpp" />
+    <ClCompile Include="MySvrConnector\Epoll.cpp" />
+    <ClCompile Include="MySvrConnector\IOCP.cpp" />
+    <ClCompile Include="MySvrConnector\Select.cpp" />
     <ClCompile Include="MySvrConnector\Socket.cpp" />
     <ClCompile Include="MySvrConnector\NetDrive.cpp" />
     <ClCompile Include="MySvrConnector\MySvrConnector.cpp" />
@@ -175,9 +175,9 @@
     <ClInclude Include="MySvrConnector\IOEventMgr.h" />
     <ClInclude Include="MySvrConnector\MinHeap.h" />
     <ClInclude Include="MySvrConnector\MsgChain.h" />
-    <ClInclude Include="MySvrConnector\MyEpoll.h" />
-    <ClInclude Include="MySvrConnector\MyIOCP.h" />
-    <ClInclude Include="MySvrConnector\MySelect.h" />
+    <ClInclude Include="MySvrConnector\Epoll.h" />
+    <ClInclude Include="MySvrConnector\IOCP.h" />
+    <ClInclude Include="MySvrConnector\Select.h" />
     <ClInclude Include="MySvrConnector\Socket.h" />
     <ClInclude Include="MySvrConnector\NetDrive.h" />
     <ClInclude Include="MySvrConnector\MySvrConnector.h" />

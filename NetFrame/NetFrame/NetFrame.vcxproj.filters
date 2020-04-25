@@ -33,15 +33,6 @@
     <ClCompile Include="MySvrConnector\MsgChain.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="MySvrConnector\MyEpoll.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="MySvrConnector\MyIOCP.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="MySvrConnector\MySelect.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="MySvrConnector\MySvrConnector.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -78,6 +69,15 @@
     <ClCompile Include="MySvrConnector\Socket.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="MySvrConnector\IOCP.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MySvrConnector\Epoll.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MySvrConnector\Select.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common\common.h">
@@ -102,15 +102,6 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="MySvrConnector\MsgChain.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="MySvrConnector\MyEpoll.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="MySvrConnector\MyIOCP.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="MySvrConnector\MySelect.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="MySvrConnector\MySvrConnector.h">
@@ -150,6 +141,15 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="MySvrConnector\Socket.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MySvrConnector\IOCP.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MySvrConnector\Epoll.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MySvrConnector\Select.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
