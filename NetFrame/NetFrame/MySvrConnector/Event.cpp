@@ -68,7 +68,7 @@ namespace NetFrame
 
 		uint32 iEv = ev->GetEv();
 
-		//ev->SetHandler(pHandler);
+		ev->SetHandler(pHandler);
 
 		const EventKey& evKey = ev->GetEvKey();
 

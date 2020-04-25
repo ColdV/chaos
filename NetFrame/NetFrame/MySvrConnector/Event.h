@@ -102,15 +102,15 @@ namespace NetFrame
 		void SetEv(uint32 ev) { m_ev = ev; }
 		uint32 GetEv() const { return m_ev; }
 
-		//void SetHandler(EventHandler* pHandler) { m_pHandler = pHandler; }
+		void SetHandler(EventHandler* pHandler) { m_pHandler = pHandler; }
 
-		//void Handle() { if (!m_pHandler) return; m_pHandler->Handle(this); }
+		void Handle() { if (!m_pHandler) return; m_pHandler->Handle(this); }
 
 		const EventKey& GetEvKey() const { return m_evKey; }
 
 	private:
 		uint32 m_ev;
-		//EventHandler* m_pHandler;
+		EventHandler* m_pHandler;
 		EventKey	m_evKey;
 	};
 
