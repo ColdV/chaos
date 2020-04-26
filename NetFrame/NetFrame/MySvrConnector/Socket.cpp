@@ -97,7 +97,7 @@ namespace NetFrame
 		return res;
 	}
 
-	int Socket::Accept(/*Socket& mySocket*/)
+	socket_t Socket::Accept(/*Socket& mySocket*/)
 	{
 		//printf("开始接受新的连接!\n");
 		if (SKT_LISTEN != m_type)
@@ -108,12 +108,12 @@ namespace NetFrame
 		memset(&sockAddr, 0, sizeof(sockAddr));
 
 #ifdef _WIN32
-		uint32 nfd = accept(m_fd, (sockaddr*)&sockAddr, &len);
+		socket_t fd = accept(m_fd, (sockaddr*)&sockAddr, &len);
 #else
 		uint32 nfd = accept4(m_fd, (sockaddr*)&sockAddr, &len, 2048);
 #endif
-		if (0 >= nfd)
-			return nfd;
+		if (0 >= fd)
+			return fd;
 
 		//inet_ntop(AF_INET, &sockAddr.sin_addr, mySocket.getIP(), MAX_IP_SIZE);
 		//mySocket.setPort(ntohs(sockAddr.sin_port));
@@ -122,8 +122,15 @@ namespace NetFrame
 
 		//printf("accept from ip:%s, port:%llu, new socket:%llu\n", mySocket.getIP(), mySocket.getPort(), nfd);
 
-		return nfd;
+		return fd;
 	}
+
+
+	Socket* Socket::Accept2()
+	{
+		return new Socket(Accept());
+	}
+
 
 	int Socket::Connect(const char* strIP, const int nPort)
 	{

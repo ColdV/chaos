@@ -21,6 +21,7 @@ enum SocketType
 	SKT_LISTEN,			//监听套接字(Listen)
 	SKT_CLIENT,			//客户端套接字(Connect)
 	SKT_SERVER,			//服务端套接字(Accept)
+	SKT_CONNING,		//已经连接的套接字
 };
 
 #define MAX_IP_SIZE	32
@@ -39,7 +40,9 @@ namespace NetFrame
 
 		int Listen();
 
-		int Accept(/*Socket& sock*/);
+		socket_t Accept(/*Socket& sock*/);
+
+		Socket* Accept2();
 
 		int Connect(const char* strIP, const int nPort);
 

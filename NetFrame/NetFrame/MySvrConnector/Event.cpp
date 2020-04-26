@@ -68,18 +68,21 @@ namespace NetFrame
 
 		uint32 iEv = ev->GetEv();
 
-		ev->SetHandler(pHandler);
+		//ev->SetHandler(pHandler);
 
-		const EventKey& evKey = ev->GetEvKey();
+		const EventKey* pEvKey = ev->GetEvKey();
 
-		if (iEv & (EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT))
-			m_netEvs.insert(std::make_pair(evKey.netEvKey, ev));
-		else if (iEv & EV_TIMEOUT)
-			m_timerEvs.insert(std::make_pair(evKey.timerEvKey, ev));
-		else if (iEv & EV_SIGNAL)
-			m_signalEvs.insert(std::make_pair(evKey.signalEvKey, ev));
-		else
-			return -1;
+		if (pEvKey)
+		{
+			if (iEv & (EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT))
+				m_netEvs.insert(std::make_pair(pEvKey->fd, ev));
+			else if (iEv & EV_TIMEOUT)
+				m_timerEvs.insert(std::make_pair(pEvKey->timerId, ev));
+			else if (iEv & EV_SIGNAL)
+				m_signalEvs.insert(std::make_pair(pEvKey->signal, ev));
+			else
+				return -1;
+		}
 
 		return 0;
 	}
@@ -91,16 +94,19 @@ namespace NetFrame
 
 		uint32 iEv = ev->GetEv();
 
-		EventKey evKey = ev->GetEvKey();
+		const EventKey* pEvKey = ev->GetEvKey();
 
-		if (iEv & (EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT))
-			m_netEvs.erase(evKey.netEvKey);
-		else if (iEv & EV_TIMEOUT)
-			m_timerEvs.erase(evKey.timerEvKey);
-		else if (iEv & EV_SIGNAL)
-			m_signalEvs.erase(evKey.signalEvKey);
-		else
-			return -1;
+		if (pEvKey)
+		{
+			if (iEv & (EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT))
+				m_netEvs.erase(pEvKey->fd);
+			else if (iEv & EV_TIMEOUT)
+				m_timerEvs.erase(pEvKey->timerId);
+			else if (iEv & EV_SIGNAL)
+				m_signalEvs.erase(pEvKey->signal);
+			else
+				return -1;
+		}
 
 		return 0;
 	}
@@ -147,8 +153,67 @@ namespace NetFrame
 
 namespace NetFrame
 {
-	void NetEvent::Handle()
+	void NetEventHandler::Handle(Event* pEv)
 	{
+		NetEvent* pNetEv = (NetEvent*)pEv;
 
+		uint32 ev = pNetEv->GetCurEv();
+
+		Socket* pSocket = pNetEv->GetSocket();
+		if (!pSocket)
+			return;
+
+		if (ev & EV_IOREAD)
+		{
+			uint32 fdType = pSocket->GetFdType();
+
+			if (fdType == SKT_LISTEN)
+			{
+				HandleListen(pSocket);
+			}
+			else if (fdType == SKT_CONNING)
+			{
+				HandleRead(pSocket);
+			}
+		}
+		
+		if (ev & EV_IOWRITE)
+		{
+			HandleWrite(pSocket);
+		}
+	}
+
+
+	int NetEventHandler::HandleListen(Socket* pSocket)
+	{
+		if (!pSocket)
+			return -1;
+
+		Socket* pNewSock = pSocket->Accept2();
+		if (!pNewSock)
+			return -1;
+
+		EventKey* pKey = new EventKey();
+		if (!pKey)
+			return -1;
+
+		pKey->fd = pNewSock->GetFd();
+	
+		NetEventHandler* pHandler = new NetEventHandler();
+		if (!pHandler)
+			return -1;
+
+		NetEvent* pNewEv = new NetEvent(pNewSock, EV_IOREAD | EV_IOWRITE, pHandler, pKey);
+		if (!pNewEv)
+			return -1;
+
+		return 0;
+	}
+
+
+
+	int NetEventHandler::HandleRead(Socket* pSocket)
+	{
+		return 0;
 	}
 }

@@ -83,9 +83,9 @@ namespace NetFrame
 
 	union EventKey
 	{
-		socket_t	netEvKey;
-		int			timerEvKey;
-		int			signalEvKey;
+		socket_t	fd;
+		int			timerId;
+		int			signal;
 	};
 
 
@@ -93,25 +93,47 @@ namespace NetFrame
 	class Event
 	{
 	public:
-		Event() {}
-		virtual ~Event() = 0;
+		/*Event() {}
+		virtual ~Event() = 0;*/
 
 
-		virtual void Handle() = 0;
+		//virtual void Handle() = 0;
 
-		void SetEv(uint32 ev) { m_ev = ev; }
 		uint32 GetEv() const { return m_ev; }
 
-		void SetHandler(EventHandler* pHandler) { m_pHandler = pHandler; }
+		/*void SetHandler(EventHandler* pHandler) { m_pHandler = pHandler; }*/
+
+		uint32 GetCurEv() const { return m_curEv; }
+		void SetCurEv(uint32 ev) { m_curEv = ev; }
 
 		void Handle() { if (!m_pHandler) return; m_pHandler->Handle(this); }
 
-		const EventKey& GetEvKey() const { return m_evKey; }
+		const EventKey* GetEvKey() const { return m_pEvKey; }
+
+
+	protected:
+		Event(uint32 ev, EventHandler* pHandler, EventKey* pEvKey) :
+			m_ev(ev),
+			m_curEv(0),
+			m_pHandler(pHandler),
+			m_pEvKey(pEvKey)
+		{
+		}
+
+		virtual ~Event() = 0
+		{
+			if (m_pHandler)
+				delete m_pHandler;
+
+			if (m_pEvKey)
+				delete m_pEvKey;
+		}
 
 	private:
 		uint32 m_ev;
+		uint32 m_curEv;
 		EventHandler* m_pHandler;
-		EventKey	m_evKey;
+		EventKey*	m_pEvKey;
 	};
 
 
@@ -179,7 +201,9 @@ namespace NetFrame
 	class NetEvent : public Event
 	{
 	public:
-		NetEvent(Socket* pSocket):m_pSocket(pSocket)
+		NetEvent(Socket* pSocket, uint32 ev, EventHandler* pHandler, EventKey* evKey):
+			Event(ev, pHandler, evKey),
+			m_pSocket(pSocket)
 		{ 
 		}
 
@@ -189,7 +213,8 @@ namespace NetFrame
 				delete m_pSocket;
 		}
 
-		virtual void Handle() override;
+		Socket* GetSocket() const { return m_pSocket; }
+		//virtual void Handle() override;
 
 	private:
 		Socket* m_pSocket;
@@ -199,10 +224,18 @@ namespace NetFrame
 	class NetEventHandler : public EventHandler
 	{
 	public:
-		NetEventHandler();
-		~NetEventHandler();
+		NetEventHandler() {}
+		~NetEventHandler() {}
 
-		virtual void Handle(Event* pEv);
+		virtual void Handle(Event* pEv) override;
+
+
+	private:
+		int HandleListen(Socket* pSocket);
+
+		int HandleRead(Socket* pSocket);
+
+		int HandleWrite(Socket* pSocket);
 	};
 
 }	//namespace NetFrame
