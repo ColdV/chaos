@@ -1,6 +1,8 @@
 #include "MsgChain.h"
 
 
+#if 0
+
 MsgChain::MsgChain():m_chain(NULL)
 ,m_curChain(NULL)
 ,m_chainSize(0)
@@ -66,3 +68,6 @@ char* MsgChain::NextChain(int& size)
 	size = m_curChain->totalSize;
 	return m_curChain->cursor;
 }
+
+
+#endif

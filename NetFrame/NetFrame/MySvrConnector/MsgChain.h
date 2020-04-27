@@ -2,6 +2,8 @@
 #include "../common/stdafx.h"
 
 
+#if 0
+
 class MsgChain
 {
 public:
@@ -46,3 +48,5 @@ private:
 	uint32	m_chainSize;
 	uint32	m_totalMsgSize;
 };
+
+#endif

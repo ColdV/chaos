@@ -172,17 +172,17 @@ namespace NetFrame
 #ifdef _WIN32
 		unsigned long n = 0;
 		if (ioctlsocket(m_fd, FIONREAD, &n) < 0)
-			printf("socket[%llu] ready recv msg len:%llu\n", m_fd, n);
+			printf("socket[%llu] ready recv msg len:%lu\n", m_fd, n);
 
 #else
 		int n = 0;
 		if (ioctl(m_fd, FIONREAD, &n) >= 0)
-			printf("socket[%llu] ready recv msg len:%llu\n", m_fd, n);
+			printf("socket[%d] ready recv msg len:%llu\n", m_fd, n);
 
 #endif // _WIN32
 
 		int len = recv(m_fd, buf, size, 0); //MSG_PEEK
-		printf("socket[%llu] already recv msg len:%llu\n", m_fd, len);
+		printf("socket[%llu] already recv msg len:%d\n", m_fd, len);
 
 		if (0 >= len)
 		{
@@ -196,11 +196,11 @@ namespace NetFrame
 			//sleep(5);
 		}
 
-		printf("recv data[%s],from ip:%s,port:%llu, fd:%llu\n", buf, m_ip, m_port, m_fd);
+		printf("recv data[%s],from ip:%s,port:%d, fd:%llu\n", buf, m_ip, m_port, m_fd);
 
 
 		len = send(m_fd, buf, strlen(buf), 0);
-		printf("send data to socket[%llu] len:%llu\n", m_fd, len);
+		printf("send data to socket[%llu] len:%d\n", m_fd, len);
 
 		//memset(m_recv_buf, 0, sizeof(m_recv_buf));
 
@@ -210,7 +210,7 @@ namespace NetFrame
 	int Socket::Send(const char* buf, const int size)
 	{
 		int len = send(m_fd, buf, size, 0);
-		printf("send data to socket[%llu] len:%llu\n", m_fd, len);
+		printf("send data to socket[%u] len:%d\n", m_fd, len);
 
 		return len;
 	}
