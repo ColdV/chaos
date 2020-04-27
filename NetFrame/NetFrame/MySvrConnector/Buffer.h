@@ -22,6 +22,7 @@ namespace NetFrame
 		};
 
 		typedef std::list<BufferNode*>	BufferNodeList;
+		typedef std::list<BufferNode*>::iterator BufferNodeIt;
 
 	public:
 		Buffer();
@@ -29,16 +30,16 @@ namespace NetFrame
 
 		//const char* GetBuffer() const { return m_cursor; }
 
-		uint32 ReadFd(socket_t fd);
+		int ReadFd(Socket* pSocket);
 
-		uint32 WriteFd(socket_t fd);
+		int WriteFd(Socket* pSocket);
 
 		uint32 ReadBuffer(char* buffer, uint32 size);
 
 		uint32 WriteBuffer(const char* buffer, uint32 size);
 
 	private:
-		uint32 Expand();
+		int Expand();
 
 		char* GetCursor();
 
@@ -53,6 +54,8 @@ namespace NetFrame
 		/*BufferNode* m_buff;
 		uint32 m_nodeSize;*/
 		BufferNodeList m_buff;
+		BufferNodeIt m_curNodeIt;
+		BufferNode* m_pCurNode;
 		uint32 m_useSize;
 	};
 }

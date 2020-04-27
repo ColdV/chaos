@@ -145,6 +145,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Client\test.cpp" />
+    <ClCompile Include="MySvrConnector\Buffer.cpp" />
     <ClCompile Include="MySvrConnector\Event.cpp" />
     <ClCompile Include="MySvrConnector\EventMaster.cpp" />
     <ClCompile Include="MySvrConnector\IOEventMgr.cpp" />
@@ -170,6 +171,7 @@
     <ClInclude Include="common\common.h" />
     <ClInclude Include="common\single_templete.h" />
     <ClInclude Include="common\stdafx.h" />
+    <ClInclude Include="MySvrConnector\Buffer.h" />
     <ClInclude Include="MySvrConnector\Event.h" />
     <ClInclude Include="MySvrConnector\EventMaster.h" />
     <ClInclude Include="MySvrConnector\IOEventMgr.h" />

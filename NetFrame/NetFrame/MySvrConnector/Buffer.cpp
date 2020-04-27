@@ -4,12 +4,13 @@ namespace NetFrame
 {
 	Buffer::Buffer():
 		//m_totalSize(BUFFER_INIT_SIZE),
+		m_pCurNode(0),
 		m_useSize(0)
 	{
 		/*m_buff = new char[BUFFER_INIT_SIZE];
 		m_cursor = m_buff;*/
-
 		m_buff.clear();
+		m_curNodeIt = m_buff.end();
 	}
 
 	Buffer::~Buffer()
@@ -28,8 +29,10 @@ namespace NetFrame
 	}
 
 
-	uint32 Buffer::ReadFd(socket_t fd)
+	int Buffer::ReadFd(Socket* pSocket)
 	{
+		socket_t fd = pSocket->GetFd();
+
 #ifdef _WIN32
 		unsigned long n = 0;
 		if (ioctlsocket(fd, FIONREAD, &n) < 0)
@@ -48,33 +51,76 @@ namespace NetFrame
 
 #endif // _WIN32
 
+		//适配空间
 		while (m_buff.size() * BUFFER_INIT_SIZE - m_useSize < n)
 		{
-			if (Expand() == 0)
+			if (Expand() != 0)
 			{
 				return 0;
 			}
 		}
 
+		if (m_curNodeIt == m_buff.end() || !(*m_curNodeIt))
+			return 0;
+
+		BufferNode* pCurNode = *m_curNodeIt;
+
+		int recvLen = 0;
+		//int totalLen = 0;
 
 		while (0 < n)
 		{
+			recvLen = pSocket->Recv(pCurNode->buff + pCurNode->useSize, pCurNode->totalSize - pCurNode->useSize);
+			if (0 >= recvLen)
+				return recvLen;
+			else
+			{
+				pCurNode->useSize += recvLen;
+				//totalLen += recvLen;
 
+				n -= recvLen;
+
+				//当前buffer节点数据已满 使用下一个节点
+				if (pCurNode->totalSize == pCurNode->useSize)
+				{
+					/*auto it = std::find(m_buff.begin(), m_buff.end(), m_pCurNode);
+					if (it == m_buff.end())
+						return -1;*/
+
+					++m_curNodeIt;
+					pCurNode = *m_curNodeIt;
+				}
+			}
 		}
+
+		return n;
 	}
 
 
-	uint32 Buffer::Expand()
+	int Buffer::Expand()
 	{
 		BufferNode* pNewNode = new BufferNode;
 		if (!pNewNode)
-			return 0;
+			return -1;
 
 		pNewNode->buff = new char[BUFFER_INIT_SIZE];
 		pNewNode->cursor = pNewNode->buff;
 		pNewNode->totalSize = BUFFER_INIT_SIZE;
 		pNewNode->useSize = 0;
 
+		if (m_buff.empty())
+		{
+			m_pCurNode = pNewNode;
+		}
+
 		m_buff.push_back(pNewNode);
+
+		if (1 == m_buff.size())
+		{
+			m_curNodeIt = m_buff.begin();
+		}
+
+		return 0;
 	}
+
 }

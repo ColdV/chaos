@@ -78,6 +78,9 @@
     <ClCompile Include="MySvrConnector\Select.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="MySvrConnector\Buffer.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common\common.h">
@@ -150,6 +153,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="MySvrConnector\Select.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MySvrConnector\Buffer.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
