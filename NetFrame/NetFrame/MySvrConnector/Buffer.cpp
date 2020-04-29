@@ -87,11 +87,15 @@ namespace NetFrame
 					if (it == m_buff.end())
 						return -1;*/
 
-					++m_curNodeIt;
+					if(++m_curNodeIt == m_buff.end())
+						m_curNodeIt = m_buff.begin();
+
 					pCurNode = *m_curNodeIt;
 				}
 			}
 		}
+
+		m_useSize += n;
 
 		return n;
 	}
