@@ -45,6 +45,8 @@ namespace NetFrame
 
 		BufferNode* GetCurNode();
 
+		BufferNodeIt GetNextNodeIt() { if (++m_curNodeIt == m_buff.end()) m_curNodeIt = m_buff.begin(); }
+
 	private:
 		/*char* m_buff;
 		uint32 m_totalSize;

@@ -87,8 +87,10 @@ namespace NetFrame
 					if (it == m_buff.end())
 						return -1;*/
 
-					if(++m_curNodeIt == m_buff.end())
-						m_curNodeIt = m_buff.begin();
+					/*if(++m_curNodeIt == m_buff.end())
+						m_curNodeIt = m_buff.begin();*/
+
+					m_curNodeIt = GetNextNodeIt();
 
 					pCurNode = *m_curNodeIt;
 				}
@@ -112,10 +114,10 @@ namespace NetFrame
 		pNewNode->totalSize = BUFFER_INIT_SIZE;
 		pNewNode->useSize = 0;
 
-		if (m_buff.empty())
-		{
-			m_pCurNode = pNewNode;
-		}
+		//if (m_buff.empty())
+		//{
+		//	m_pCurNode = pNewNode;
+		//}
 
 		m_buff.push_back(pNewNode);
 
