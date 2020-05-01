@@ -81,6 +81,18 @@ namespace NetFrame
 	typedef std::list<Event*>	ActiveEventList;
 
 
+
+	//抽象事件处理器
+	class EventHandler
+	{
+	public:
+		EventHandler() {}
+		virtual ~EventHandler() = 0 {};
+
+		virtual void Handle(Event* pEv) = 0;
+	};
+
+
 	union EventKey
 	{
 		socket_t	fd;
@@ -137,17 +149,6 @@ namespace NetFrame
 	};
 
 
-	//抽象事件处理器
-	class EventHandler
-	{
-	public:
-		EventHandler() {}
-		virtual ~EventHandler() = 0;
-
-		virtual void Handle(Event* pEv) = 0;
-	};
-
-
 	//事件的注册、销毁、分发
 	class EventCentre
 	{
@@ -186,16 +187,6 @@ namespace NetFrame
 	};
 
 
-
-	////网络事件调度器
-	//class NetEventDispatcher
-	//{
-	//public:
-	//	NetEventDispatcher();
-	//	virtual ~NetEventDispatcher() = 0;
-
-	//	virtual void Init() = 0;
-	//};
 
 
 	class NetEvent : public Event

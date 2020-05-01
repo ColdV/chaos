@@ -8,6 +8,8 @@
 #	Last Modified: 2018-08-11 17:40:43
 *******************************************/
 
+#if 0
+
 #ifdef _WIN32
 
 #pragma once
@@ -37,3 +39,6 @@ namespace NetFrame
 
 
 #endif // _WIN32
+
+
+#endif

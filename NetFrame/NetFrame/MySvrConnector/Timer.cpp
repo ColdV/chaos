@@ -4,6 +4,7 @@
 //
 //std::vector<int> v;
 
+#if 0
 
 Timer::Timer()
 {
@@ -123,3 +124,5 @@ int Timer::DelTimer(unsigned int timerID)
 
 	return timerID;
 }
+
+#endif

@@ -1,5 +1,7 @@
 #pragma once
 
+#if 0
+
 #include"MinHeap.h"
 #include <set>
 #include "Event.h"
@@ -59,3 +61,5 @@ private:
 	std::set<unsigned int>	m_deled;
 	time_t	m_lastRunTime;
 };
+
+#endif 

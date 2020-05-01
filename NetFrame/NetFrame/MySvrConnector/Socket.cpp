@@ -15,7 +15,7 @@ namespace NetFrame
 {
 
 #ifdef _WIN32
-	WsaData g_wsa = WsaData::Instance();
+	//WsaData g_wsa = WsaData::Instance();
 #endif // _WIN32
 
 

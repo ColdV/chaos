@@ -11,6 +11,8 @@
 
 #pragma once
 
+#if 0
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <map>
@@ -93,3 +95,5 @@ private:
 
 	std::map<unsigned int, socket_info> client_socket_map;
 };
+
+#endif

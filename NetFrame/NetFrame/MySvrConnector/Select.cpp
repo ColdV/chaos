@@ -10,6 +10,7 @@
 
 
 #include "Select.h"
+#include "Event.h"
 
 namespace NetFrame
 {

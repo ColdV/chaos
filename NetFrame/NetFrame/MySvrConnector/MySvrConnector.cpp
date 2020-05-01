@@ -8,7 +8,7 @@
 #	Last Modified: 2018-07-31 10:47:39
 *******************************************/
 
-
+#if 0
 
 #include "MySvrConnector.h"
 
@@ -248,3 +248,5 @@ int MySvrConnector::Except(unsigned int nfd)
 
 	return 0;
 }
+
+#endif

@@ -17,27 +17,27 @@
 namespace NetFrame
 {
 
-	NetDrive::NetDrive()
-	{
-		/*m_sockets.clear();
-		m_max_socket = 0;
-		memset(m_recv_buf, 0, MAX_RECV_BUF_SIZE);
-		m_ioType = SI_SELECT;*/
-		//InitIOThread();
+	//NetDrive::NetDrive()
+	//{
+	//	/*m_sockets.clear();
+	//	m_max_socket = 0;
+	//	memset(m_recv_buf, 0, MAX_RECV_BUF_SIZE);
+	//	m_ioType = SI_SELECT;*/
+	//	//InitIOThread();
 
-	/*
-	#ifdef _WIN32
+	///*
+	//#ifdef _WIN32
 
-		static WSADATA wsa;
-		if (0 != WSAStartup(MAKEWORD(2, 2), &wsa))
-		{
-			printf("initialize windows socket failed!\n");
-			exit(0);
-		}
+	//	static WSADATA wsa;
+	//	if (0 != WSAStartup(MAKEWORD(2, 2), &wsa))
+	//	{
+	//		printf("initialize windows socket failed!\n");
+	//		exit(0);
+	//	}
 
-	#endif // _WIN32
-	*/
-	}
+	//#endif // _WIN32
+	//*/
+	//}
 
 	NetDrive::~NetDrive()
 	{

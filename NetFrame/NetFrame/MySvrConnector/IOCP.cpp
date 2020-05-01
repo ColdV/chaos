@@ -8,6 +8,8 @@
 #	Last Modified: 2018-08-11 17:40:47
 *******************************************/
 
+#if 0
+
 #ifdef _WIN32
 
 #include "IOCP.h"
@@ -24,3 +26,5 @@ namespace NetFrame
 }
 
 #endif // !_WIN32
+
+#endif

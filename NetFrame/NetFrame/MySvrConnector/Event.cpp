@@ -211,8 +211,13 @@ namespace NetFrame
 	}
 
 
-
 	int NetEventHandler::HandleRead(Socket* pSocket)
+	{
+		return 0;
+	}
+
+
+	int NetEventHandler::HandleWrite(Socket* pSocket)
 	{
 		return 0;
 	}

@@ -12,7 +12,7 @@
 #include "Socket.h"
 #include "../MyThreadPool/MyMutex.h"
 #include <list>
-#include "Event.h"
+//#include "Event.h"
 
 #ifdef _WIN32
 typedef unsigned int(__stdcall *ThreadProcess)(void*);
@@ -25,7 +25,7 @@ typedef void(*ThreadProcess)(void*);
 namespace NetFrame
 {
 #ifdef _WIN32
-	WsaData& g_wsa = WsaData::Instance();
+	//WsaData& g_wsa = WsaData::Instance();
 #endif
 	//enum IOType
 	//{
@@ -86,7 +86,7 @@ namespace NetFrame
 	public:
 		virtual ~NetDrive();
 
-	protected:
+	//protected:
 		NetDrive() { m_fds.clear(); m_activeFd.clear(); };
 
 	public:
@@ -148,7 +148,7 @@ namespace NetFrame
 
 		virtual void CancelFd(socket_t fd, short ev) {}
 
-		void PushActiveFd(const FdEvent& fdEv) { m_activeFd.insert(fdEv); }
+		void PushActiveFd(const FdEvent& fdEv) { m_activeFd.push_back(fdEv); }
 
 		std::set<socket_t>* GetFds() { return &m_fds; }
 
