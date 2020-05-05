@@ -5,6 +5,7 @@
 #include <map>
 #include <set>
 #include "NetDrive.h"
+#include "Buffer.h"
 
 enum
 {
@@ -74,12 +75,7 @@ namespace NetFrame
 {
 	class EventHandler;
 	class Event;
-
-	typedef std::map<socket_t, Event*> NetEventMap;
-	typedef std::map<int, Event*>	TimerEventMap;
-	typedef std::map<int, Event*>	SignalEventMap;
-	typedef std::list<Event*>	ActiveEventList;
-
+	class EventCentre;
 
 
 	//抽象事件处理器
@@ -108,8 +104,7 @@ namespace NetFrame
 		/*Event() {}
 		virtual ~Event() = 0;*/
 
-
-		//virtual void Handle() = 0;
+		virtual void Handle() = 0;
 
 		uint32 GetEv() const { return m_ev; }
 
@@ -118,17 +113,18 @@ namespace NetFrame
 		uint32 GetCurEv() const { return m_curEv; }
 		void SetCurEv(uint32 ev) { m_curEv = ev; }
 
-		void Handle() { if (!m_pHandler) return; m_pHandler->Handle(this); }
+		//void Handle() { if (!m_pHandler) return; m_pHandler->Handle(this); }
 
 		const EventKey* GetEvKey() const { return m_pEvKey; }
 
 
 	protected:
-		Event(uint32 ev, EventHandler* pHandler, EventKey* pEvKey) :
+		Event(EventCentre* pCentre, uint32 ev, EventHandler* pHandler, EventKey* pEvKey) :
 			m_ev(ev),
 			m_curEv(0),
 			m_pHandler(pHandler),
-			m_pEvKey(pEvKey)
+			m_pEvKey(pEvKey),
+			m_pCenter(pCentre)
 		{
 		}
 
@@ -141,9 +137,14 @@ namespace NetFrame
 				delete m_pEvKey;
 		}
 
+		//int AddNewEvent(Event* pNewEv);
+
+		EventCentre* GetCentre() const { return m_pCenter; }
+
 	private:
-		uint32 m_ev;
-		uint32 m_curEv;
+		EventCentre* m_pCenter;		//所属的事件中心
+		uint32 m_ev;		//注册的事件
+		uint32 m_curEv;		//当前发生的事件
 		EventHandler* m_pHandler;
 		EventKey*	m_pEvKey;
 	};
@@ -152,6 +153,13 @@ namespace NetFrame
 	//事件的注册、销毁、分发
 	class EventCentre
 	{
+	public:
+		typedef std::map<socket_t, Event*> NetEventMap;
+		typedef std::map<int, Event*>	TimerEventMap;
+		typedef std::map<int, Event*>	SignalEventMap;
+		typedef std::list<Event*>	ActiveEventList;
+
+
 	public:
 		EventCentre();
 		~EventCentre();
@@ -166,6 +174,7 @@ namespace NetFrame
 
 		int DispatchEvent();
 
+	private:
 		int NetEventDispatch();
 
 		int SignalDispatch();
@@ -192,23 +201,63 @@ namespace NetFrame
 	class NetEvent : public Event
 	{
 	public:
-		NetEvent(Socket* pSocket, uint32 ev, EventHandler* pHandler, EventKey* evKey):
-			Event(ev, pHandler, evKey),
+		NetEvent(EventCentre* pCentre, Socket* pSocket, uint32 ev, EventHandler* pHandler, EventKey* pEvKey):
+			Event(pCentre, ev, pHandler, pEvKey),
 			m_pSocket(pSocket)
-		{ 
+		{
+			m_pRBuffer = new Buffer;
+			m_pWBuffer = new Buffer;
 		}
 
 		~NetEvent()
 		{
 			if (m_pSocket)
 				delete m_pSocket;
+
+			if (m_pRBuffer)
+				delete m_pRBuffer;
+
+			if (m_pWBuffer)
+				delete m_pWBuffer;
 		}
 
 		Socket* GetSocket() const { return m_pSocket; }
-		//virtual void Handle() override;
+
+		virtual void Handle() override;
+
+	private:
+		int HandleListen();
+
+		int HandleRead();
+
+		int HandleWrite();
 
 	private:
 		Socket* m_pSocket;
+		Buffer* m_pRBuffer;
+		Buffer* m_pWBuffer;
+	};
+
+
+	class TimerEvent : public Event
+	{
+	public:
+		TimerEvent(EventCentre* pCentre, uint32 ev, EventKey* pEvKey, uint32 timeOut):
+			Event(pCentre, ev, NULL, pEvKey),
+			m_timeOut(timeOut)
+		{
+		}
+
+		virtual ~TimerEvent()
+		{}
+
+		uint32 GetTimeOut() const { return m_timeOut; }
+
+		virtual void Handle() override;
+
+	private:
+		uint32 m_timeOut;
+		bool m_isLoop;
 	};
 
 
@@ -222,11 +271,11 @@ namespace NetFrame
 
 
 	private:
-		int HandleListen(Socket* pSocket);
+		int HandleListen(NetEvent* pEv);
 
-		int HandleRead(Socket* pSocket);
+		int HandleRead(NetEvent* pEv);
 
-		int HandleWrite(Socket* pSocket);
+		int HandleWrite(NetEvent* pEv);
 	};
 
 }	//namespace NetFrame

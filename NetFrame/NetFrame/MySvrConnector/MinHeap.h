@@ -25,9 +25,9 @@ public:
 
 	T* Top() { return &m_heap[0]; }
 
-	void Erase(int pos);
+	//void Erase(int pos);
 
-	//T* Erase(const T* node);
+	T* Erase(const T* node);
 
 	//int GetPos(const T* node);
 
@@ -35,8 +35,13 @@ public:
 
 	int GetTotalSize() const { return m_totalSize; }
 
+	const T* Begin() const { return &m_heap[0]; }
+
+	const T* End() const { return &m_heap[m_curSize]; }
 
 protected:
+	void Erase(int pos);
+
 	const T* GetHeap() const { return m_heap; }
 
 	T* Parent(int pos);
@@ -168,11 +173,13 @@ void MinHeap<T, Cmp>::Erase(int pos)
 }
 
 
-//template<typename T, typename Cmp>
-//T* MinHeap<T, Cmp>::Erase(const T* node)
-//{
-//	return Erase(GetPos(node));
-//}
+template<typename T, typename Cmp>
+T* MinHeap<T, Cmp>::Erase(const T* node)
+{
+	Erase(node - m_heap + 1);
+
+	return m_heap[node - heap + 1];
+}
 //
 //
 //template<typename T, typename Cmp>

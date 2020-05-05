@@ -23,3 +23,7 @@ inline void strncpy_safe(char* des, const int desSize, const char* src, const in
 
 #endif // _WIN32
 }
+
+
+#define SetBit(x, y)	(x |= (1<<y))
+#define ClrBit(x, y)	(x&=(~(1<<y)))

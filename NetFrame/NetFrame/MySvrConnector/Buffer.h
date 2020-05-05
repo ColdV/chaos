@@ -35,7 +35,7 @@ namespace NetFrame
 
 		//读出m_bufferList中的数据  写入到fd
 		//如果没有指定size 将所有数据写入fd
-		int WriteFd(Socket* pSocket, uint32 size /*= 0*/);
+		int WriteFd(Socket* pSocket, uint32 size = 0);
 
 		//读出m_bufferList中的数据 写入到参数buffer中
 		uint32 ReadBuffer(char* buffer, uint32 size);
