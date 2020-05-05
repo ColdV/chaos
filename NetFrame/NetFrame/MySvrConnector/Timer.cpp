@@ -57,26 +57,34 @@ namespace NetFrame
 	{
 		time_t curTime = time(NULL);
 
-		TimerEvent* ev = TopTimer();
+		//TimerEvent* ev = TopTimer();
+		TimerEvent* ev = m_timers.Front();
 
 		while (ev && curTime - m_lastRunTime >= ev->GetTimeOut())
 		{
-			if (!m_delList.empty()
-				&& m_delList.find(ev->Ev.evTimer.timerID) != m_delList.end())
-			{
-				PopTimer();
-				ev = TopTimer();
-				m_delList.erase(ev->Ev.evTimer.timerID);
-				continue;
-			}
+			//if (!m_delList.empty()
+			//	&& m_delList.find(ev->Ev.evTimer.timerID) != m_delList.end())
+			//{
+			//	PopTimer();
+			//	ev = TopTimer();
+			//	m_delList.erase(ev->Ev.evTimer.timerID);
+			//	continue;
+			//}
 
-			ev = PopTimer();
+			/*ev = PopTimer();
 			ev->evCb(ev, ev->userData);
 
 			if (ev->isLoop)
 				AddTimer(ev, ev->Ev.evTimer.timeOut, ev->evCb);
 
-			ev = TopTimer();
+			ev = TopTimer();*/
+
+			if (ev->IsLoop())
+				AddTimer(ev);
+
+			m_timers.Pop();
+
+			ev = m_timers.Front();
 		}
 
 		m_lastRunTime = time(NULL);

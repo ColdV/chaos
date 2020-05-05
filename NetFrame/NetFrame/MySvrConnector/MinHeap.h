@@ -23,7 +23,7 @@ public:
 
 	void Pop();
 
-	T* Top() { return &m_heap[0]; }
+	T& Front() { return &m_heap[0]; }
 
 	//void Erase(int pos);
 

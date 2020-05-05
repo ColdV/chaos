@@ -68,9 +68,9 @@ namespace NetFrame
 	private:
 		//uint32 NewID() { if (m_maxID >= 0xFFFFFFFF)return 0; return ++m_maxID; }
 
-		TimerEvent* PopTimer() { return TopTimer(); }
+		//TimerEvent* PopTimer() { return TopTimer(); }
 
-		TimerEvent* TopTimer() { return *m_timers.Top(); }
+		//TimerEvent* TopTimer() { return *m_timers.Front(); }
 
 		//分配一个定时器ID, 返回0表示无ID可用
 		uint32 AllocaTimerID();

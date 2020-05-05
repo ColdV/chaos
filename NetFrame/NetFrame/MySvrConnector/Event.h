@@ -253,6 +253,8 @@ namespace NetFrame
 
 		uint32 GetTimeOut() const { return m_timeOut; }
 
+		bool IsLoop() const { return m_isLoop; }
+
 		virtual void Handle() override;
 
 	private:
