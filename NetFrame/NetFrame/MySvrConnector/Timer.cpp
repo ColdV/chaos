@@ -8,18 +8,21 @@
 namespace NetFrame
 {
 
+	timer_id Timer::s_maxIDSize = Timer::INIT_ID_SIZE;
+	char* Timer::s_ids = new char[INIT_ID_SIZE];
+
 	Timer::Timer() :
-		m_maxIDSize(INIT_ID_SIZE),
+		//s_maxIDSize(INIT_ID_SIZE),
 		m_lastRunTime(0)
 	{
-		m_ids = new char[INIT_ID_SIZE];
+		//s_ids = new char[INIT_ID_SIZE];
 	}
 
 
 	Timer::~Timer()
 	{
-		if (m_ids)
-			delete [] m_ids;
+		/*if (s_ids)
+			delete [] s_ids;*/
 	}
 
 
@@ -55,10 +58,21 @@ namespace NetFrame
 
 	void Timer::DispatchTimer()
 	{
+
+		/*if (!pCentre)
+			return;*/
+
 		time_t curTime = time(NULL);
 
 		//TimerEvent* ev = TopTimer();
-		TimerEvent* ev = m_timers.Front();
+		TimerEvent* ev = NULL;
+		if (0 < m_timers.Size())
+			ev = m_timers.Front();
+
+		if (!ev)
+			return;
+
+		std::list<TimerEvent*> addEv;		//这里可以考虑优化
 
 		while (ev && curTime - m_lastRunTime >= ev->GetTimeOut())
 		{
@@ -80,11 +94,25 @@ namespace NetFrame
 			ev = TopTimer();*/
 
 			if (ev->IsLoop())
-				AddTimer(ev);
+				/*AddTimer(ev);*/
+				addEv.push_back(ev);
+
+			/*pCentre->PushActiveEv(ev);*/
+
+			if (ev->GetCentre())
+				ev->GetCentre()->PushActiveEv(ev);
 
 			m_timers.Pop();
 
+			if (0 >= m_timers.Size())
+				break;
+
 			ev = m_timers.Front();
+		}
+
+		for (auto it = addEv.begin(); it != addEv.end(); ++it)
+		{
+			AddTimer(ev);
 		}
 
 		m_lastRunTime = time(NULL);
@@ -152,13 +180,17 @@ namespace NetFrame
 		if (!pTimerEv)
 			return 0;
 
-		int id = AllocaTimerID();
+		const EventKey* pKey = pTimerEv->GetEvKey();
+		if (!pKey)
+			return 0;
+
+		int id = pKey->timerId;
 		if (0 == id)
 			return 0;
 
 		if (0 != m_timers.Push(pTimerEv))
 		{
-			m_ids[id] = 0;
+			s_ids[id] = 0;
 			return 0;
 		}
 
@@ -206,17 +238,17 @@ namespace NetFrame
 	}
 
 
-	uint32 Timer::AllocaTimerID()
+	timer_id Timer::CreateTimerID()
 	{
-		if (!m_ids)
+		if (!s_ids)
 			return 0;
 
 		uint32 i = 0;
-		while(i < m_maxIDSize)
+		while(i < s_maxIDSize)
 		{
-			if (m_ids[i] != 1)
+			if (s_ids[i] != 1)
 			{
-				m_ids[i] = 1;
+				s_ids[i] = 1;
 				return i + 1;
 			}
 
@@ -224,7 +256,7 @@ namespace NetFrame
 		}
 
 		//当前ID 已用完 扩展ID
-		if (i == m_maxIDSize && 0 == ExpandID())
+		if (i == s_maxIDSize && 0 == Timer::ExpandID())
 			return i;
 
 		return 0;
@@ -233,19 +265,19 @@ namespace NetFrame
 
 	int Timer::ExpandID()
 	{
-		if (!m_ids || m_maxIDSize >= 0xFFFFFFFF)
+		if (!s_ids || s_maxIDSize >= 0xFFFFFFFF)
 			return -1;
 
-		uint32 size = 0xFFFFFFFF / 2 > m_maxIDSize ? 0xFFFFFFFF : m_maxIDSize * 2;
+		uint32 size = 0xFFFFFFFF / 2 > s_maxIDSize ? 0xFFFFFFFF : s_maxIDSize * 2;
 
 		char* pNewIDs = new char[size] {0};
 		if (!pNewIDs)
 			return -1;
 		
-		memcpy(pNewIDs, m_ids, m_maxIDSize);
-		delete[] m_ids;
-		m_ids = pNewIDs;
-		m_maxIDSize = size;
+		memcpy(pNewIDs, s_ids, s_maxIDSize);
+		delete[] s_ids;
+		s_ids = pNewIDs;
+		s_maxIDSize = size;
 
 		return 0;
 	}

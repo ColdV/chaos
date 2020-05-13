@@ -61,9 +61,14 @@ namespace NetFrame
 
 		//Event* TopTimer() { return m_timers.Top(); }
 
-		int GetSize() { return m_timers.GetSize(); }
+		int Size() { return m_timers.Size(); }
 
-		int GetTotalSize() { return m_timers.GetTotalSize(); }
+		int TotalSize() { return m_timers.TotalSize(); }
+
+
+	public:
+		//分配一个定时器ID, 返回0表示无ID可用
+		static timer_id CreateTimerID();
 
 	private:
 		//uint32 NewID() { if (m_maxID >= 0xFFFFFFFF)return 0; return ++m_maxID; }
@@ -73,19 +78,26 @@ namespace NetFrame
 		//TimerEvent* TopTimer() { return *m_timers.Front(); }
 
 		//分配一个定时器ID, 返回0表示无ID可用
-		uint32 AllocaTimerID();
+		//timer_id CreateTimerID();
 
 		//扩展ID
-		int ExpandID();
+		static int ExpandID();
 
 	private:
 		MinHeap<TimerEvent*, TimerCmp> m_timers;
 		//std::set<unsigned int>	m_timerIDs;
 		std::set<unsigned int>	m_delList;
 		std::set<unsigned int>	m_deled;
-		char* m_ids;
-		uint32 m_maxIDSize;
+		/*char* m_ids;
+		timer_id m_maxIDSize;*/
 		time_t	m_lastRunTime;
+
+	public:
+		static int a;
+
+	private:
+		static char* s_ids;
+		static timer_id s_maxIDSize;
 	};
 
 }

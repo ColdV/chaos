@@ -48,6 +48,7 @@ typedef	int				int32;
 typedef unsigned int	uint32;
 typedef long long int	int64;
 typedef unsigned long long int uint64;
+typedef uint32	timer_id;
 
 #ifdef WIN32
 typedef SOCKET socket_t;

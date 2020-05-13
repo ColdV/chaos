@@ -32,9 +32,9 @@ namespace NetFrame
 
 		virtual int Init() override;
 
-		virtual void Launch() override;
+		virtual int Launch() override;
 
-		virtual void WaitEvent();
+		//virtual void WaitEvent();
 
 		//virtual void HandleEvent(const IOEvent& ioEvent);
 

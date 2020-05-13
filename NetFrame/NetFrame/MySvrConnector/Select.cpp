@@ -45,10 +45,10 @@ namespace NetFrame
 
 
 
-	void Select::Launch()
-	{
-		WaitEvent();
-	}
+	//int Select::Launch()
+	//{
+	//	WaitEvent();
+	//}
 
 
 	//int Select::InitIO(const char* ip, int port, uint32 max_fd)
@@ -75,25 +75,29 @@ namespace NetFrame
 	//	return res;
 	//}
 
-	void Select::WaitEvent()
+	int Select::Launch()
 	{
 
 		fd_set rfds = m_rfds;
 		fd_set wfds = m_wfds;
 		fd_set efds = m_efds;
 
-		int cnt = select(MAX_FD, &rfds, NULL, &efds, 0);
+		timeval val;
+		val.tv_sec = 1;
+		int cnt = select(MAX_FD, &rfds, &wfds, &efds, &val);
 
 		if (0 > cnt)
 		{
-			printf("call select failed! code:%d\n", cnt);
-			return;
+			printf("call select failed! code:%d\n", WSAGetLastError());
+			return cnt;
 		}
 
 		if (0 == cnt)
-			return;//continue;
+			return 0;//continue;
 
 		CollectEvent(rfds, wfds, efds);
+
+		return 0;
 	}
 
 
@@ -101,6 +105,8 @@ namespace NetFrame
 	{
 		/*IOEvent newEvent;*/
 		FdEvent fdEv;
+
+		//EvAndKey fdEv;
 		fdEv.ev = 0;
 
 #ifdef _WIN32
@@ -114,6 +120,9 @@ namespace NetFrame
 
 			fdEv.fd = rfds.fd_array[i];
 			fdEv.ev = EV_IOREAD;
+
+			/*fdEv.ev = EV_IOREAD;
+			fdEv.key.fd = rfds.fd_array[i];*/
 
 			PushActiveFd(fdEv);
 		}

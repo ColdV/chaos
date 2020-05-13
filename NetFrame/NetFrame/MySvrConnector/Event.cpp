@@ -1,5 +1,6 @@
 #include "Event.h"
-
+#include "Timer.h"
+#include <stdio.h>
 
 namespace NetFrame
 {
@@ -20,13 +21,26 @@ namespace NetFrame
 
 
 	EventCentre::~EventCentre()
-	{}
+	{
+		if (m_pNetDrive)
+			delete m_pNetDrive;
+
+		if (!m_pTimer)
+			delete m_pTimer;
+	}
 
 
 	int EventCentre::Init()
 	{
 		m_pNetDrive = NetDrive::AdapterNetDrive();
+		if (!m_pNetDrive)
+			return -1;
+
 		m_pNetDrive->Init();
+
+		m_pTimer = new Timer();
+		if (!m_pTimer)
+			return -1;
 
 		return 0;
 	}
@@ -36,22 +50,29 @@ namespace NetFrame
 	{
 		while (true)
 		{
-			DispatchEvent();
+			if (0 != DispatchEvent())
+				break;
 		}
 	}
 
 
 	int EventCentre::DispatchEvent()
 	{
-		TimerDispatch();
+		int ret = 0;
 
-		NetEventDispatch();
+		if (0 != (ret = TimerDispatch()))
+			return ret;
 
-		SignalDispatch();
+		if (0 != (ret = NetEventDispatch()))
+			return ret;
 
-		ProcessActiveEvent();
+		if (0 != (ret = SignalDispatch()))
+			return ret;
 
-		return 0;
+		if(0 != (ret = ProcessActiveEvent()))
+			return ret;
+
+		return ret;
 	}
 
 
@@ -90,7 +111,10 @@ namespace NetFrame
 				m_pNetDrive->AddFd(pEvKey->fd, iEv);
 			}
 			else if (iEv & EV_TIMEOUT)
+			{
 				m_timerEvs.insert(std::make_pair(pEvKey->timerId, ev));
+				m_pTimer->AddTimer((TimerEvent*)ev);
+			}
 			else if (iEv & EV_SIGNAL)
 				m_signalEvs.insert(std::make_pair(pEvKey->signal, ev));
 			else
@@ -130,7 +154,9 @@ namespace NetFrame
 		if (!m_pNetDrive)
 			return -1;
 
-		m_pNetDrive->Launch();
+		int ret = 0;
+		if (0 != (ret = m_pNetDrive->Launch()))
+			return ret;
 
 		const std::list<FdEvent>& evs = m_pNetDrive->GetActives();
 
@@ -145,7 +171,7 @@ namespace NetFrame
 
 		m_pNetDrive->ResetActives();
 
-		return 0;
+		return ret;
 	}
 
 
@@ -157,6 +183,11 @@ namespace NetFrame
 
 	int EventCentre::TimerDispatch()
 	{
+		if (!m_pTimer)
+			return -1;
+
+		m_pTimer->DispatchTimer();
+
 		return 0;
 	}
 
@@ -327,5 +358,14 @@ namespace NetFrame
 	int NetEventHandler::HandleWrite(NetEvent* pNetEv)
 	{
 		return 0;
+	}
+}
+
+
+namespace NetFrame
+{
+	void TimerEvent::Handle()
+	{
+		printf("test!\n");
 	}
 }

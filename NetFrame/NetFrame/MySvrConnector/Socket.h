@@ -80,8 +80,8 @@ namespace NetFrame
 	public:
 		static WsaData& Instance()
 		{
-			static WsaData wsa_;
-			return wsa_;
+			static WsaData inst_;
+			return inst_;
 		}
 
 

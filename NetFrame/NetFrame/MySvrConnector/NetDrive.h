@@ -24,9 +24,9 @@ typedef void(*ThreadProcess)(void*);
 
 namespace NetFrame
 {
-#ifdef _WIN32
-	//WsaData& g_wsa = WsaData::Instance();
-#endif
+
+	class EventCentre;
+
 	//enum IOType
 	//{
 	//	SI_SELECT = 1,
@@ -87,7 +87,11 @@ namespace NetFrame
 		virtual ~NetDrive();
 
 	//protected:
-		NetDrive() { m_fds.clear(); m_activeFd.clear(); };
+		NetDrive(EventCentre* pCentre = 0):
+			m_pCentre(pCentre)
+		{ 
+			m_fds.clear(); m_activeFd.clear(); 
+		}
 
 	public:
 		//virtual int InitIO(const char* ip, int port, uint32 max_fd) = 0;
@@ -100,11 +104,11 @@ namespace NetFrame
 
 		virtual int Init() = 0;
 
-		virtual void Launch() = 0;
+		virtual int Launch(/*EventCentre* pCentre*/) = 0;
 
-		void AddFd(socket_t fd, short ev) { m_fds.insert(fd); RegistFd(fd, ev); }
+		void AddFd(socket_t fd, uint32 ev) { m_fds.insert(fd); RegistFd(fd, ev); }
 
-		void DelFd(socket_t fd, short ev) { m_fds.erase(fd); CancelFd(fd, ev); }
+		void DelFd(socket_t fd, uint32 ev) { m_fds.erase(fd); CancelFd(fd, ev); }
 
 		const std::list<FdEvent>& GetActives() const { return m_activeFd; }
 
@@ -163,6 +167,7 @@ namespace NetFrame
 
 		std::set<socket_t> m_fds;
 		std::list<FdEvent> m_activeFd;
+		EventCentre* m_pCentre;
 	};
 
 

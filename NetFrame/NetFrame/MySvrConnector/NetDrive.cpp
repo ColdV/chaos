@@ -16,7 +16,6 @@
 
 namespace NetFrame
 {
-
 	//NetDrive::NetDrive()
 	//{
 	//	/*m_sockets.clear();

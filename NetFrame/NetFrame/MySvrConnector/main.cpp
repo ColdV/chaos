@@ -10,6 +10,8 @@
 #include "EventMaster.h"
 #include "MinHeap.h"
 #include <map>
+#include "Event.h"
+#include "Timer.h"
 
 
 const char IP[] = "10.246.60.164";//"0.0.0.0";//"10.246.60.179";
@@ -33,18 +35,18 @@ public:
 };
 
 
-template<class T = void>
-void print(T a)
-{
-	if (T == void)
-	{
-		printf("non T!\n");
-		return;
-
-	}
-
-	printf("%d\n", a);
-}
+//template<class T = void>
+//void print(T a)
+//{
+//	if (T == void)
+//	{
+//		printf("non T!\n");
+//		return;
+//
+//	}
+//
+//	printf("%d\n", a);
+//}
 
 void timecb(unsigned int timeid, void* userData)
 {
@@ -69,12 +71,15 @@ void testNonCpy(TestNonCpy cpy)
 {
 	;
 }
+#include "../common/common.h"
 
+
+#if 0
 int main()
 {
 
-	TestNonCpy c(1);
-	testNonCpy(c);
+	/*TestNonCpy c(1);
+	testNonCpy(c);*/
 	//SetConsoleTitle(L"NetFrame");
 	/*
 	MySvrConnector svr(FD_SETSIZE);
@@ -85,10 +90,10 @@ int main()
 	//test t1 = test::Instance();
 	//t1.print();
 
-#ifndef _WIN32
+//#ifndef _WIN32
 	//if(signal(SIGPIPE, SIG_IGN) == SIG_ERR)
 	//   return -1;
-#endif
+//#endif
 	//NetDrive* p = CreateSocketIO(FD_SETSIZE, SI_EPOLL);
 
 	//if (!p)
@@ -182,32 +187,78 @@ int main()
 	//}
 	
 
-	MinHeap<int> min;
+	//MinHeap<int> min;
 
-	const int SIZE = 100;
+	//const int SIZE = 100;
 
-	int ary[100];// = { 5,0,7,8,4,9,1,3,2,6 };
+	//int ary[100];// = { 5,0,7,8,4,9,1,3,2,6 };
 
-	for (int i = 0; i < SIZE; ++i)
-	{
-		ary[i] = rand();
-	}
+	//for (int i = 0; i < SIZE; ++i)
+	//{
+	//	ary[i] = rand();
+	//}
 
-	for (int i = 0; i < SIZE; ++i)
-	{
-		min.Push(ary[i]);
-	}
+	//for (int i = 0; i < SIZE; ++i)
+	//{
+	//	min.Push(ary[i]);
+	//}
 
-	printf("size:%d\n", min.GetSize());
+	//printf("size:%d\n", min.GetSize());
 
 
-	for (int i = 0; i < SIZE; ++i)
-	{
-		printf("pop:%d\n", *min.Top());
-		min.Pop();
-	}
+	//for (int i = 0; i < SIZE; ++i)
+	//{
+	//	printf("pop:%d\n", *min.Top());
+	//	min.Pop();
+	//}
 
-	printf("size:%d\n", min.GetSize());
+	//printf("size:%d\n", min.GetSize());
+
+//int a = 8;
+//char b[10] = { 1 };
+//SetBit(a, 1);
+//printf("%d\n", a);
+//ClrBit(a, 1);
+//printf("%u\n", b[0]);
+//	return 0;
+}
+
+#endif
+
+
+int main()
+{
+	NetFrame::EventCentre* pCentre = new NetFrame::EventCentre();
+	if (!pCentre)
+		return -1;
+
+	if (0 != pCentre->Init())
+		return -1;
+	
+	socket_t sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	NetFrame::Socket* s = new NetFrame::Socket(sock);
+	if (!s)
+		return -1;
+
+	s->Bind("0.0.0.0", 3307);
+	s->Listen();
+
+	NetFrame::EventKey* pNKey = new NetFrame::EventKey();
+	pNKey->fd = sock;
+
+	NetFrame::NetEvent* netEv = new NetFrame::NetEvent(pCentre, s, EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT, NULL, pNKey);
+	if (!netEv)
+		return -1;
+
+	pCentre->RegisterEvent(netEv, NULL);
+
+	NetFrame::EventKey* pKey = new NetFrame::EventKey();
+	pKey->timerId = NetFrame::Timer::CreateTimerID();
+	NetFrame::TimerEvent* ev = new NetFrame::TimerEvent(pCentre, EV_TIMEOUT, pKey, 1, true);
+
+	pCentre->RegisterEvent(ev, NULL);
+	pCentre->EventLoop();
+
 	return 0;
 }
 

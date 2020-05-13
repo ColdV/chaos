@@ -1,6 +1,10 @@
 #pragma once
 
-#include "stdio.h"
+#include <stdio.h>
+#include <cstring>
+
+
+//有空可以实现一个iterater
 
 template <typename T = void>
 struct Less
@@ -23,7 +27,7 @@ public:
 
 	void Pop();
 
-	T& Front() { return &m_heap[0]; }
+	T Front() { return m_heap[0]; }
 
 	//void Erase(int pos);
 
@@ -31,9 +35,9 @@ public:
 
 	//int GetPos(const T* node);
 
-	int GetSize() const { return m_curSize; }
+	int Size() const { return m_curSize; }
 
-	int GetTotalSize() const { return m_totalSize; }
+	int TotalSize() const { return m_totalSize; }
 
 	const T* Begin() const { return &m_heap[0]; }
 
@@ -178,7 +182,7 @@ T* MinHeap<T, Cmp>::Erase(const T* node)
 {
 	Erase(node - m_heap + 1);
 
-	return m_heap[node - heap + 1];
+	return &m_heap[node - m_heap + 1];
 }
 //
 //

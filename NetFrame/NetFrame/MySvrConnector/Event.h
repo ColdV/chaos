@@ -6,6 +6,7 @@
 #include <set>
 #include "NetDrive.h"
 #include "Buffer.h"
+//#include "Timer.h"
 
 enum
 {
@@ -76,6 +77,7 @@ namespace NetFrame
 	class EventHandler;
 	class Event;
 	class EventCentre;
+	class Timer;
 
 
 	//抽象事件处理器
@@ -92,10 +94,16 @@ namespace NetFrame
 	union EventKey
 	{
 		socket_t	fd;
-		int			timerId;
+		timer_id	timerId;
 		int			signal;
 	};
 
+
+	struct EvAndKey
+	{
+		uint32 ev;
+		EventKey key;
+	};
 
 	//抽象事件(资源类)
 	class Event
@@ -117,6 +125,7 @@ namespace NetFrame
 
 		const EventKey* GetEvKey() const { return m_pEvKey; }
 
+		EventCentre* GetCentre() const { return m_pCenter; }
 
 	protected:
 		Event(EventCentre* pCentre, uint32 ev, EventHandler* pHandler, EventKey* pEvKey) :
@@ -138,8 +147,6 @@ namespace NetFrame
 		}
 
 		//int AddNewEvent(Event* pNewEv);
-
-		EventCentre* GetCentre() const { return m_pCenter; }
 
 	private:
 		EventCentre* m_pCenter;		//所属的事件中心
@@ -174,6 +181,8 @@ namespace NetFrame
 
 		int DispatchEvent();
 
+		void PushActiveEv(Event* ev) { m_activeEvs.push_back(ev); }
+
 	private:
 		int NetEventDispatch();
 
@@ -189,6 +198,8 @@ namespace NetFrame
 		NetDrive* m_pNetDrive;
 
 		TimerEventMap m_timerEvs;
+
+		Timer* m_pTimer;
 
 		SignalEventMap m_signalEvs;
 
@@ -242,9 +253,10 @@ namespace NetFrame
 	class TimerEvent : public Event
 	{
 	public:
-		TimerEvent(EventCentre* pCentre, uint32 ev, EventKey* pEvKey, uint32 timeOut):
+		TimerEvent(EventCentre* pCentre, uint32 ev, EventKey* pEvKey, uint32 timeOut, bool isLoop = false) :
 			Event(pCentre, ev, NULL, pEvKey),
-			m_timeOut(timeOut)
+			m_timeOut(timeOut),
+			m_isLoop(isLoop)
 		{
 		}
 
@@ -254,6 +266,7 @@ namespace NetFrame
 		uint32 GetTimeOut() const { return m_timeOut; }
 
 		bool IsLoop() const { return m_isLoop; }
+		void SetLoop(bool isLoop) { m_isLoop = isLoop; }
 
 		virtual void Handle() override;
 
