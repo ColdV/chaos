@@ -15,11 +15,11 @@
 namespace NetFrame
 {
 
-	Select& Select::Instance()
-	{
-		static Select s_inst;
-		return s_inst;
-	}
+	//Select& Select::Instance()
+	//{
+	//	static Select s_inst;
+	//	return s_inst;
+	//}
 
 
 	Select::Select()

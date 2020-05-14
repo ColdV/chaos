@@ -24,7 +24,8 @@ namespace NetFrame
 			MAX_FD = 1024,
 		};
 
-		static Select& Instance();
+		//static Select& Instance();
+		Select();
 
 		virtual ~Select();
 
@@ -33,8 +34,6 @@ namespace NetFrame
 		virtual int Launch() override;
 
 	protected:
-		Select();
-
 		virtual void RegistFd(socket_t fd, short ev) override;
 		
 		virtual void CancelFd(socket_t fd) override;

@@ -26,23 +26,21 @@ namespace NetFrame
 			MAX_FD = 1024,
 		};
 
-		static Epoll& Instance();
+		//static Epoll& Instance();
+		Epoll();
 
-		virtual ~Epoll() {}
+		virtual ~Epoll();
 
-		virtual int InitIO(/*const char* ip, int port, uint32 max_fd*/);
+		virtual int Init();
 
 		virtual int Launch();
 
 	protected:
-		Epoll();
-
 		virtual void RegistFd(socket_t fd, short ev);
 
 		virtual void CancelFd(socket_t fd, short ev);
 
 	private:
-		int m_max_fd;
 		int m_epfd;
 		epoll_event* m_events;
 	};

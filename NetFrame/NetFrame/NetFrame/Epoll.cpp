@@ -16,20 +16,31 @@
 namespace NetFrame
 { 
 
-	Epoll& Epoll::Instance()
+	//Epoll& Epoll::Instance()
+	//{
+	//	static Epoll s_inst;
+	//	return s_inst;
+	//}
+
+	Epoll::Epoll():
+		m_epfd(0),
+		m_events(0)
 	{
-		static Epoll s_inst;
-		return s_inst;
 	}
 
-	Epoll::Epoll()
+
+	Epoll:~Epoll()
 	{
+		if (m_events)
+			delete[] m_events;
 	}
 
 
-	int Epoll::InitIO(/*const char* ip, int port, uint32 max_fd*/)
+	int Epoll::Init()
 	{
 		m_events = new epoll_event[MAX_FD];
+		if (!m_events)
+			return -1;
 
 		m_epfd = epoll_create(MAX_FD);
 		if (0 >= m_epfd)

@@ -7,12 +7,10 @@
 #	Create: 2018-08-11 17:40:43
 #	Last Modified: 2018-08-11 17:40:43
 *******************************************/
+#pragma once
 
-#if 0
 
 #ifdef _WIN32
-
-#pragma once
 
 #include "NetDrive.h"
 
@@ -22,23 +20,16 @@ namespace NetFrame
 	class IOCP : public NetDrive
 	{
 	public:
-		static IOCP& Instance();
+		//static IOCP& Instance();
+		IOCP() {}
 		~IOCP() {}
 
-		virtual int InitIO(const char* ip, int port, uint32 max_fd) { return 0; }
+		virtual int Init() {};
 
-		virtual void WaitEvent() {};
-
-		virtual void HandleEvent(const IOEvent& fdEvent) {};
-
-	protected:
-		IOCP() {}
+		virtual int Launch() {};
 	};
 
 }
 
 
 #endif // _WIN32
-
-
-#endif

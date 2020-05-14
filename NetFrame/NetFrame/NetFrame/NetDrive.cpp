@@ -16,6 +16,14 @@
 
 namespace NetFrame
 {
+
+	NetDrive::NetDrive()
+	{
+		m_fds.clear();
+		m_activeFd.clear();
+	}
+
+
 	NetDrive::~NetDrive()
 	{
 		printf("delete IO!\n");
@@ -25,10 +33,14 @@ namespace NetFrame
 	NetDrive* NetDrive::AdapterNetDrive()
 	{
 #ifdef _WIN32
-		return &Select::Instance();
+		Select* pDrive = new Select();
+		if (pDrive)
+			return pDrive;
+		//return &Select::Instance();
 #else
 		return &Epoll:Instance();
 #endif
 
+		return 0;
 	}
 }
