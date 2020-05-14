@@ -28,28 +28,16 @@ namespace NetFrame
 
 		virtual ~Select();
 
-		//virtual int InitIO(const char* ip, int port, uint32 max_fd);
-
 		virtual int Init() override;
 
 		virtual int Launch() override;
 
-		//virtual void WaitEvent();
-
-		//virtual void HandleEvent(const IOEvent& ioEvent);
-
 	protected:
 		Select();
 
-		//virtual int addSocket(const uint32 fd, const Socket& ms, fd_set* rfds, fd_set* wfds, fd_set* efds);
-		//void delSocket(const uint32 fd);
-		//virtual int AddSocket(uint32 fd);
-		//virtual int DelSocket(uint32 fd);
-		//virtual void AddFd(uint32 fd, short event) override;
-
 		virtual void RegistFd(socket_t fd, short ev) override;
 		
-		virtual void CancelFd(socket_t fd, short ev) override;
+		virtual void CancelFd(socket_t fd) override;
 
 	private:
 		void CollectEvent(const fd_set& rfds, const fd_set& wfds, const fd_set& efds);

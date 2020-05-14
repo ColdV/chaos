@@ -2,22 +2,14 @@
 #include "Timer.h"
 #include <stdio.h>
 
-namespace NetFrame
-{
-	//int Event::AddNewEvent(Event* pNewEv)
-	//{
-	//	if (!pNewEv || !m_pCenter)
-	//		return -1;
-
-	//	return m_pCenter->RegisterEvent(pNewEv, NULL);
-	//}
-}
-
 
 namespace NetFrame
 {
-	EventCentre::EventCentre() :m_pNetDrive(0)
-	{}
+	EventCentre::EventCentre() :
+		m_pNetDrive(0),
+		m_pTimer(0)
+	{
+	}
 
 
 	EventCentre::~EventCentre()
@@ -93,25 +85,23 @@ namespace NetFrame
 
 	int EventCentre::RegisterEvent(Event* ev)
 	{
-		//m_events.insert(std::make_pair(ev, pHandler));
-		if (!ev)//|| !pHandler)
+		if (!ev)
 			return -1;
 
 		uint32 iEv = ev->GetEv();
-
-		//ev->SetHandler(pHandler);
 
 		const EventKey* pEvKey = ev->GetEvKey();
 
 		if (pEvKey)
 		{
 			if (iEv & (EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT)
-			   && !(iEv & ~(EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT)))
+			   && !(iEv & ~(EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT))
+				&& m_pNetDrive)
 			{
 				m_netEvs.insert(std::make_pair(pEvKey->fd, ev));
 				m_pNetDrive->AddFd(pEvKey->fd, iEv);
 			}
-			else if (iEv & EV_TIMEOUT && !(iEv & ~EV_TIMEOUT))
+			else if (iEv & EV_TIMEOUT && !(iEv & ~EV_TIMEOUT) && m_pTimer)
 			{
 				m_timerEvs.insert(std::make_pair(pEvKey->timerId, ev));
 				m_pTimer->AddTimer((TimerEvent*)ev);
@@ -136,10 +126,16 @@ namespace NetFrame
 
 		if (pEvKey)
 		{
-			if (iEv & (EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT))
+			if (iEv & (EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT) && m_pNetDrive)
+			{
 				m_netEvs.erase(pEvKey->fd);
-			else if (iEv & EV_TIMEOUT)
+				m_pNetDrive->DelFd(pEvKey->fd);
+			}
+			else if (iEv & EV_TIMEOUT && m_pTimer)
+			{
 				m_timerEvs.erase(pEvKey->timerId);
+				m_pTimer->DelTimer((TimerEvent*)ev);
+			}
 			else if (iEv & EV_SIGNAL)
 				m_signalEvs.erase(pEvKey->signal);
 			else
@@ -241,10 +237,6 @@ namespace NetFrame
 
 		pKey->fd = pNewSock->GetFd();
 
-		//NetEventHandler* pHandler = new NetEventHandler();
-		//if (!pHandler)
-		//	return -1;
-
 		EventCentre* pCentre = GetCentre();
 		if (!pCentre)
 			return -1;
@@ -253,8 +245,6 @@ namespace NetFrame
 		if (!pNewEv)
 			return -1;
 
-		/*if (0 != AddNewEvent(pNewEv))
-			return -1;*/
 		pCentre->RegisterEvent(pNewEv);
 
 		return 0;
@@ -276,10 +266,7 @@ namespace NetFrame
 				pCentre->CancelEvent(this);
 		}
 
-
-		return nRet;/*m_pSocket && m_pRBuffer ?
-			m_pRBuffer->ReadFd(m_pSocket) :
-			-1;*/
+		return nRet;
 	}
 
 
@@ -290,91 +277,6 @@ namespace NetFrame
 			-1;
 	}
 }
-
-
-//namespace NetFrame
-//{ 
-//
-//	void NetEventHandler::Handle(Event* pEv)
-//	{
-//		NetEvent* pNetEv = (NetEvent*)pEv;
-//
-//		uint32 ev = pNetEv->GetCurEv();
-//
-//		Socket* pSocket = pNetEv->GetSocket();
-//		if (!pSocket)
-//			return;
-//
-//		if (ev & EV_IOREAD)
-//		{
-//			uint32 fdType = pSocket->GetFdType();
-//
-//			if (fdType == SKT_LISTEN)
-//			{
-//				HandleListen(pNetEv);
-//			}
-//			else if (fdType == SKT_CONNING)
-//			{
-//				HandleRead(pNetEv);
-//			}
-//		}
-//		
-//		if (ev & EV_IOWRITE)
-//		{
-//			HandleWrite(pNetEv);
-//		}
-//	}
-//
-//
-//	int NetEventHandler::HandleListen(NetEvent* pNetEv)
-//	{
-//		if (!pNetEv)
-//			return -1;
-//
-//		Socket* pSocket = pNetEv->GetSocket();
-//		if (!pSocket)
-//			return -1;
-//
-//		Socket* pNewSock = pSocket->Accept2();
-//		if (!pNewSock)
-//			return -1;
-//
-//		EventKey* pKey = new EventKey();
-//		if (!pKey)
-//			return -1;
-//
-//		pKey->fd = pNewSock->GetFd();
-//	
-//		NetEventHandler* pHandler = new NetEventHandler();
-//		if (!pHandler)
-//			return -1;
-//
-//		/*NetEvent* pNewEv = new NetEvent(pNewSock, EV_IOREAD | EV_IOWRITE, pHandler, pKey);
-//		if (!pNewEv)
-//			return -1;*/
-//
-//		return 0;
-//	}
-//
-//
-//	int NetEventHandler::HandleRead(NetEvent* pNetEv)
-//	{
-//		if (!pNetEv)
-//			return -1;
-//
-//		Socket* pSocket = pNetEv->GetSocket();
-//		if (!pSocket)
-//			return -1;
-//
-//		return 0;
-//	}
-//
-//
-//	int NetEventHandler::HandleWrite(NetEvent* pNetEv)
-//	{
-//		return 0;
-//	}
-//}
 
 
 namespace NetFrame

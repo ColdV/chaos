@@ -21,19 +21,7 @@
     <ClCompile Include="MySvrConnector\Event.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="MySvrConnector\EventMaster.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="MySvrConnector\IOEventMgr.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="MySvrConnector\main.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="MySvrConnector\MsgChain.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="MySvrConnector\MySvrConnector.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="MySvrConnector\Timer.cpp">
@@ -95,19 +83,7 @@
     <ClInclude Include="MySvrConnector\Event.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="MySvrConnector\EventMaster.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="MySvrConnector\IOEventMgr.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="MySvrConnector\MinHeap.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="MySvrConnector\MsgChain.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="MySvrConnector\MySvrConnector.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="MySvrConnector\Timer.h">

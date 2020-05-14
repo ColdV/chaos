@@ -32,22 +32,11 @@ namespace NetFrame
 
 		virtual int InitIO(/*const char* ip, int port, uint32 max_fd*/);
 
-		//virtual void WaitEvent();
-
-		//virtual void HandleEvent(const IOEvent& ioEvent);
-
 		virtual int Launch();
-
-		//int AddSocket(const Socket& s);
 
 	protected:
 		Epoll();
 
-		//virtual void delSocket(const uint32 fd);
-
-		//virtual int AddSocket(uint32 fd);
-
-		//virtual int DelSocket(uint32 fd);
 		virtual void RegistFd(socket_t fd, short ev);
 
 		virtual void CancelFd(socket_t fd, short ev);

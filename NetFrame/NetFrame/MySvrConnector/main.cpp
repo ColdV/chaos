@@ -1,4 +1,3 @@
-#include "MySvrConnector.h"
 #include "NetDrive.h"
 #include "../common/single_templete.h"
 #include "../MyThreadPool/MyThreadPool.h"
@@ -7,7 +6,6 @@
 #include <process.h>
 #endif // _WIN32
 
-#include "EventMaster.h"
 #include "MinHeap.h"
 #include <map>
 #include "Event.h"

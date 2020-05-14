@@ -6,7 +6,6 @@
 #include <set>
 #include "NetDrive.h"
 #include "Buffer.h"
-//#include "Timer.h"
 
 enum
 {
@@ -17,60 +16,6 @@ enum
 	EV_SIGNAL = 1 << 4,
 };
 
-//struct TimerEvent
-//{
-//	unsigned int timerID;
-//	int timeOut;
-//	//TimerCallback cb;
-//};
-//
-//
-//struct SocketEvent		//need scoketEvMgr
-//{
-//	unsigned int fd;
-//	int size;
-//	int totalSize;
-//	char* buffer;
-//};
-//
-//
-//struct Event
-//{
-//	int evID;
-//	int ev;
-//
-//	union
-//	{
-//		TimerEvent		evTimer;
-//		SocketEvent		evSocket;
-//	} Ev;
-//
-//	EventCallback	evCb;
-//	bool isLoop;
-//	void* userData;
-//};
-//
-//
-//class EventNew
-//{
-//public:
-//	virtual ~EventNew() = 0;
-//
-//protected:
-//	EventNew() {};
-//
-//	EventNew* NewEvent(short ev, EventCallback evCb, bool isLoop) {};
-//
-//protected:
-//	unsigned int m_id;
-//	short m_ev;
-//	EventCallback m_evCb;
-//	bool m_isLoop;
-//
-//	static unsigned int m_increment;
-//	static std::set<unsigned int> m_readyId;
-//};
-
 
 namespace NetFrame
 {
@@ -78,17 +23,6 @@ namespace NetFrame
 	class Event;
 	class EventCentre;
 	class Timer;
-
-
-	////抽象事件处理器
-	//class EventHandler
-	//{
-	//public:
-	//	EventHandler() {}
-	//	virtual ~EventHandler() = 0 {};
-
-	//	virtual void Handle(Event* pEv) = 0;
-	//};
 
 
 	union EventKey
@@ -109,19 +43,13 @@ namespace NetFrame
 	class Event
 	{
 	public:
-		/*Event() {}
-		virtual ~Event() = 0;*/
-
 		virtual void Handle() = 0;
 
 		uint32 GetEv() const { return m_ev; }
 
-		/*void SetHandler(EventHandler* pHandler) { m_pHandler = pHandler; }*/
-
 		uint32 GetCurEv() const { return m_curEv; }
-		void SetCurEv(uint32 ev) { m_curEv = ev; }
 
-		//void Handle() { if (!m_pHandler) return; m_pHandler->Handle(this); }
+		void SetCurEv(uint32 ev) { m_curEv = ev; }
 
 		const EventKey* GetEvKey() const { return m_pEvKey; }
 
@@ -141,8 +69,6 @@ namespace NetFrame
 			if (m_pEvKey)
 				delete m_pEvKey;
 		}
-
-		//int AddNewEvent(Event* pNewEv);
 
 	private:
 		EventCentre* m_pCenter;		//所属的事件中心
@@ -270,22 +196,5 @@ namespace NetFrame
 		bool m_isLoop;
 	};
 
-
-	//class NetEventHandler : public EventHandler
-	//{
-	//public:
-	//	NetEventHandler() {}
-	//	~NetEventHandler() {}
-
-	//	virtual void Handle(Event* pEv) override;
-
-
-	//private:
-	//	int HandleListen(NetEvent* pEv);
-
-	//	int HandleRead(NetEvent* pEv);
-
-	//	int HandleWrite(NetEvent* pEv);
-	//};
 
 }	//namespace NetFrame
