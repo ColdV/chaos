@@ -11,7 +11,6 @@
 #pragma once
 
 #include "NetDrive.h"
-#include "../common/single_templete.h"
 
 namespace NetFrame
 {

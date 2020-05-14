@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include "../common/stdafx.h"
+#include "../../common/stdafx.h"
 #include <map>
 #include <set>
 #include "NetDrive.h"

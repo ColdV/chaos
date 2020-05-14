@@ -7,6 +7,7 @@
 #include <map>
 #include "Event.h"
 #include "Timer.h"
+#include "../../common/common.h"
 
 
 const char IP[] = "10.246.60.164";//"0.0.0.0";//"10.246.60.179";
@@ -29,7 +30,7 @@ void testNonCpy(TestNonCpy cpy)
 {
 	;
 }
-#include "../common/common.h"
+
 
 
 int main()

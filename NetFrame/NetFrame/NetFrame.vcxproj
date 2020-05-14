@@ -156,7 +156,6 @@
   <ItemGroup>
     <ClInclude Include="common\common.h" />
     <ClInclude Include="common\single_templete.h" />
-    <ClInclude Include="common\stdafx.h" />
     <ClInclude Include="NetFrame\Buffer.h" />
     <ClInclude Include="NetFrame\Epoll.h" />
     <ClInclude Include="NetFrame\Event.h" />

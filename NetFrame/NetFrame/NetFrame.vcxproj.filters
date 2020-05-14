@@ -77,8 +77,5 @@
     <ClInclude Include="common\single_templete.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="common\stdafx.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>

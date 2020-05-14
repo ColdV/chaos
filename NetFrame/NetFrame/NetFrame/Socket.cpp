@@ -9,7 +9,7 @@
 *******************************************/
 
 #include "Socket.h"
-#include "../common/common.h"
+#include "../../common/common.h"
 
 namespace NetFrame
 {
