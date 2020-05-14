@@ -15,33 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Client\test.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="MyThreadPool\MyCondition.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="MyThreadPool\MyEvent.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="MyThreadPool\MyMutex.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="MyThreadPool\MyTask.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="MyThreadPool\MyThread.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="MyThreadPool\MyThreadPool.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="MyThreadPool\MyThreadSyncObj.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="MyThreadPool\MyWorkThread.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="NetFrame\Buffer.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -71,42 +44,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="common\common.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="common\single_templete.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="common\stdafx.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="MyThreadPool\MyCondition.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="MyThreadPool\MyEvent.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="MyThreadPool\MyMutex.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="MyThreadPool\MyTask.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="MyThreadPool\MyThread.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="MyThreadPool\MyThreadPool.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="MyThreadPool\MyThreadSyncObj.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="MyThreadPool\MyWorkThread.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="MyThreadPool\stdafx.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="NetFrame\Buffer.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -132,6 +69,15 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="NetFrame\Timer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="common\common.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="common\single_templete.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="common\stdafx.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

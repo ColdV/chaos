@@ -1,7 +1,4 @@
 
-#include "../common/single_templete.h"
-#include "../MyThreadPool/MyThreadPool.h"
-
 #ifdef _WIN32
 #include <process.h>
 #endif // _WIN32
@@ -14,37 +11,6 @@
 
 const char IP[] = "10.246.60.164";//"0.0.0.0";//"10.246.60.179";
 
-/*
-void func(void* tid)
-{
-	int i = *(int*)tid;
-	printf("i am thread:%d\n", GetCurrentThreadId());
-	return;
-}
-*/
-
-class test : public SingleTmp<test>
-{
-public:
-	//test() {}
-	~test() {}
-	void print() { printf("single test!\n"); }
-	test() {}
-};
-
-
-//template<class T = void>
-//void print(T a)
-//{
-//	if (T == void)
-//	{
-//		printf("non T!\n");
-//		return;
-//
-//	}
-//
-//	printf("%d\n", a);
-//}
 
 void timecb(unsigned int timeid, void* userData)
 {

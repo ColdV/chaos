@@ -20,11 +20,10 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
-    <ProjectGuid>{3487A9D4-95D1-49C0-B481-A15CD6909C41}</ProjectGuid>
+    <ProjectGuid>{B6B2AE7A-B7A0-4F1B-842A-C41EF09AD4E4}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>NetFramevs2017</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
-    <ProjectName>NetFrame</ProjectName>
+    <RootNamespace>NetFrame</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -144,47 +143,29 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Client\test.cpp" />
     <ClCompile Include="NetFrame\Buffer.cpp" />
-    <ClCompile Include="NetFrame\Event.cpp" />
-    <ClCompile Include="NetFrame\main.cpp" />
     <ClCompile Include="NetFrame\Epoll.cpp" />
+    <ClCompile Include="NetFrame\Event.cpp" />
     <ClCompile Include="NetFrame\IOCP.cpp" />
+    <ClCompile Include="NetFrame\main.cpp" />
+    <ClCompile Include="NetFrame\NetDrive.cpp" />
     <ClCompile Include="NetFrame\Select.cpp" />
     <ClCompile Include="NetFrame\Socket.cpp" />
-    <ClCompile Include="NetFrame\NetDrive.cpp" />
     <ClCompile Include="NetFrame\Timer.cpp" />
-    <ClCompile Include="MyThreadPool\MyCondition.cpp" />
-    <ClCompile Include="MyThreadPool\MyEvent.cpp" />
-    <ClCompile Include="MyThreadPool\MyMutex.cpp" />
-    <ClCompile Include="MyThreadPool\MyTask.cpp" />
-    <ClCompile Include="MyThreadPool\MyThread.cpp" />
-    <ClCompile Include="MyThreadPool\MyThreadPool.cpp" />
-    <ClCompile Include="MyThreadPool\MyThreadSyncObj.cpp" />
-    <ClCompile Include="MyThreadPool\MyWorkThread.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common\common.h" />
     <ClInclude Include="common\single_templete.h" />
     <ClInclude Include="common\stdafx.h" />
     <ClInclude Include="NetFrame\Buffer.h" />
-    <ClInclude Include="NetFrame\Event.h" />
-    <ClInclude Include="NetFrame\MinHeap.h" />
     <ClInclude Include="NetFrame\Epoll.h" />
+    <ClInclude Include="NetFrame\Event.h" />
     <ClInclude Include="NetFrame\IOCP.h" />
+    <ClInclude Include="NetFrame\MinHeap.h" />
+    <ClInclude Include="NetFrame\NetDrive.h" />
     <ClInclude Include="NetFrame\Select.h" />
     <ClInclude Include="NetFrame\Socket.h" />
-    <ClInclude Include="NetFrame\NetDrive.h" />
     <ClInclude Include="NetFrame\Timer.h" />
-    <ClInclude Include="MyThreadPool\MyCondition.h" />
-    <ClInclude Include="MyThreadPool\MyEvent.h" />
-    <ClInclude Include="MyThreadPool\MyMutex.h" />
-    <ClInclude Include="MyThreadPool\MyTask.h" />
-    <ClInclude Include="MyThreadPool\MyThread.h" />
-    <ClInclude Include="MyThreadPool\MyThreadPool.h" />
-    <ClInclude Include="MyThreadPool\MyThreadSyncObj.h" />
-    <ClInclude Include="MyThreadPool\MyWorkThread.h" />
-    <ClInclude Include="MyThreadPool\stdafx.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
