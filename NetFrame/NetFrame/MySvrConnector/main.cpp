@@ -256,6 +256,10 @@ int main()
 	pKey->timerId = NetFrame::Timer::CreateTimerID();
 	NetFrame::TimerEvent* ev = new NetFrame::TimerEvent(pCentre, EV_TIMEOUT, pKey, 1, true);
 
+	NetFrame::NetEvent* netEv1 = new NetFrame::NetEvent(pCentre, s, EV_TIMEOUT, NULL, pNKey);
+	int n = pCentre->RegisterEvent(netEv1, NULL);
+	printf("%d\n", n);
+
 	pCentre->RegisterEvent(ev, NULL);
 	pCentre->EventLoop();
 
