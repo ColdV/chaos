@@ -267,9 +267,9 @@ namespace NetFrame
 	NetDrive* NetDrive::AdapterNetDrive()
 	{
 #ifdef _WIN32
-		return &Select::Instance(1);
+		return &Select::Instance();
 #else
-		return &Epoll:Instance(1);
+		return &Epoll:Instance();
 #endif
 
 	}

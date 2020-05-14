@@ -74,21 +74,21 @@ enum
 
 namespace NetFrame
 {
-	class EventHandler;
+	//class EventHandler;
 	class Event;
 	class EventCentre;
 	class Timer;
 
 
-	//抽象事件处理器
-	class EventHandler
-	{
-	public:
-		EventHandler() {}
-		virtual ~EventHandler() = 0 {};
+	////抽象事件处理器
+	//class EventHandler
+	//{
+	//public:
+	//	EventHandler() {}
+	//	virtual ~EventHandler() = 0 {};
 
-		virtual void Handle(Event* pEv) = 0;
-	};
+	//	virtual void Handle(Event* pEv) = 0;
+	//};
 
 
 	union EventKey
@@ -128,10 +128,9 @@ namespace NetFrame
 		EventCentre* GetCentre() const { return m_pCenter; }
 
 	protected:
-		Event(EventCentre* pCentre, uint32 ev, EventHandler* pHandler, EventKey* pEvKey) :
+		Event(EventCentre* pCentre, uint32 ev, EventKey* pEvKey) :
 			m_ev(ev),
 			m_curEv(0),
-			m_pHandler(pHandler),
 			m_pEvKey(pEvKey),
 			m_pCenter(pCentre)
 		{
@@ -139,9 +138,6 @@ namespace NetFrame
 
 		virtual ~Event() = 0
 		{
-			if (m_pHandler)
-				delete m_pHandler;
-
 			if (m_pEvKey)
 				delete m_pEvKey;
 		}
@@ -152,7 +148,6 @@ namespace NetFrame
 		EventCentre* m_pCenter;		//所属的事件中心
 		uint32 m_ev;		//注册的事件
 		uint32 m_curEv;		//当前发生的事件
-		EventHandler* m_pHandler;
 		EventKey*	m_pEvKey;
 	};
 
@@ -175,7 +170,7 @@ namespace NetFrame
 
 		void EventLoop();
 
-		int RegisterEvent(Event* ev, EventHandler* pHandler);
+		int RegisterEvent(Event* ev);
 
 		int CancelEvent(Event* ev);
 
@@ -212,8 +207,8 @@ namespace NetFrame
 	class NetEvent : public Event
 	{
 	public:
-		NetEvent(EventCentre* pCentre, Socket* pSocket, uint32 ev, EventHandler* pHandler, EventKey* pEvKey):
-			Event(pCentre, ev, pHandler, pEvKey),
+		NetEvent(EventCentre* pCentre, Socket* pSocket, uint32 ev, EventKey* pEvKey):
+			Event(pCentre, ev, pEvKey),
 			m_pSocket(pSocket)
 		{
 			m_pRBuffer = new Buffer;
@@ -254,7 +249,7 @@ namespace NetFrame
 	{
 	public:
 		TimerEvent(EventCentre* pCentre, uint32 ev, EventKey* pEvKey, uint32 timeOut, bool isLoop = false) :
-			Event(pCentre, ev, NULL, pEvKey),
+			Event(pCentre, ev, pEvKey),
 			m_timeOut(timeOut),
 			m_isLoop(isLoop)
 		{
@@ -276,21 +271,21 @@ namespace NetFrame
 	};
 
 
-	class NetEventHandler : public EventHandler
-	{
-	public:
-		NetEventHandler() {}
-		~NetEventHandler() {}
+	//class NetEventHandler : public EventHandler
+	//{
+	//public:
+	//	NetEventHandler() {}
+	//	~NetEventHandler() {}
 
-		virtual void Handle(Event* pEv) override;
+	//	virtual void Handle(Event* pEv) override;
 
 
-	private:
-		int HandleListen(NetEvent* pEv);
+	//private:
+	//	int HandleListen(NetEvent* pEv);
 
-		int HandleRead(NetEvent* pEv);
+	//	int HandleRead(NetEvent* pEv);
 
-		int HandleWrite(NetEvent* pEv);
-	};
+	//	int HandleWrite(NetEvent* pEv);
+	//};
 
 }	//namespace NetFrame

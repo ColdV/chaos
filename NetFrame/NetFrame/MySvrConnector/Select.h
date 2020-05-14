@@ -24,7 +24,7 @@ namespace NetFrame
 			MAX_FD = 1024,
 		};
 
-		static Select& Instance(int max_socket);
+		static Select& Instance();
 
 		virtual ~Select();
 
@@ -39,7 +39,7 @@ namespace NetFrame
 		//virtual void HandleEvent(const IOEvent& ioEvent);
 
 	protected:
-		Select(int max_socket);
+		Select();
 
 		//virtual int addSocket(const uint32 fd, const Socket& ms, fd_set* rfds, fd_set* wfds, fd_set* efds);
 		//void delSocket(const uint32 fd);

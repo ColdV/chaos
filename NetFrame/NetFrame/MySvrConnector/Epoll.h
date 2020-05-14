@@ -15,36 +15,49 @@
 #include "NetDrive.h"
 #include <sys/epoll.h>
 
-
-class Epoll : public NetDrive
+namespace NetFrame
 {
-public:
 
-	static Epoll& Instance();
+	class Epoll : public NetDrive
+	{
+	public:
+		enum
+		{
+			MAX_FD = 1024,
+		};
 
-	virtual ~Epoll() {}
+		static Epoll& Instance();
 
-	virtual int InitIO(const char* ip, int port, uint32 max_fd);
+		virtual ~Epoll() {}
 
-	virtual void WaitEvent();
+		virtual int InitIO(/*const char* ip, int port, uint32 max_fd*/);
 
-	virtual void HandleEvent(const IOEvent& ioEvent);
+		//virtual void WaitEvent();
 
-	int AddSocket(const Socket& s);
+		//virtual void HandleEvent(const IOEvent& ioEvent);
 
-protected:
-	Epoll();
+		virtual int Launch();
 
-	virtual void delSocket(const uint32 fd);
+		//int AddSocket(const Socket& s);
 
-	virtual int AddSocket(uint32 fd);
+	protected:
+		Epoll();
 
-	virtual int DelSocket(uint32 fd);
+		//virtual void delSocket(const uint32 fd);
 
-private:
-	int m_max_fd;
-	int m_epfd;
-	epoll_event* m_events;
-};
+		//virtual int AddSocket(uint32 fd);
+
+		//virtual int DelSocket(uint32 fd);
+		virtual void RegistFd(socket_t fd, short ev);
+
+		virtual void CancelFd(socket_t fd, short ev);
+
+	private:
+		int m_max_fd;
+		int m_epfd;
+		epoll_event* m_events;
+	};
+
+}
 
 #endif // !_WIN32

@@ -246,17 +246,17 @@ int main()
 	NetFrame::EventKey* pNKey = new NetFrame::EventKey();
 	pNKey->fd = sock;
 
-	NetFrame::NetEvent* netEv = new NetFrame::NetEvent(pCentre, s, EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT, NULL, pNKey);
+	NetFrame::NetEvent* netEv = new NetFrame::NetEvent(pCentre, s, EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT, pNKey);
 	if (!netEv)
 		return -1;
 
-	pCentre->RegisterEvent(netEv, NULL);
+	pCentre->RegisterEvent(netEv);
 
 	NetFrame::EventKey* pKey = new NetFrame::EventKey();
 	pKey->timerId = NetFrame::Timer::CreateTimerID();
 	NetFrame::TimerEvent* ev = new NetFrame::TimerEvent(pCentre, EV_TIMEOUT, pKey, 1, true);
 
-	pCentre->RegisterEvent(ev, NULL);
+	pCentre->RegisterEvent(ev);
 	pCentre->EventLoop();
 
 	return 0;

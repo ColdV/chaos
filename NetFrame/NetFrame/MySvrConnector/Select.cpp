@@ -15,15 +15,14 @@
 namespace NetFrame
 {
 
-	Select& Select::Instance(int max_socket)
+	Select& Select::Instance()
 	{
-		static Select s_select(max_socket);
-
-		return s_select;
+		static Select s_inst;
+		return s_inst;
 	}
 
 
-	Select::Select(int max_socket)
+	Select::Select()
 	{
 		//m_sockets.clear();
 		//m_max_socket = max_socket;
