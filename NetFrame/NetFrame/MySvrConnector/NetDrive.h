@@ -87,10 +87,10 @@ namespace NetFrame
 		virtual ~NetDrive();
 
 	//protected:
-		NetDrive(EventCentre* pCentre = 0):
-			m_pCentre(pCentre)
+		NetDrive(/*EventCentre* pCentre = 0*/)//: m_pCentre(pCentre)
 		{ 
-			m_fds.clear(); m_activeFd.clear(); 
+			m_fds.clear(); 
+			m_activeFd.clear(); 
 		}
 
 	public:
@@ -167,7 +167,7 @@ namespace NetFrame
 
 		std::set<socket_t> m_fds;
 		std::list<FdEvent> m_activeFd;
-		EventCentre* m_pCentre;
+		//EventCentre* m_pCentre;
 	};
 
 
