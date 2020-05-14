@@ -263,9 +263,23 @@ namespace NetFrame
 
 	int NetEvent::HandleRead()
 	{
-		return m_pSocket && m_pRBuffer ?
+		if (!m_pSocket || !m_pRBuffer)
+			return -1;
+
+		int nRet = m_pRBuffer->ReadFd(m_pSocket);
+		if (0 >= nRet)
+		{
+			m_pSocket->Close();
+
+			EventCentre* pCentre = GetCentre();
+			if (pCentre)
+				pCentre->CancelEvent(this);
+		}
+
+
+		return nRet;/*m_pSocket && m_pRBuffer ?
 			m_pRBuffer->ReadFd(m_pSocket) :
-			-1;
+			-1;*/
 	}
 
 
