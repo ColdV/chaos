@@ -105,17 +105,18 @@ namespace NetFrame
 
 		if (pEvKey)
 		{
-			if (iEv & (EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT))
+			if (iEv & (EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT)
+			   && !(ev & ~(EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT)))
 			{
 				m_netEvs.insert(std::make_pair(pEvKey->fd, ev));
 				m_pNetDrive->AddFd(pEvKey->fd, iEv);
 			}
-			else if (iEv & EV_TIMEOUT)
+			else if (iEv & EV_TIMEOUT && !(ev & ~EV_TIMEOUT))
 			{
 				m_timerEvs.insert(std::make_pair(pEvKey->timerId, ev));
 				m_pTimer->AddTimer((TimerEvent*)ev);
 			}
-			else if (iEv & EV_SIGNAL)
+			else if (iEv & EV_SIGNAL && !(ev & ~EV_SIGNAL))
 				m_signalEvs.insert(std::make_pair(pEvKey->signal, ev));
 			else
 				return -1;
