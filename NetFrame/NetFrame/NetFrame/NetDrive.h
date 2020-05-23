@@ -17,16 +17,17 @@
 namespace NetFrame
 {
 
-	struct FdEvent
-	{
-		socket_t fd;
-		short ev;
-	};
+	class Event;
+	class EventCentre;
 
-	class NetDrive
+	const int NET_TICK = 1000 / 60;		//“ª√Î60÷°
+
+	class NetDrive : public NonCopyable
 	{
 	public:
-		NetDrive();
+		typedef std::map<socket_t, Event*> NetEventMap;
+
+		NetDrive(EventCentre* pCentre);
 
 		virtual ~NetDrive();
 
@@ -35,30 +36,35 @@ namespace NetFrame
 
 		virtual int Launch() = 0;
 
-		void AddFd(socket_t fd, uint32 ev) { m_fds.insert(fd); RegistFd(fd, ev); }
+		int AddEvent(Event* pEvent);
 
-		void DelFd(socket_t fd) { m_fds.erase(fd); CancelFd(fd); }
+		int DelEvent(Event* pEvent);
 
-		const std::list<FdEvent>& GetActives() const { return m_activeFd; }
+		int DelEvent(socket_t fd);
 
-		void ResetActives() { m_activeFd.clear(); }
+		Event* GetEvent(socket_t);
 
-		static NetDrive* AdapterNetDrive();
+		static NetDrive* AdapterNetDrive(EventCentre* pCentre);
 
 
 	protected:
-		virtual void RegistFd(socket_t fd, short ev) {}
+		virtual int RegistFd(socket_t fd, short ev) { return 0; }
 
-		virtual void CancelFd(socket_t fd) {}
+		virtual int CancelFd(socket_t fd) { return 0; }
 
-		void PushActiveFd(const FdEvent& fdEv) { m_activeFd.push_back(fdEv); }
+		int PushActiveEvent(socket_t fd, short ev);
 
-		std::set<socket_t>* GetFds() { return &m_fds; }
+		int PushActiveEvent(Event* pEvent);
+
+		//std::set<socket_t>* GetFds() { return &m_fds; }
 		
+	private:
+		NetDrive(const NetDrive&);
 
 	protected:
-		std::set<socket_t> m_fds;
-		std::list<FdEvent> m_activeFd;
+		EventCentre* m_pCentre;
+		//std::set<socket_t> m_fds;
+		NetEventMap m_events;
 	};
 
 }

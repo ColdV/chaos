@@ -5,9 +5,17 @@
 
 namespace NetFrame
 {
+	void Event::CancelEvent()
+	{
+		if (m_pCenter)
+			m_pCenter->CancelEvent(this);
+	}
+
+
 	EventCentre::EventCentre() :
 		m_pNetDrive(0),
-		m_pTimer(0)
+		m_pTimer(0),
+		m_running(false)
 	{
 	}
 
@@ -24,7 +32,7 @@ namespace NetFrame
 
 	int EventCentre::Init()
 	{
-		m_pNetDrive = NetDrive::AdapterNetDrive();
+		m_pNetDrive = NetDrive::AdapterNetDrive(this);
 		if (!m_pNetDrive)
 			return -1;
 
@@ -40,7 +48,9 @@ namespace NetFrame
 
 	void EventCentre::EventLoop()
 	{
-		while (true)
+		m_running = true;
+
+		while (m_running)
 		{
 			if (0 != DispatchEvent())
 				break;
@@ -83,31 +93,32 @@ namespace NetFrame
 		return 0;
 	}
 
-	int EventCentre::RegisterEvent(Event* ev)
+
+	int EventCentre::RegisterEvent(Event* pEvent)
 	{
-		if (!ev)
+		if (!pEvent)
 			return -1;
 
-		uint32 iEv = ev->GetEv();
+		uint32 ev = pEvent->GetEv();
 
-		const EventKey* pEvKey = ev->GetEvKey();
+		const EventKey* pEvKey = pEvent->GetEvKey();
 
 		if (pEvKey)
 		{
-			if (iEv & (EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT)
-			   && !(iEv & ~(EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT))
+			if (ev & (EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT)
+			   && !(ev & ~(EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT))
 				&& m_pNetDrive)
 			{
-				m_netEvs.insert(std::make_pair(pEvKey->fd, ev));
-				m_pNetDrive->AddFd(pEvKey->fd, iEv);
+				//m_netEvs.insert(std::make_pair(pEvKey->fd, pEvent));
+				m_pNetDrive->AddEvent(pEvent);
 			}
-			else if (iEv & EV_TIMEOUT && !(iEv & ~EV_TIMEOUT) && m_pTimer)
+			else if (ev & EV_TIMEOUT && !(ev & ~EV_TIMEOUT) && m_pTimer)
 			{
-				m_timerEvs.insert(std::make_pair(pEvKey->timerId, ev));
-				m_pTimer->AddTimer((TimerEvent*)ev);
+				m_timerEvs.insert(std::make_pair(pEvKey->timerId, pEvent));
+				m_pTimer->AddTimer((TimerEvent*)pEvent);
 			}
-			else if (iEv & EV_SIGNAL && !(iEv & ~EV_SIGNAL))
-				m_signalEvs.insert(std::make_pair(pEvKey->signal, ev));
+			else if (ev & EV_SIGNAL && !(ev & ~EV_SIGNAL))
+				m_signalEvs.insert(std::make_pair(pEvKey->signal, pEvent));
 			else
 				return -1;
 		}
@@ -115,28 +126,29 @@ namespace NetFrame
 		return 0;
 	}
 
-	int EventCentre::CancelEvent(Event* ev)
+
+	int EventCentre::CancelEvent(Event* pEvent)
 	{
-		if (!ev)
+		if (!pEvent)
 			return -1;
 
-		uint32 iEv = ev->GetEv();
+		uint32 ev = pEvent->GetEv();
 
-		const EventKey* pEvKey = ev->GetEvKey();
+		const EventKey* pEvKey = pEvent->GetEvKey();
 
 		if (pEvKey)
 		{
-			if (iEv & (EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT) && m_pNetDrive)
+			if (ev & (EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT) && m_pNetDrive)
 			{
-				m_netEvs.erase(pEvKey->fd);
-				m_pNetDrive->DelFd(pEvKey->fd);
+				//m_netEvs.erase(pEvKey->fd);
+				m_pNetDrive->DelEvent(pEvent);
 			}
-			else if (iEv & EV_TIMEOUT && m_pTimer)
+			else if (ev & EV_TIMEOUT && m_pTimer)
 			{
 				m_timerEvs.erase(pEvKey->timerId);
-				m_pTimer->DelTimer((TimerEvent*)ev);
+				m_pTimer->DelTimer((TimerEvent*)pEvent);
 			}
-			else if (iEv & EV_SIGNAL)
+			else if (ev & EV_SIGNAL)
 				m_signalEvs.erase(pEvKey->signal);
 			else
 				return -1;
@@ -154,19 +166,6 @@ namespace NetFrame
 		int ret = 0;
 		if (0 != (ret = m_pNetDrive->Launch()))
 			return ret;
-
-		const std::list<FdEvent>& evs = m_pNetDrive->GetActives();
-
-		for (auto it = evs.begin(); it != evs.end(); ++it)
-		{
-			auto evIt = m_netEvs.find(it->fd);
-			if (evIt == m_netEvs.end())
-				continue;
-
-			m_activeEvs.push_back(evIt->second);
-		}
-
-		m_pNetDrive->ResetActives();
 
 		return ret;
 	}
@@ -191,90 +190,186 @@ namespace NetFrame
 }
 
 
+
 namespace NetFrame
 {
-
-	void NetEvent::Handle()
+	void Listener::Handle()
 	{
-		uint32 ev = GetCurEv();
-
 		if (!m_pSocket)
 			return;
 
+		uint32 ev = GetCurEv();
+
 		if (ev & EV_IOREAD)
 		{
-			uint32 fdType = m_pSocket->GetFdType();
+			do
+			{
+				//优化：这里考虑内存分配是在Accept调用中还是在此处分配
+				Socket* pNewSock = m_pSocket->Accept();
+				if (!pNewSock || 0 > pNewSock->GetFd() ||
+					errno == EAGAIN ||
+					pNewSock->GetFd() == INVALID_SOCKET)
+				{
+					delete pNewSock;
+					return;
+				}
 
-			if (fdType == SKT_LISTEN)
-			{
-				HandleListen();
-			}
-			else if (fdType == SKT_CONNING)
-			{
-				HandleRead();
-			}
+				EventKey* pKey = new EventKey();
+				if (!pKey)
+					return;
+
+				pKey->fd = pNewSock->GetFd();
+
+				EventCentre* pCentre = GetCentre();
+				if (!pCentre)
+					return;
+
+				Event* pNewEv = NULL;
+
+#if defined WIN32
+				pNewEv = new AsynConnecter(pCentre, pNewSock, EV_IOREAD | EV_IOWRITE, pKey);
+#else
+				pNewEv = new Connecter(pCentre, pNewSock, EV_IOREAD | EV_IOWRITE, pKey);
+#endif
+				if (!pNewEv)
+				{
+					delete pNewSock;
+					return;
+				}
+
+				pCentre->RegisterEvent(pNewEv);
+
+				SetCurEv(ev & (~EV_IOREAD));
+
+			} while (m_pSocket->Block());
+		}
+
+	}
+}
+
+
+namespace NetFrame
+{
+
+	void Connecter::Handle()
+	{
+		if (!m_pSocket)
+			return;
+
+		uint32 ev = GetCurEv();
+
+		if (ev & EV_IOREAD)
+		{
+
+			HandleRead();
+
+			SetCurEv(ev & (~EV_IOREAD));
 		}
 
 		if (ev & EV_IOWRITE)
 		{
 			HandleWrite();
+			SetCurEv(ev & (~EV_IOWRITE));
 		}
 	}
 
 
-	int NetEvent::HandleListen()
-	{
-		if (!m_pSocket)
-			return -1;
 
-		Socket* pNewSock = m_pSocket->Accept2();
-		if (!pNewSock)
-			return -1;
-
-		EventKey* pKey = new EventKey();
-		if (!pKey)
-			return -1;
-
-		pKey->fd = pNewSock->GetFd();
-
-		EventCentre* pCentre = GetCentre();
-		if (!pCentre)
-			return -1;
-
-		NetEvent* pNewEv = new NetEvent(pCentre, pNewSock, EV_IOREAD | EV_IOWRITE, pKey);
-		if (!pNewEv)
-			return -1;
-
-		pCentre->RegisterEvent(pNewEv);
-
-		return 0;
-	}
-
-
-	int NetEvent::HandleRead()
+	int Connecter::HandleRead()
 	{
 		if (!m_pSocket || !m_pRBuffer)
 			return -1;
 
-		int nRet = m_pRBuffer->ReadFd(m_pSocket);
+		int nRet = m_pRBuffer->ReadSocket(m_pSocket);
 		if (0 >= nRet)
 		{
-			m_pSocket->Close();
+			//m_pSocket->Close();
 
-			EventCentre* pCentre = GetCentre();
-			if (pCentre)
-				pCentre->CancelEvent(this);
+			CancelEvent();
 		}
 
 		return nRet;
 	}
 
 
-	int NetEvent::HandleWrite()
+	int Connecter::HandleWrite()
 	{
 		return m_pSocket && m_pWBuffer ?
-			m_pWBuffer->WriteFd(m_pSocket) :
+			m_pWBuffer->WriteSocket(m_pSocket) :
 			-1;
+	}
+
+
+	void AsynConnecter::Handle()
+	{
+		if (!m_pSocket)
+			return;
+
+		uint32 ev = GetCurEv();
+
+		if (ev & EV_IOREAD)
+		{
+			AsynRead();
+			SetCurEv(ev & (~EV_IOREAD));
+		}
+
+		if (ev & EV_IOWRITE)
+		{
+			AsynWrite();
+			SetCurEv(ev & (~EV_IOWRITE));
+		}
+	}
+
+
+	int AsynConnecter::AsynRead()
+	{
+		if (!m_pOverlapped)
+		{
+			CancelEvent();
+			return -1;
+		}
+
+		Socket* s = GetSocket();
+		if (!s)
+		{
+			CancelEvent();
+			return -1;
+		}
+
+		if (INVALID_IOCP_RET != m_pOverlapped->asynRet && 0 == m_pOverlapped->databuf.len)
+		{
+			printf("AsynRead close socket[%d]\n", s->GetFd());
+			CancelEvent();
+			return -1;
+		}
+		
+		//收完数据后调整buffer的位置
+		if(0 < m_pOverlapped->databuf.len)
+			m_pRBuffer->MoveWriteBuffer(m_pOverlapped->databuf.len);
+
+		uint32 size = 0;
+		m_pOverlapped->databuf.buf = m_pRBuffer->GetWriteBuffer(&size);
+		m_pOverlapped->databuf.len = size;
+
+		m_pOverlapped->key.fd = s->GetFd();
+
+		DWORD bytesRead = 0;
+		DWORD flags = 0;
+
+		int ret = WSARecv(m_pOverlapped->key.fd, &m_pOverlapped->databuf, 1, &bytesRead, &flags, &m_pOverlapped->overlapped, NULL);
+		if (ret)
+		{
+			if(GetLastError() != WSA_IO_PENDING)
+				CancelEvent();
+		}
+
+		return 0;
+	}
+
+
+	int AsynConnecter::AsynWrite()
+	{
+		return 0;
 	}
 }
 

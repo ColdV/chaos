@@ -22,22 +22,38 @@ namespace NetFrame
 	//}
 
 
-	Select::Select()
+	Select::Select(EventCentre* pCentre):
+		NetDrive(pCentre)
 	{
 		FD_ZERO(&m_rfds);
 		FD_ZERO(&m_wfds);
 		FD_ZERO(&m_efds);
+
+#ifdef WIN32
+		m_iocp = new IOCP(pCentre);
+#endif // WIN32
+
 	}
 
 
 	Select::~Select()
 	{
+#ifdef WIN32
+		if (m_iocp)
+			delete m_iocp;
+#endif // WIN32
+
 	}
 
 
 	int Select::Init()
 	{
-		return 0;
+		int ret = 0;
+
+		if (m_iocp)
+			ret = m_iocp->Init();
+
+		return ret;
 	}
 
 
@@ -48,14 +64,20 @@ namespace NetFrame
 		fd_set wfds = m_wfds;
 		fd_set efds = m_efds;
 
-		timeval val;
-		val.tv_sec = 1;
+		timeval val{0, NET_TICK * 1000};
+
 		int cnt = select(MAX_FD, &rfds, &wfds, &efds, &val);
 
 		if (0 > cnt)
 		{
 			printf("call select failed! code:%d\n", WSAGetLastError());
 			return cnt;
+		}
+
+
+		else if(0 < cnt)
+		{
+			printf("select cnt:%d\n", cnt);
 		}
 
 		if (0 == cnt)
@@ -69,33 +91,21 @@ namespace NetFrame
 
 	void Select::CollectEvent(const fd_set& rfds, const fd_set& wfds, const fd_set& efds)
 	{
-		FdEvent fdEv;
-		fdEv.ev = 0;
-
 #ifdef _WIN32
 
 		for (uint32 i = 0; i < rfds.fd_count; ++i)
 		{
-			fdEv.fd = rfds.fd_array[i];
-			fdEv.ev = EV_IOREAD;
-
-			PushActiveFd(fdEv);
+			PushActiveEvent(rfds.fd_array[i], EV_IOREAD);
 		}
 
 		for (uint32 i = 0; i < wfds.fd_count; ++i)
 		{
-			fdEv.fd = rfds.fd_array[i];
-			fdEv.ev = EV_IOWRITE;
-
-			PushActiveFd(fdEv);
+			PushActiveEvent(wfds.fd_array[i], EV_IOWRITE);
 		}
 
 		for (uint32 i = 0; i < efds.fd_count; ++i)
 		{
-			fdEv.fd = rfds.fd_array[i];
-			fdEv.ev = EV_IOEXCEPT;
-
-			PushActiveFd(fdEv);
+			PushActiveEvent(efds.fd_array[i], EV_IOEXCEPT);
 		}
 
 #else
@@ -103,21 +113,21 @@ namespace NetFrame
 		for (auto it = fds.begin(); it != fds.end(); ++it)
 		{
 			socket_t fd = it->first;
+			short ev = 0;
 
 			if (FD_ISSET(fd, &rfds))
-				fdEv.ev |= EV_IOREAD;
+				ev |= EV_IOREAD;
 
 			if (FD_ISSET(fd, &wfds))
-				fdEv.ev |= EV_IOWRITE;
+				ev |= EV_IOWRITE;
 
 			if (FD_ISSET(fd, &efds))
-				fdEv.ev |= EV_IOEXCEPT;
+				ev |= EV_IOEXCEPT;
 
 			else
 				continue;
 
-			fdEv.fd = fd;
-			PushActiveFd(fdEv);
+			PushActiveEvent(fd, ev);
 		}
 
 
@@ -126,22 +136,48 @@ namespace NetFrame
 	}
 
 
-	void Select::RegistFd(socket_t fd, short ev)
+	int Select::RegistFd(socket_t fd, short ev)
 	{
+#ifdef WIN32
+		if (fd == INVALID_SOCKET)
+			return -1;
+
+		if (0 < m_rfds.fd_count && m_iocp)
+		{
+			Event* pEvent = GetEvent(fd);
+
+			if (!pEvent)
+				return -1;
+
+			//这里会把event添加到iocp的events中
+			//所以删除当前events中的event
+			m_iocp->AddEvent(pEvent);
+			m_events.erase(fd);
+
+			return 0;
+		}
+#endif // WIN32
+
 		if (ev & EV_IOREAD)
 			FD_SET(fd, &m_rfds);
 		if (ev & EV_IOWRITE)
 			FD_SET(fd, &m_wfds);
 		if (ev & EV_IOEXCEPT)
 			FD_SET(fd, &m_efds);
+
+		return 0;
 	}
 
 
-	void Select::CancelFd(socket_t fd)
+	int Select::CancelFd(socket_t fd)
 	{
+		m_iocp->DelEvent(fd);
+
 		FD_CLR(fd, &m_rfds);
 		FD_CLR(fd, &m_wfds);
 		FD_CLR(fd, &m_efds);
+
+		return 0;
 	}
 
 }

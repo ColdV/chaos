@@ -29,7 +29,7 @@ namespace NetFrame
 	}
 
 
-	int Buffer::ReadFd(Socket* pSocket)
+	int Buffer::ReadSocket(Socket* pSocket)
 	{
 		socket_t fd = pSocket->GetFd();
 
@@ -94,7 +94,7 @@ namespace NetFrame
 	}
 
 
-	int Buffer::WriteFd(Socket* pSocket, uint32 size)
+	int Buffer::WriteSocket(Socket* pSocket, uint32 size)
 	{
 		if (!pSocket)
 			return -1;
@@ -208,6 +208,48 @@ namespace NetFrame
 	}
 
 
+	char* Buffer::GetWriteBuffer(uint32* size)
+	{
+		if (!size)
+			return NULL;
+
+		*size = 0;
+
+		if (GetLeftSize() <= 0 && 0 != Expand())
+			return NULL;
+
+		if (m_wNodeIt == m_buffList.end())
+			return NULL;
+
+		BufferNode* pCurNode = *m_wNodeIt;
+		if (!pCurNode)
+			return NULL;
+
+		*size = pCurNode->totalSize - pCurNode->useSize;
+		if (0 >= *size)
+		{
+			pCurNode = *GetNextWNodeIt();
+			*size = pCurNode->totalSize - pCurNode->useSize;
+		}
+
+		return pCurNode->buffer + pCurNode->useSize;
+
+	}
+
+
+	void Buffer::MoveWriteBuffer(uint32 size)
+	{
+		if (m_wNodeIt == m_buffList.end())
+			return;
+
+		BufferNode* pCurNode = *m_wNodeIt;
+		if (!pCurNode)
+			return;
+
+		pCurNode->useSize += size;
+	}
+
+
 	int Buffer::Expand()
 	{
 		//bufferÉÏÏÞÖµ
@@ -218,7 +260,7 @@ namespace NetFrame
 		if (!pNewNode)
 			return -1;
 
-		pNewNode->buffer = new char[BUFFER_INIT_SIZE];
+		pNewNode->buffer = new char[BUFFER_INIT_SIZE] {0};
 		pNewNode->readCursor = pNewNode->buffer;
 		pNewNode->totalSize = BUFFER_INIT_SIZE;
 		pNewNode->useSize = 0;

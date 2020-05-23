@@ -42,7 +42,7 @@ namespace NetFrame
 
 	private:
 		int m_epfd;
-		epoll_event* m_events;
+		epoll_event* m_evs;
 	};
 
 }

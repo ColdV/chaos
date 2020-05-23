@@ -8,7 +8,153 @@
 #	Last Modified: 2018-08-02 16:28:44
 *******************************************/
 
-#if 0
+#define MAX_FD	10000
+#define IP	"192.168.0.101" //"192.168.2.109"
+#define PORT 3307
+
+
+#ifdef WIN32
+#include <WS2tcpip.h>
+#include <WinSock2.h>
+#include <process.h>
+#include <stdio.h>
+
+#pragma comment(lib, "ws2_32.lib")
+
+
+int main()
+{
+	WSADATA wsa;
+	if (0 != WSAStartup(MAKEWORD(2, 2), &wsa))
+	{
+		printf("initialize windows socket failed!\n");
+		return 0;
+	}
+
+	fd_set fds;
+	FD_ZERO(&fds);
+
+	int* nfds = new int[MAX_FD];
+	char recvBuf[1024] = { 0 };
+	int maxFd = 0;
+	int epFd = 0;
+
+
+	/*int a = recv(1, recvBuf, 1024, 0);
+	printf("a:%d, err:%d\n", a, GetLastError()); WSAECONNABORTED*/
+
+	for (int i = 0; i < MAX_FD; ++i)
+	{
+		nfds[i] = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+		if (0 >= nfds[i])
+		{
+			printf("create socket failed! fds[%d]:%d\n", i, nfds[i]);
+			continue;
+		}
+	}
+
+	sockaddr_in addr;
+	memset(&addr, 0, sizeof(addr));
+
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(PORT);
+	inet_pton(AF_INET, IP, (void*)&addr.sin_addr);
+
+
+	for (int i = 0; i < MAX_FD; ++i)
+	{
+		int res = connect(nfds[i], (sockaddr*)&addr, sizeof(addr));
+		if (0 != res)
+		{
+			nfds[i] = 0;
+			printf("connect failed! fds[%d]:%d\n", i, nfds[i]);
+			continue;
+		}
+
+
+		FD_SET(nfds[i], &fds);
+		if (nfds[i] > maxFd)
+			maxFd = nfds[i];
+
+		printf("connect sucess fd:%d\n", nfds[i]);
+	}
+
+
+	char send_buf[128] = { 0 };
+
+	for (int i = 0; i < MAX_FD; ++i)
+	{
+		if (0 >= nfds[i])
+			continue;
+
+		sprintf_s(send_buf, "%si am socket[%d]", "hello world!", nfds[i]);
+		int res = send(nfds[i], send_buf, strlen(send_buf), 0);
+		printf("socket[%d] send msg len:%d\n", nfds[i], res);
+		memset(send_buf, 0, sizeof(send_buf));
+	}
+
+
+	Sleep(3000);
+
+	for (int i = 0; i < MAX_FD; ++i)
+	{
+		if (0 >= nfds[i])
+			continue;
+
+		sprintf_s(send_buf, "%si am socket[%d]", "hello world!", nfds[i]);
+		int res = send(nfds[i], send_buf, strlen(send_buf), 0);
+		printf("socket[%d] send msg len:%d\n", nfds[i], res);
+		memset(send_buf, 0, sizeof(send_buf));
+	}
+
+	while (true)
+	{
+		fd_set fd_copy = fds;
+
+		//printf("inter main loop socket[%d], fd_set[%d], src_fd[%d]\n", nfds[0], fd_copy.fds_bits[0], fds.fds_bits[0]);
+		int n = select(maxFd + 1, &fd_copy, NULL, NULL, NULL);
+
+
+		if (0 > n)
+		{
+			printf("select call error!\n", n);
+			return 0;
+		}
+
+
+		for (int i = 0; i < MAX_FD; ++i)
+		{
+			//			printf("socket[%d], fd_copy[%d]\n", nfds[i], fd_copy);
+			if (FD_ISSET(nfds[i], &fd_copy))
+			{
+				int len = recv(nfds[i], recvBuf, sizeof(recvBuf), 0);
+				if (0 < len)
+				{
+					printf("socket[%d] recv msg:%s\n", nfds[i], recvBuf);
+				}
+				else
+				{
+					if (-1 == len)
+						perror("recv -1:");
+					printf("recv fail! code:%d, socket:%d\n", len, nfds[i]);
+
+					FD_CLR(nfds[i], &fds);
+					closesocket(nfds[i]);
+				}
+
+				memset(recvBuf, 0, sizeof(recvBuf));
+			}
+		}
+	}
+
+
+	delete[] nfds;
+	return 0;
+}
+
+
+
+#else
 #include <stdio.h>
 #include <stdlib.h>
 #include <map>
@@ -20,10 +166,6 @@
 #include <arpa/inet.h>
 #include <sys/select.h>
 #include <sys/epoll.h>
-
-#define MAX_FD	10000
-#define IP	"10.246.60.179" //"192.168.2.109"
-#define PORT 6666
 
 int main()
 {

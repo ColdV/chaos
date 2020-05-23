@@ -19,37 +19,49 @@ namespace NetFrame
 #endif // _WIN32
 
 
-	Socket::Socket(socket_t fd):
-		m_type(SKT_INVALID),
+	Socket::Socket(socket_t fd, sockaddr_in* addr, bool isBlock):
 		m_fd(fd),
-		m_port(0),
-		m_ip{0}
+		m_isBlock(isBlock)
 	{
+		if (!addr)
+		{
+			m_port = -1;
+			m_ip[0] = 0x00;
+		}
+		else
+		{
+			m_port = addr->sin_port;
+			inet_ntop(AF_INET, &(addr->sin_addr), m_ip, MAX_IP_SIZE);
+		}
 	}
 
-	Socket::Socket(int af, int type, int protocol):
-		m_type(SKT_INVALID),
+
+	Socket::Socket(int af, int type, int protocol, bool isBlock):
 		m_port(0),
 		m_ip{ 0 }
 	{
-		/*Init();*/
 		m_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+		if (isBlock)
+		{
+#ifdef _WIN32
+			u_long mode = 1;
+			if (SOCKET_ERROR == ioctlsocket(m_fd, FIONBIO, &mode))
+			{
+				printf("set socket nonblock failed!\n");
+				return;
+			}
+#else
+			fcntl(m_fd, F_SETFL, fcntl(m_fd, F_GETFL) | O_NONBLOCK);
+
+#endif // _WIN32
+		}
 	}
 
 
 	Socket::~Socket()
 	{
-		//Close();
-	}
-
-
-	int Socket::Init()
-	{
-		m_type = SKT_INVALID;
-		memset(m_ip, 0, sizeof(m_ip));
-		m_port = 0;
-
-		return 0;
+		printf("close socket:%d\n", m_fd);
+		Close();
 	}
 
 
@@ -60,7 +72,7 @@ namespace NetFrame
 
 		sockAddr.sin_family = AF_INET;
 		sockAddr.sin_port = htons(nPort);
-		//inet_pton(AF_INET, strIP, &sockAddr.sin_addr);
+		inet_pton(AF_INET, strIP, &sockAddr.sin_addr);
 
 		if (0 != bind(m_fd, (sockaddr*)&sockAddr, sizeof(sockaddr)))
 			return -1;
@@ -73,7 +85,6 @@ namespace NetFrame
 
 	int Socket::Listen()
 	{
-		//靠靠縧isten socket
 #ifdef _WIN32
 		u_long mode = 1;
 		if (SOCKET_ERROR == ioctlsocket(m_fd, FIONBIO, &mode))
@@ -88,20 +99,23 @@ namespace NetFrame
 
 #endif // _WIN32
 
+		
+
 		int res = listen(m_fd, 128);
 		if (0 != res) //if (0 != listen(m_fd, 5))
 			return res;
 
-		m_type = SKT_LISTEN;
+		//m_type |= SKT_LISTEN;
 
 		return res;
 	}
 
-	socket_t Socket::Accept(/*Socket& mySocket*/)
+
+	Socket* Socket::Accept()
 	{
 		//printf("开始接受新的连接!\n");
-		if (SKT_LISTEN != m_type)
-			return -1;
+		//if (SKT_LISTEN != m_type)
+		//	return NULL;
 
 		sockaddr_in sockAddr;
 		socklen_t len = sizeof(sockAddr);
@@ -110,32 +124,28 @@ namespace NetFrame
 #ifdef _WIN32
 		socket_t fd = accept(m_fd, (sockaddr*)&sockAddr, &len);
 #else
-		uint32 nfd = accept4(m_fd, (sockaddr*)&sockAddr, &len, 2048);
+		socket_t fd = accept4(m_fd, (sockaddr*)&sockAddr, &len, 2048);
 #endif
-		if (0 >= fd)
-			return fd;
 
-		//inet_ntop(AF_INET, &sockAddr.sin_addr, mySocket.getIP(), MAX_IP_SIZE);
-		//mySocket.setPort(ntohs(sockAddr.sin_port));
-		//mySocket.setSocket(nfd);
-		//mySocket.setType(SKT_SERVER);
+		if (0 > fd || errno == EAGAIN || fd == INVALID_SOCKET)
+			return new Socket(fd, NULL, m_isBlock);
 
-		//printf("accept from ip:%s, port:%llu, new socket:%llu\n", mySocket.getIP(), mySocket.getPort(), nfd);
+		//m_type = SKT_SERVER | SKT_CONNING;
 
-		return fd;
+		return new Socket(fd, &sockAddr, m_isBlock);
 	}
 
 
-	Socket* Socket::Accept2()
-	{
-		return new Socket(Accept());
-	}
+	//Socket* Socket::Accept2()
+	//{
+	//	return Accept();
+	//}
 
 
 	int Socket::Connect(const char* strIP, const int nPort)
 	{
-		if (0 != m_type)
-			return -1;
+		//if (0 != m_type)
+		//	return -1;
 
 		sockaddr_in sockAddr;
 		memset(&sockAddr, 0, sizeof(sockAddr));
@@ -149,7 +159,7 @@ namespace NetFrame
 		if (0 != res)
 			return -1;
 
-		m_type = SKT_CLIENT;
+		//m_type = SKT_CLIENT | SKT_CONNING;
 
 		return 0;
 	}

@@ -16,6 +16,7 @@
 #include <map>
 #include <queue>
 #include <string.h>
+#include "noncopyable.h"
 
 #ifndef FD_SETSIZE
 #define FD_SETSIZE 1024
@@ -25,6 +26,8 @@
 #ifdef _WIN32
 #include <WS2tcpip.h>
 #include <WinSock2.h>
+#include <process.h>
+
 #pragma comment(lib, "ws2_32.lib")
 
 #else

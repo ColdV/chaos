@@ -11,10 +11,12 @@
 #pragma once
 
 #include "NetDrive.h"
+#include "IOCP.h"
+
+extern socket_t listenS;
 
 namespace NetFrame
 {
-
 	class Select : public NetDrive
 	{
 	public:
@@ -24,7 +26,7 @@ namespace NetFrame
 		};
 
 		//static Select& Instance();
-		Select();
+		Select(EventCentre* pCentre);
 
 		virtual ~Select();
 
@@ -33,9 +35,9 @@ namespace NetFrame
 		virtual int Launch() override;
 
 	protected:
-		virtual void RegistFd(socket_t fd, short ev) override;
+		virtual int RegistFd(socket_t fd, short ev) override;
 		
-		virtual void CancelFd(socket_t fd) override;
+		virtual int CancelFd(socket_t fd) override;
 
 	private:
 		void CollectEvent(const fd_set& rfds, const fd_set& wfds, const fd_set& efds);
@@ -44,5 +46,9 @@ namespace NetFrame
 		fd_set m_rfds;
 		fd_set m_wfds;
 		fd_set m_efds;
+
+#ifdef WIN32
+		IOCP* m_iocp;
+#endif // WIN32
 	};
 }

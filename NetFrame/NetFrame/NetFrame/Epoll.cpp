@@ -24,22 +24,22 @@ namespace NetFrame
 
 	Epoll::Epoll():
 		m_epfd(0),
-		m_events(0)
+		m_evs(0)
 	{
 	}
 
 
 	Epoll:~Epoll()
 	{
-		if (m_events)
-			delete[] m_events;
+		if (m_evs)
+			delete[] m_evs;
 	}
 
 
 	int Epoll::Init()
 	{
-		m_events = new epoll_event[MAX_FD];
-		if (!m_events)
+		m_evs = new epoll_event[MAX_FD];
+		if (!m_evs)
 			return -1;
 
 		m_epfd = epoll_create(MAX_FD);
@@ -53,7 +53,7 @@ namespace NetFrame
 	//void Epoll::WaitEvent()
 	void Epoll::Launch()
 	{
-		int cnt = epoll_wait(m_epfd, m_events, MAX_FD, 1);
+		int cnt = epoll_wait(m_epfd, m_evs, MAX_FD, NET_TICK);
 		if (0 > cnt)
 			return -1;
 
@@ -63,23 +63,23 @@ namespace NetFrame
 		for (int i = 0; i < cnt; ++i)
 		{
 		
-			if (m_events[i].events & EPOLLIN)
+			if (m_evs[i].events & EPOLLIN)
 				fdEv.ev = EV_IOREAD;
 
-			else if (m_events[i].events & EPOLLOUT)
+			else if (m_evs[i].events & EPOLLOUT)
 				fdEv.ev = EV_IOWRITE;
 
-			else if (m_events[i].events & EPOLLERR)
+			else if (m_evs[i].events & EPOLLERR)
 				fdEv.ev = EV_IOEXCEPT;
 
 			else
 			{
 
-				printf("unexpected event:%d\n", m_events[i].events);
+				printf("unexpected event:%d\n", m_evs[i].events);
 				continue;
 			}
 
-			fdEv.fd = m_events[i].data.fd;
+			fdEv.fd = m_evs[i].data.fd;
 			/*addIOEvent(newEvent);*/
 			PushActiveFd(fdEv);
 		}
