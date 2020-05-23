@@ -67,12 +67,12 @@ namespace NetFrame
 
 	int NetDrive::DelEvent(socket_t fd)
 	{
+		CancelFd(fd);
+
 		auto it = m_events.find(fd);
 
 		if (it == m_events.end())
 			return -1;
-
-		CancelFd(fd);
 
 		delete it->second;
 		m_events.erase(fd);
