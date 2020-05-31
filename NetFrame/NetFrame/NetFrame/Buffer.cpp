@@ -247,6 +247,7 @@ namespace NetFrame
 			return;
 
 		pCurNode->useSize += size;
+		m_useSize += size;
 	}
 
 

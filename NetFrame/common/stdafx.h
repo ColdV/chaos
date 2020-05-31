@@ -16,6 +16,8 @@
 #include <map>
 #include <queue>
 #include <string.h>
+#include <stack>
+#include <list>
 #include "noncopyable.h"
 
 #ifndef FD_SETSIZE
@@ -41,6 +43,7 @@
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <pthread.h>
 
 #endif  //_WIN32
 
@@ -55,9 +58,21 @@ typedef uint32	timer_id;
 
 #ifdef WIN32
 typedef SOCKET socket_t;
+typedef uint32 thread_t;
+typedef HANDLE sem_t;
+typedef HANDLE mutex_t;
+typedef HANDLE cond_t;
+typedef DWORD sem_wait_ret;
+typedef DWORD mutex_lock_ret;
 
 #else
 typedef int socket_t;
+typedef pthread_t thread_t;
+typedef int sem_t;
+typedef pthread_mutex_t mutex_t;
+typedef pthread_cond_t cond_t;
+typedef int sem_wait_ret;
+typedef int mutex_lock_ret;
 
 #endif // WIN32
 

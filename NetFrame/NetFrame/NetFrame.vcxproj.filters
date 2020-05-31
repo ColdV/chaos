@@ -42,6 +42,12 @@
     <ClCompile Include="NetFrame\Timer.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Thread\Thread.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Thread\ThreadPool.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="NetFrame\Buffer.h">
@@ -75,6 +81,24 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="common\single_templete.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Thread\Mutex.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Thread\Sem.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Thread\Thread.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Thread\ThreadPool.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Thread\ThreadTask.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Thread\Condition.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

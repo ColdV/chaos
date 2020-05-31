@@ -152,6 +152,8 @@
     <ClCompile Include="NetFrame\Select.cpp" />
     <ClCompile Include="NetFrame\Socket.cpp" />
     <ClCompile Include="NetFrame\Timer.cpp" />
+    <ClCompile Include="Thread\Thread.cpp" />
+    <ClCompile Include="Thread\ThreadPool.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common\common.h" />
@@ -165,6 +167,12 @@
     <ClInclude Include="NetFrame\Select.h" />
     <ClInclude Include="NetFrame\Socket.h" />
     <ClInclude Include="NetFrame\Timer.h" />
+    <ClInclude Include="Thread\Condition.h" />
+    <ClInclude Include="Thread\Mutex.h" />
+    <ClInclude Include="Thread\Sem.h" />
+    <ClInclude Include="Thread\Thread.h" />
+    <ClInclude Include="Thread\ThreadPool.h" />
+    <ClInclude Include="Thread\ThreadTask.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

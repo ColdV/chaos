@@ -13,6 +13,9 @@
 
 inline void strncpy_safe(char* des, const int desSize, const char* src, const int srcSize)
 {
+	if (!des || !src)
+		return;
+
 #ifdef _WIN32
 	strncpy_s(des, desSize, src, srcSize);
 

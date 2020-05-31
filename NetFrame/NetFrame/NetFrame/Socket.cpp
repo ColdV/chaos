@@ -181,7 +181,7 @@ namespace NetFrame
 
 #ifdef _WIN32
 		unsigned long n = 0;
-		if (ioctlsocket(m_fd, FIONREAD, &n) < 0)
+		if (0 == ioctlsocket(m_fd, FIONREAD, &n))
 			printf("socket[%llu] ready recv msg len:%lu\n", m_fd, n);
 
 #else

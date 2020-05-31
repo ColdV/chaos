@@ -27,6 +27,7 @@ namespace NetFrame
 		m_completionPort(0),
 		m_workThreads(0),
 		m_threadHandles(0),
+		m_tids(0),
 		m_pThreadParam(0)
 	{
 		SYSTEM_INFO systemInfo;
@@ -38,19 +39,37 @@ namespace NetFrame
 		m_threadHandles = new HANDLE[m_workThreads]{ 0 };
 		if (!m_threadHandles)
 			return; 
+
+		m_tids = new thread_t[m_workThreads]{ 0 };
+		if (!m_tids)
+			return;
 	}
 
 
 	IOCP::~IOCP()
 	{
-		if (m_completionPort)
-			CloseHandle(m_completionPort);
+		for (int i = 0; i < m_workThreads; ++i)
+		{
+			PostQueuedCompletionStatus(m_completionPort, 0, NOTIFY_SHUTDOWN_KEY, NULL);
+		}
 
 		if (m_threadHandles)
+		{
+			for (int i = 0; i < m_workThreads; ++i)
+			{
+				CloseHandle(m_threadHandles[i]); 
+			}
 			delete[] m_threadHandles;
+		}
+
+		if (m_tids)
+			delete[] m_tids;
 
 		if (m_pThreadParam)
 			delete m_pThreadParam;
+
+		if (m_completionPort)
+			CloseHandle(m_completionPort);
 	}
 
 
@@ -65,7 +84,7 @@ namespace NetFrame
 
 		for (DWORD i = 0; i < m_workThreads; ++i)
 		{
-			m_threadHandles[i] = (HANDLE)_beginthread(&IOCP::Loop, 0, m_pThreadParam);
+			m_threadHandles[i] = (HANDLE)_beginthreadex(NULL, 0, &IOCP::Loop, m_pThreadParam, 0, &m_tids[i]);
 			if (!m_threadHandles)
 				return -1;
 		}
@@ -95,12 +114,12 @@ namespace NetFrame
 	}
 
 
-	void IOCP::Loop(void* param)
+	unsigned int IOCP::Loop(void* arg)
 	{
-		if (!param)
-			return;
+		if (!arg)
+			return -1;
 
-		LPTHREAD_PARAM pThreadParam = (LPTHREAD_PARAM)param;
+		LPTHREAD_PARAM pThreadParam = (LPTHREAD_PARAM)arg;
 
 		while (1)
 		{
@@ -108,6 +127,9 @@ namespace NetFrame
 			ULONG_PTR key = 0;
 			OVERLAPPED *overlapped = NULL;
 			bool bOk = GetQueuedCompletionStatus(pThreadParam->iocp, &bytes, &key, &overlapped, WSA_INFINITE);
+
+			if (NOTIFY_SHUTDOWN_KEY == key)
+				break;
 
 			LPCOMPLETE_OVERLAPPED_DATA data = NULL;
 			if (overlapped)
@@ -135,6 +157,8 @@ namespace NetFrame
 			}
 
 		}
+
+		return 0;
 	}
 
 }

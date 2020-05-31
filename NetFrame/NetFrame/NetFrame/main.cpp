@@ -10,6 +10,7 @@
 #include "../../common/common.h"
 #include "IOCP.h"
 #include <Mswsock.h>
+#include "../Thread/ThreadPool.h"
 //#include "NetDrive.h"
 
 #pragma comment(lib,"Mswsock.lib")
@@ -17,7 +18,7 @@ const char IP[] = "10.246.60.164";//"0.0.0.0";//"10.246.60.179";
 
 
 
-
+#if 0
 int main()
 {
 	printf("Listener:%d, Connecter:%d socket:%d, center:%d\n", sizeof(NetFrame::Listener), sizeof(NetFrame::Connecter),\
@@ -62,3 +63,72 @@ int main()
 	return 0;
 }
 
+#endif
+
+
+
+
+//------------threadpool test----------------
+
+//#if 0
+
+class Task : public ThreadTask
+{
+public:
+	Task(int id) { m_id = id; }
+	~Task() {}
+
+	void Run()
+	{
+		//Sleep(3000);
+		printf("i am task:%d!\n", m_id);
+	}
+
+private:
+	int m_id;
+};
+
+int main()
+{
+	ThreadPool* pool = new ThreadPool();
+	if (!pool)
+		return -1;
+	
+	const int NUM = 1000;
+
+	Task** all = new Task*[NUM];
+	//Task* all[50];
+
+	for (int i = 0; i < NUM; ++i)
+	{
+		all[i] = new Task(i);
+	}
+
+	pool->Run();
+
+
+	Sleep(3000);
+
+	for (int i = 0; i < NUM; ++i)
+	{
+		pool->PushTask(all[i]);
+	}
+
+	Sleep(3000);
+	pool->Stop();
+
+	while (1)
+	{
+		Sleep(1);
+	}
+
+
+	for (int i = 0; i < NUM; ++i)
+		delete all[i];
+
+	delete[] all;
+
+	return 0;
+}
+
+//#endif

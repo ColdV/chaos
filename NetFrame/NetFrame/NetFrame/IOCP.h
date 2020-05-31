@@ -22,6 +22,8 @@ namespace NetFrame
 		INVALID_IOCP_RET = -1,
 	};
 
+	const int NOTIFY_SHUTDOWN_KEY = -1;
+
 	typedef struct
 	{
 		socket_t fd;
@@ -63,12 +65,13 @@ namespace NetFrame
 		virtual int CancelFd(socket_t fd) override;
 
 	public:
-		static void Loop(void* param);
+		static unsigned int __stdcall Loop(void* arg);
 
 	private:
 		HANDLE m_completionPort;
 		DWORD m_workThreads;
 		HANDLE* m_threadHandles;
+		thread_t* m_tids;
 		LPTHREAD_PARAM m_pThreadParam;
 	};
 
