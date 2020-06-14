@@ -166,6 +166,39 @@ namespace NetFrame
 	}
 
 
+	uint32 Buffer::GetReadSize()
+	{
+		if (m_rNodeIt == m_buffList.end() || m_wNodeIt == m_buffList.end())
+			return 0;
+
+		uint32 size = 0;
+
+		BufferNodeIt rIt = m_rNodeIt;
+		BufferNodeIt wIt = m_wNodeIt;
+
+		while (rIt != wIt)
+		{
+			BufferNode* node = *rIt;
+			if (!node)
+				break;
+
+			//当前节点的可读大小等于 可读数据(已写入大小) - 已读数据(当前读出游标-buffer起点)
+			size += (node->useSize - (node->readCursor - node->buffer));
+
+			if (++rIt == m_buffList.end())
+				rIt = m_buffList.begin();
+
+			if (rIt == wIt)
+			{
+				size += (node->useSize - (node->readCursor - node->buffer));
+				break;
+			}
+		}
+
+		return size;
+	}
+
+
 	uint32 Buffer::WriteBuffer(const char* buffer, uint32 size)
 	{
 		//适配空间
@@ -249,6 +282,7 @@ namespace NetFrame
 		pCurNode->useSize += size;
 		m_useSize += size;
 	}
+
 
 
 	int Buffer::Expand()

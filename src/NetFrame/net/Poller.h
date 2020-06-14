@@ -20,7 +20,7 @@ namespace NetFrame
 	class Event;
 	class EventCentre;
 
-	const int NET_TICK = 1000 / 60;		//“ª√Î60÷°
+	const int NET_TICK = 1;	// 1000 / 60;		//“ª√Î60÷°
 
 	class Poller : public NonCopyable
 	{

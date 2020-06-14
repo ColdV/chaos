@@ -32,7 +32,7 @@ uint32 DBMysql::Connect()
 
 int DBMysql::Query(const char* cmd, uint32 length, DBResult* pResult)
 {
-	if (!cmd || !pResult)
+	if (!cmd )
 		return -1;
 
 	Ping();
@@ -42,13 +42,22 @@ int DBMysql::Query(const char* cmd, uint32 length, DBResult* pResult)
 	if (0 != ret)
 		return ret;
 
+	if(pResult)
+		QueryResult(pResult);
+
+	return ret;
+}
+
+
+int DBMysql::QueryResult(DBResult* pResult)
+{
 	MYSQL_RES* pRes = mysql_store_result(m_pMysql);
 
 	if (!pRes)
 		return GetLastErrno();
 
 	MYSQL_FIELD* fields = mysql_fetch_fields(pRes);
-	if(!fields)
+	if (!fields)
 		return GetLastErrno();
 
 	uint32 fieldnum = mysql_num_fields(pRes);
@@ -74,6 +83,8 @@ int DBMysql::Query(const char* cmd, uint32 length, DBResult* pResult)
 
 		++rownum;
 	}
+
+	mysql_free_result(pRes);
 
 	return 0;
 }

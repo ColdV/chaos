@@ -34,6 +34,13 @@ public:
 	//获取上次错误信息
 	const char* GetLastErrStr() const { return mysql_error(m_pMysql); }
 
+	//受影响行数
+	uint64 GetLastAffectRows() const { return mysql_affected_rows(m_pMysql); }
+
+private:
+	//写入执行结果
+	int QueryResult(DBResult* pResult);
+
 private:
 	MYSQL* m_pMysql;
 

@@ -66,6 +66,7 @@ typedef HANDLE mutex_t;
 typedef HANDLE cond_t;
 typedef DWORD sem_wait_ret;
 typedef DWORD mutex_lock_ret;
+typedef unsigned long socket_unread_t;
 
 #else
 typedef int socket_t;
@@ -75,6 +76,7 @@ typedef pthread_mutex_t mutex_t;
 typedef pthread_cond_t cond_t;
 typedef int sem_wait_ret;
 typedef int mutex_lock_ret;
+typedef int socket_unread_t;
 
 #endif // WIN32
 

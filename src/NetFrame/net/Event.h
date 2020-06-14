@@ -20,7 +20,6 @@ enum
 
 namespace NetFrame
 {
-	//class EventHandler;
 	class Event;
 	class EventCentre;
 	class Timer;
@@ -46,8 +45,6 @@ namespace NetFrame
 	public:
 		virtual ~Event()
 		{
-			if (m_pEvKey)
-				delete m_pEvKey;
 		}
 
 		virtual void Handle() = 0;
@@ -58,17 +55,17 @@ namespace NetFrame
 
 		void SetCurEv(short ev) { m_curEv = ev; }
 
-		const EventKey* GetEvKey() const { return m_pEvKey; }
+		const EventKey& GetEvKey() const { return m_evKey; }
 
 		EventCentre* GetCentre() const { return m_pCenter; }
 
 	protected:
-		Event(EventCentre* pCentre, short ev, EventKey* pEvKey) :
+		Event(EventCentre* pCentre, short ev, const EventKey& pEvKey) :
+			m_pCenter(pCentre),
 			m_ev(ev),
-			m_curEv(0),
-			m_pEvKey(pEvKey),
-			m_pCenter(pCentre)
+			m_curEv(0)
 		{
+			memcpy(&m_evKey, &pEvKey, sizeof(EventKey));
 		}
 
 
@@ -78,7 +75,7 @@ namespace NetFrame
 		EventCentre* m_pCenter;		//所属的事件中心
 		short m_ev;		//注册的事件
 		short m_curEv;		//当前发生的事件
-		EventKey*	m_pEvKey;
+		EventKey	m_evKey;
 	};
 
 
@@ -120,7 +117,7 @@ namespace NetFrame
 	private:
 		//NetEventMap m_netEvs;			//IOMasterEvent->AllIOEvent
 
-		Poller* m_pNetDrive;
+		Poller* m_pPoller;
 
 		TimerEventMap m_timerEvs;
 
@@ -137,8 +134,8 @@ namespace NetFrame
 	class NetEvent :public Event
 	{
 	public:
-		NetEvent(EventCentre* pCentre, Socket* pSocket, short ev, EventKey* pEvKey) :
-			Event(pCentre, ev, pEvKey),
+		NetEvent(EventCentre* pCentre, Socket* pSocket, short ev, const EventKey& evKey) :
+			Event(pCentre, ev, evKey),
 			m_pSocket(pSocket)
 		{
 		}
@@ -162,8 +159,8 @@ namespace NetFrame
 	class Listener :public NetEvent
 	{
 	public:
-		Listener(EventCentre* pCentre, Socket* pSocket, short ev, EventKey* pEvKey) :
-			NetEvent(pCentre, pSocket, ev,pEvKey)
+		Listener(EventCentre* pCentre, Socket* pSocket, short ev, const EventKey& evKey) :
+			NetEvent(pCentre, pSocket, ev, evKey)
 		{
 		}
 
@@ -180,8 +177,8 @@ namespace NetFrame
 	class Connecter : public NetEvent
 	{
 	public:
-		Connecter(EventCentre* pCentre, Socket* pSocket, short ev, EventKey* pEvKey):
-			NetEvent(pCentre, pSocket, ev, pEvKey)
+		Connecter(EventCentre* pCentre, Socket* pSocket, short ev, const EventKey& evKey):
+			NetEvent(pCentre, pSocket, ev, evKey)
 		{
 			m_pRBuffer = new Buffer;
 			m_pWBuffer = new Buffer;
@@ -217,8 +214,8 @@ namespace NetFrame
 	class AsynConnecter : public NetEvent
 	{
 	public:
-		AsynConnecter(EventCentre* pCentre, Socket* pSocket, short ev, EventKey* pEvKey) :
-			NetEvent(pCentre, pSocket, ev, pEvKey)
+		AsynConnecter(EventCentre* pCentre, Socket* pSocket, short ev, const EventKey& evKey) :
+			NetEvent(pCentre, pSocket, ev, evKey)
 		{
 			m_pRBuffer = new Buffer;
 			m_pWBuffer = new Buffer;
@@ -263,8 +260,8 @@ namespace NetFrame
 	class TimerEvent : public Event
 	{
 	public:
-		TimerEvent(EventCentre* pCentre, uint32 ev, EventKey* pEvKey, uint32 timeOut, bool isLoop = false) :
-			Event(pCentre, ev, pEvKey),
+		TimerEvent(EventCentre* pCentre, uint32 ev, const EventKey& evKey, uint32 timeOut, bool isLoop = false) :
+			Event(pCentre, ev, evKey),
 			m_timeOut(timeOut),
 			m_isLoop(isLoop)
 		{

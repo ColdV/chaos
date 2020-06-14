@@ -13,7 +13,7 @@ namespace NetFrame
 
 
 	EventCentre::EventCentre() :
-		m_pNetDrive(0),
+		m_pPoller(0),
 		m_pTimer(0),
 		m_running(false)
 	{
@@ -22,8 +22,8 @@ namespace NetFrame
 
 	EventCentre::~EventCentre()
 	{
-		if (m_pNetDrive)
-			delete m_pNetDrive;
+		if (m_pPoller)
+			delete m_pPoller;
 
 		if (!m_pTimer)
 			delete m_pTimer;
@@ -32,11 +32,11 @@ namespace NetFrame
 
 	int EventCentre::Init()
 	{
-		m_pNetDrive = Poller::AdapterNetDrive(this);
-		if (!m_pNetDrive)
+		m_pPoller = Poller::AdapterNetDrive(this);
+		if (!m_pPoller)
 			return -1;
 
-		m_pNetDrive->Init();
+		m_pPoller->Init();
 
 		m_pTimer = new Timer();
 		if (!m_pTimer)
@@ -101,27 +101,24 @@ namespace NetFrame
 
 		uint32 ev = pEvent->GetEv();
 
-		const EventKey* pEvKey = pEvent->GetEvKey();
+		const EventKey& evKey = pEvent->GetEvKey();
 
-		if (pEvKey)
+		if (ev & (EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT)
+			&& !(ev & ~(EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT))
+			&& m_pPoller)
 		{
-			if (ev & (EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT)
-			   && !(ev & ~(EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT))
-				&& m_pNetDrive)
-			{
-				//m_netEvs.insert(std::make_pair(pEvKey->fd, pEvent));
-				m_pNetDrive->AddEvent(pEvent);
-			}
-			else if (ev & EV_TIMEOUT && !(ev & ~EV_TIMEOUT) && m_pTimer)
-			{
-				m_timerEvs.insert(std::make_pair(pEvKey->timerId, pEvent));
-				m_pTimer->AddTimer((TimerEvent*)pEvent);
-			}
-			else if (ev & EV_SIGNAL && !(ev & ~EV_SIGNAL))
-				m_signalEvs.insert(std::make_pair(pEvKey->signal, pEvent));
-			else
-				return -1;
+			//m_netEvs.insert(std::make_pair(pEvKey->fd, pEvent));
+			m_pPoller->AddEvent(pEvent);
 		}
+		else if (ev & EV_TIMEOUT && !(ev & ~EV_TIMEOUT) && m_pTimer)
+		{
+			m_timerEvs.insert(std::make_pair(evKey.timerId, pEvent));
+			m_pTimer->AddTimer((TimerEvent*)pEvent);
+		}
+		else if (ev & EV_SIGNAL && !(ev & ~EV_SIGNAL))
+			m_signalEvs.insert(std::make_pair(evKey.signal, pEvent));
+		else
+			return -1;
 
 		return 0;
 	}
@@ -134,25 +131,22 @@ namespace NetFrame
 
 		uint32 ev = pEvent->GetEv();
 
-		const EventKey* pEvKey = pEvent->GetEvKey();
+		const EventKey& evKey = pEvent->GetEvKey();
 
-		if (pEvKey)
+		if (ev & (EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT) && m_pPoller)
 		{
-			if (ev & (EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT) && m_pNetDrive)
-			{
-				//m_netEvs.erase(pEvKey->fd);
-				m_pNetDrive->DelEvent(pEvent);
-			}
-			else if (ev & EV_TIMEOUT && m_pTimer)
-			{
-				m_timerEvs.erase(pEvKey->timerId);
-				m_pTimer->DelTimer((TimerEvent*)pEvent);
-			}
-			else if (ev & EV_SIGNAL)
-				m_signalEvs.erase(pEvKey->signal);
-			else
-				return -1;
+			//m_netEvs.erase(pEvKey->fd);
+			m_pPoller->DelEvent(pEvent);
 		}
+		else if (ev & EV_TIMEOUT && m_pTimer)
+		{
+			m_timerEvs.erase(evKey.timerId);
+			m_pTimer->DelTimer((TimerEvent*)pEvent);
+		}
+		else if (ev & EV_SIGNAL)
+			m_signalEvs.erase(evKey.signal);
+		else
+			return -1;
 
 		return 0;
 	}
@@ -160,11 +154,11 @@ namespace NetFrame
 
 	int EventCentre::NetEventDispatch()
 	{
-		if (!m_pNetDrive)
+		if (!m_pPoller)
 			return -1;
 
 		int ret = 0;
-		if (0 != (ret = m_pNetDrive->Launch()))
+		if (0 != (ret = m_pPoller->Launch()))
 			return ret;
 
 		return ret;
@@ -214,11 +208,9 @@ namespace NetFrame
 					return;
 				}
 
-				EventKey* pKey = new EventKey();
-				if (!pKey)
-					return;
+				EventKey key;
 
-				pKey->fd = pNewSock->GetFd();
+				key.fd = pNewSock->GetFd();
 
 				EventCentre* pCentre = GetCentre();
 				if (!pCentre)
@@ -227,9 +219,9 @@ namespace NetFrame
 				Event* pNewEv = NULL;
 
 #if defined WIN32
-				pNewEv = new AsynConnecter(pCentre, pNewSock, EV_IOREAD | EV_IOWRITE, pKey);
+				pNewEv = new AsynConnecter(pCentre, pNewSock, EV_IOREAD | EV_IOWRITE, key);
 #else
-				pNewEv = new Connecter(pCentre, pNewSock, EV_IOREAD | EV_IOWRITE, pKey);
+				pNewEv = new Connecter(pCentre, pNewSock, EV_IOREAD | EV_IOWRITE, key);
 #endif
 				if (!pNewEv)
 				{
@@ -280,15 +272,32 @@ namespace NetFrame
 		if (!m_pSocket || !m_pRBuffer)
 			return -1;
 
-		int nRet = m_pRBuffer->ReadSocket(m_pSocket);
-		if (0 >= nRet)
-		{
-			//m_pSocket->Close();
+		socket_unread_t unread = m_pSocket->GetUnreadByte();
+		if (0 >= unread)
+			return unread;
 
-			CancelEvent();
+		while (0 < unread)
+		{
+			uint32 size = 0;
+
+			char* buf = m_pRBuffer->GetWriteBuffer(&size);
+			if (!buf)
+				break;
+
+			int read = m_pSocket->Recv(buf, size);
+
+			if (0 >= read)
+			{
+				CancelEvent();
+				break;
+			}
+
+			m_pRBuffer->MoveWriteBuffer(read);
+
+			unread -= read;
 		}
 
-		return nRet;
+		return 0;
 	}
 
 

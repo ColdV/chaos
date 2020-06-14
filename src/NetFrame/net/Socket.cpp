@@ -83,6 +83,7 @@ namespace NetFrame
 		return 0;
 	}
 
+
 	int Socket::Listen()
 	{
 #ifdef _WIN32
@@ -99,13 +100,9 @@ namespace NetFrame
 
 #endif // _WIN32
 
-		
-
 		int res = listen(m_fd, 128);
-		if (0 != res) //if (0 != listen(m_fd, 5))
+		if (0 != res)
 			return res;
-
-		//m_type |= SKT_LISTEN;
 
 		return res;
 	}
@@ -114,8 +111,6 @@ namespace NetFrame
 	Socket* Socket::Accept()
 	{
 		//printf("开始接受新的连接!\n");
-		//if (SKT_LISTEN != m_type)
-		//	return NULL;
 
 		sockaddr_in sockAddr;
 		socklen_t len = sizeof(sockAddr);
@@ -130,8 +125,6 @@ namespace NetFrame
 		if (0 > fd || errno == EAGAIN || fd == INVALID_SOCKET)
 			return new Socket(fd, NULL, m_isBlock);
 
-		//m_type = SKT_SERVER | SKT_CONNING;
-
 		return new Socket(fd, &sockAddr, m_isBlock);
 	}
 
@@ -144,9 +137,6 @@ namespace NetFrame
 
 	int Socket::Connect(const char* strIP, const int nPort)
 	{
-		//if (0 != m_type)
-		//	return -1;
-
 		sockaddr_in sockAddr;
 		memset(&sockAddr, 0, sizeof(sockAddr));
 
@@ -158,8 +148,6 @@ namespace NetFrame
 
 		if (0 != res)
 			return -1;
-
-		//m_type = SKT_CLIENT | SKT_CONNING;
 
 		return 0;
 	}
@@ -175,21 +163,10 @@ namespace NetFrame
 #endif // _WIN32
 	}
 
+
 	int Socket::Recv(char* buf, const int size)
 	{
 		//printf("开始接受数据！\n");
-
-#ifdef _WIN32
-		unsigned long n = 0;
-		if (0 == ioctlsocket(m_fd, FIONREAD, &n))
-			printf("socket[%llu] ready recv msg len:%lu\n", m_fd, n);
-
-#else
-		int n = 0;
-		if (ioctl(m_fd, FIONREAD, &n) >= 0)
-			printf("socket[%d] ready recv msg len:%llu\n", m_fd, n);
-
-#endif // _WIN32
 
 		int len = recv(m_fd, buf, size, 0); //MSG_PEEK
 		printf("socket[%llu] already recv msg len:%d\n", m_fd, len);
@@ -201,16 +178,11 @@ namespace NetFrame
 			return -1;
 		}
 
-		if (8 == m_fd)
-		{
-			//sleep(5);
-		}
-
 		printf("recv data[%s],from ip:%s,port:%d, fd:%llu\n", buf, m_ip, m_port, m_fd);
 
 
-		len = send(m_fd, buf, strlen(buf), 0);
-		printf("send data to socket[%llu] len:%d\n", m_fd, len);
+		//len = send(m_fd, buf, strlen(buf), 0);
+		//printf("send data to socket[%llu] len:%d\n", m_fd, len);
 
 		//memset(m_recv_buf, 0, sizeof(m_recv_buf));
 
@@ -223,6 +195,23 @@ namespace NetFrame
 		printf("send data to socket[%u] len:%d\n", m_fd, len);
 
 		return len;
+	}
+
+
+	socket_unread_t Socket::GetUnreadByte() const
+	{
+		socket_unread_t n = 0;
+#ifdef _WIN32
+		if (0 == ioctlsocket(m_fd, FIONREAD, &n))
+			printf("socket[%llu] ready recv msg len:%lu\n", m_fd, n);
+
+#else
+		if (ioctl(m_fd, FIONREAD, &n) >= 0)
+			printf("socket[%d] ready recv msg len:%llu\n", m_fd, n);
+
+#endif // _WIN32
+
+		return n;
 	}
 
 }

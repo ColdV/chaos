@@ -39,13 +39,11 @@ namespace NetFrame
 		if (!pEvent)
 			return -1;
 
-		const EventKey* pKey = pEvent->GetEvKey();
-		if (!pKey)
-			return -1;
+		const EventKey& key = pEvent->GetEvKey();
 
-		m_events.insert(std::make_pair(pKey->fd, pEvent));
+		m_events.insert(std::make_pair(key.fd, pEvent));
 
-		RegistFd(pKey->fd, pEvent->GetEv());
+		RegistFd(key.fd, pEvent->GetEv());
 
 		return 0;
 	}
@@ -56,12 +54,9 @@ namespace NetFrame
 		if (!pEvent)
 			return -1;
 
-		const EventKey* pKey = pEvent->GetEvKey();
+ 		const EventKey& key = pEvent->GetEvKey();
 
-		if (!pKey)
-			return -1;
-
-		return DelEvent(pKey->fd);
+		return DelEvent(key.fd);
 	}
 
 

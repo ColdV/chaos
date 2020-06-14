@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include"MinHeap.h"
+#include "../../common/template/MinHeap.h"
 #include <set>
 #include "Event.h"
 
@@ -56,11 +56,9 @@ namespace NetFrame
 		std::set<unsigned int>	m_deled;
 		time_t	m_lastRunTime;
 
-	public:
-		static int a;
-
 	private:
 		static char* s_ids;
+		static uint32 s_curTimers;
 		static timer_id s_maxIDSize;
 	};
 

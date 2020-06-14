@@ -3,7 +3,7 @@
 #include <process.h>
 #endif // _WIN32
 
-#include "MinHeap.h"
+#include"../../common/template/MinHeap.h"
 #include <map>
 #include "Event.h"
 #include "Timer.h"
@@ -42,10 +42,10 @@ int main()
 	s->Bind("192.168.0.101", 3307);
 	s->Listen();
 
-	NetFrame::EventKey* pNKey = new NetFrame::EventKey();
-	pNKey->fd = s->GetFd();
+	NetFrame::EventKey key;
+	key.fd = s->GetFd();
 
-	NetFrame::Listener* netEv = new NetFrame::Listener(pCentre, s, EV_IOREAD| EV_IOEXCEPT, pNKey);
+	NetFrame::Listener* netEv = new NetFrame::Listener(pCentre, s, EV_IOREAD| EV_IOEXCEPT, key);
 	if (!netEv)
 		return -1;
 
@@ -53,9 +53,8 @@ int main()
 
 	pCentre->RegisterEvent(netEv);
 
-	NetFrame::EventKey* pKey = new NetFrame::EventKey();
-	pKey->timerId = NetFrame::Timer::CreateTimerID();
-	NetFrame::TimerEvent* ev = new NetFrame::TimerEvent(pCentre, EV_TIMEOUT, pKey, 1, true);
+	key.timerId = NetFrame::Timer::CreateTimerID();
+	NetFrame::TimerEvent* ev = new NetFrame::TimerEvent(pCentre, EV_TIMEOUT, key, 1, true);
 
 	//pCentre->RegisterEvent(ev);
 	pCentre->EventLoop();
