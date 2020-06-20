@@ -1,6 +1,6 @@
 #include "Buffer.h"
 
-namespace NetFrame
+namespace chaos
 {
 	Buffer::Buffer():
 		//m_totalSize(BUFFER_INIT_SIZE),

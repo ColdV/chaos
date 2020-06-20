@@ -2,7 +2,7 @@
 #include <time.h>
 
 
-namespace NetFrame
+namespace chaos
 {
 
 	timer_id Timer::s_maxIDSize = Timer::INIT_ID_SIZE;

@@ -21,10 +21,10 @@ const char IP[] = "10.246.60.164";//"0.0.0.0";//"10.246.60.179";
 #if 0
 int main()
 {
-	printf("Listener:%d, Connecter:%d socket:%d, center:%d\n", sizeof(NetFrame::Listener), sizeof(NetFrame::Connecter),\
-		sizeof(NetFrame::Socket), sizeof(NetFrame::EventCentre));
+	printf("Listener:%d, Connecter:%d socket:%d, center:%d\n", sizeof(chaos::Listener), sizeof(chaos::Connecter),\
+		sizeof(chaos::Socket), sizeof(chaos::EventCentre));
 
-	NetFrame::EventCentre* pCentre = new NetFrame::EventCentre();
+	chaos::EventCentre* pCentre = new chaos::EventCentre();
 
 	if (!pCentre)
 		return -1;
@@ -32,9 +32,9 @@ int main()
 	if (0 != pCentre->Init())
 		return -1;
 
-	struct timeval timeout { 100, 0 };//{0, NetFrame::NET_TICK * 1000};
+	struct timeval timeout { 100, 0 };//{0, chaos::NET_TICK * 1000};
 
-	NetFrame::Socket* s = new NetFrame::Socket(AF_INET, SOCK_STREAM, IPPROTO_TCP, true);
+	chaos::Socket* s = new chaos::Socket(AF_INET, SOCK_STREAM, IPPROTO_TCP, true);
 
 	if (!s)
 		return -1;
@@ -42,10 +42,10 @@ int main()
 	s->Bind("192.168.0.101", 3307);
 	s->Listen();
 
-	NetFrame::EventKey key;
+	chaos::EventKey key;
 	key.fd = s->GetFd();
 
-	NetFrame::Listener* netEv = new NetFrame::Listener(pCentre, s, EV_IOREAD| EV_IOEXCEPT, key);
+	chaos::Listener* netEv = new chaos::Listener(pCentre, s, EV_IOREAD| EV_IOEXCEPT, key);
 	if (!netEv)
 		return -1;
 
@@ -53,8 +53,8 @@ int main()
 
 	pCentre->RegisterEvent(netEv);
 
-	key.timerId = NetFrame::Timer::CreateTimerID();
-	NetFrame::TimerEvent* ev = new NetFrame::TimerEvent(pCentre, EV_TIMEOUT, key, 1, true);
+	key.timerId = chaos::Timer::CreateTimerID();
+	chaos::TimerEvent* ev = new chaos::TimerEvent(pCentre, EV_TIMEOUT, key, 1, true);
 
 	//pCentre->RegisterEvent(ev);
 	pCentre->EventLoop();

@@ -17,7 +17,7 @@
 
 #define MAX_IP_SIZE	32
 
-namespace NetFrame
+namespace chaos
 {
 	class Socket : public NonCopyable
 	{

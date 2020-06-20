@@ -6,7 +6,7 @@
 #include "Event.h"
 
 
-namespace NetFrame
+namespace chaos
 { 
 
 	struct TimerCmp

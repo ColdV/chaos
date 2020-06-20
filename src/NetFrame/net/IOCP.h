@@ -15,7 +15,7 @@
 #include "Poller.h"
 
 
-namespace NetFrame
+namespace chaos
 {
 	enum
 	{

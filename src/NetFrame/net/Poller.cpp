@@ -15,7 +15,7 @@
 #include "IOCP.h"
 #include "Event.h"
 
-namespace NetFrame
+namespace chaos
 {
 
 	Poller::Poller(EventCentre* pCentre):

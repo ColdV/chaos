@@ -12,7 +12,7 @@
 #include "Select.h"
 #include "Event.h"
 
-namespace NetFrame
+namespace chaos
 {
 
 	//Select& Select::Instance()

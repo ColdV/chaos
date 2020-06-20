@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 
-namespace NetFrame
+namespace chaos
 {
 	void Event::CancelEvent()
 	{
@@ -185,7 +185,7 @@ namespace NetFrame
 
 
 
-namespace NetFrame
+namespace chaos
 {
 	void Listener::Handle()
 	{
@@ -240,7 +240,7 @@ namespace NetFrame
 }
 
 
-namespace NetFrame
+namespace chaos
 {
 
 	void Connecter::Handle()
@@ -383,7 +383,7 @@ namespace NetFrame
 }
 
 
-namespace NetFrame
+namespace chaos
 {
 	void TimerEvent::Handle()
 	{

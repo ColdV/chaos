@@ -14,7 +14,7 @@
 #include <set>
 
 
-namespace NetFrame
+namespace chaos
 {
 
 	class Event;

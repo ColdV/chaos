@@ -11,7 +11,7 @@
 #include "Socket.h"
 #include "../../common/common.h"
 
-namespace NetFrame
+namespace chaos
 {
 
 #ifdef _WIN32

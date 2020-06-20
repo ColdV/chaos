@@ -18,7 +18,7 @@ enum
 };
 
 
-namespace NetFrame
+namespace chaos
 {
 	class Event;
 	class EventCentre;
@@ -283,4 +283,4 @@ namespace NetFrame
 	};
 
 
-}	//namespace NetFrame
+}	//namespace chaos

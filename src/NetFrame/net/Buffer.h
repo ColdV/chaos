@@ -6,7 +6,7 @@
 
 
 
-namespace NetFrame
+namespace chaos
 {
 	const uint32 BUFFER_INIT_SIZE = 256;
 

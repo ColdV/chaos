@@ -15,7 +15,7 @@
 #include "Poller.h"
 #include <sys/epoll.h>
 
-namespace NetFrame
+namespace chaos
 {
 
 	class Epoll : public Poller

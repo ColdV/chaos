@@ -13,7 +13,7 @@
 #include "IOCP.h"
 #include "Event.h"
 
-namespace NetFrame
+namespace chaos
 {
 
 	/*IOCP& IOCP::Instance()
