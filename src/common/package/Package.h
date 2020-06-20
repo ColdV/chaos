@@ -9,7 +9,7 @@ public:
 	Package() {}
 	virtual ~Package() {}
 
-	//装包(头两个自己表示包大小)
+	//打包(头两个自己表示包大小)
 	//@param return 返回装包后的大小 
 	//如果返回值大于pkgSize，说明传入的pkg空间不足
 	//0表示装包失败
@@ -23,8 +23,9 @@ public:
 	uint32 Unpack(const char* msg, uint32 msgSize, char* pkg, uint32 pkgSize);
 };
 
-//#define Pack(msg, msgSize, pkg, pkgSize) \
-//Package::Instance().Pack(msg, msgSize, pkg, pkgSize);
-//
-//#define Unpack(msg, msgSize, pkg, pkgSize) \
-//Package::Instance().Unpack(msg, msgSize, pkg, pkgSize);
+
+#define PackMsg(msg, msgSize, pkg, pkgSize) \
+Package::Instance().Pack(msg, msgSize, pkg, pkgSize)
+
+#define UnpackMsg(msg, msgSize, pkg, pkgSize) \
+Package::Instance().Unpack(msg, msgSize, pkg, pkgSize)

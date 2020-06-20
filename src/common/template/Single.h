@@ -1,5 +1,7 @@
 #pragma once
 
+
+/*这个有问题  暂时这样吧*/
 template <typename T>
 class Single
 {
