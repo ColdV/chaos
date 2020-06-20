@@ -309,6 +309,7 @@ namespace chaos
 	}
 
 
+#ifdef WIN32
 	void AsynConnecter::Handle()
 	{
 		if (!m_pSocket)
@@ -380,6 +381,8 @@ namespace chaos
 	{
 		return 0;
 	}
+
+#endif
 }
 
 

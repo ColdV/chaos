@@ -44,7 +44,7 @@ public:
 #ifdef _WIN32
 		ReleaseMutex(m_mutex);
 #else
-		pthread_mutex_unlock(&m_mutex)
+		pthread_mutex_unlock(&m_mutex);
 #endif // _WIN32
 	}
 

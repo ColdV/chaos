@@ -50,8 +50,10 @@ namespace chaos
 	{
 		int ret = 0;
 
+#ifdef WIN32
 		if (m_iocp)
 			ret = m_iocp->Init();
+#endif // WIN32
 
 		return ret;
 	}
@@ -109,7 +111,7 @@ namespace chaos
 		}
 
 #else
-		std::set<socket_t> fds = *GetFds();
+		auto fds = GetAllEvents();
 		for (auto it = fds.begin(); it != fds.end(); ++it)
 		{
 			socket_t fd = it->first;
@@ -171,7 +173,9 @@ namespace chaos
 
 	int Select::CancelFd(socket_t fd)
 	{
+#ifdef WIN32
 		m_iocp->DelEvent(fd);
+#endif // WIN32
 
 		FD_CLR(fd, &m_rfds);
 		FD_CLR(fd, &m_wfds);

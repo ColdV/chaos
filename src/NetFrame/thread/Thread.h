@@ -5,7 +5,7 @@
 #ifdef WIN32
 #define THREAD_FUNCTION_PRE unsigned int __stdcall
 #else
-#define THREAD_FUNCTION_PRE void
+#define THREAD_FUNCTION_PRE void*
 #endif // WIN32
 
 
@@ -13,7 +13,7 @@
 #ifdef _WIN32
 typedef unsigned int (__stdcall *PThreadFunc)(void*);
 #else
-typedef	void (*PThreadFunc)(void*);
+typedef	void* (*PThreadFunc)(void*);
 #endif // _WIN32
 
 class Thread : public NonCopyable

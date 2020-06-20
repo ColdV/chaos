@@ -24,13 +24,17 @@ public:
 
 	sem_wait_ret SemWait()
 	{
+#ifdef WIN32
 		return WaitForSingleObject(m_sem, INFINITE);
+#endif // WIN32
 	}
 
 
 	int SemPost()
 	{
+#ifdef WIN32
 		return ReleaseSemaphore(m_sem, 1, NULL);
+#endif // WIN32
 	}
 
 private:

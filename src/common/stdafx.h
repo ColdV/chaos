@@ -84,4 +84,9 @@ typedef int socket_unread_t;
 const int MAX_INT = 0x7FFFFFFF;
 
 
+#ifndef INVALID_SOCKET
+#define INVALID_SOCKET -1
+#endif // !INVALID_SOCKET
+
+
 

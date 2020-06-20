@@ -13,6 +13,7 @@
 #pragma once
 
 #include "Poller.h"
+#include "Event.h"
 #include <sys/epoll.h>
 
 namespace chaos
@@ -27,7 +28,7 @@ namespace chaos
 		};
 
 		//static Epoll& Instance();
-		Epoll();
+		Epoll(EventCentre* pCentre);
 
 		virtual ~Epoll();
 
@@ -36,9 +37,9 @@ namespace chaos
 		virtual int Launch();
 
 	protected:
-		virtual void RegistFd(socket_t fd, short ev);
+		virtual int RegistFd(socket_t fd, short ev);
 
-		virtual void CancelFd(socket_t fd, short ev);
+		virtual int CancelFd(socket_t fd, short ev);
 
 	private:
 		int m_epfd;

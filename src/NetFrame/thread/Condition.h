@@ -54,9 +54,9 @@ public:
 		{
 			struct timespec timeSpec;
 			timeSpec.tv_sec = timeOut;
-			timeSpec.tv_usec = 0;
+			timeSpec.tv_nsec = 0;
 			
-			return pthread_cond_timewait(&m_cond, m_mutex.GetMutex(), &timeSpec);
+			return pthread_cond_timedwait(&m_cond, m_mutex.GetMutex(), &timeSpec);
 		}
 		return pthread_cond_wait(&m_cond, m_mutex.GetMutex());
 #endif // WIN32
