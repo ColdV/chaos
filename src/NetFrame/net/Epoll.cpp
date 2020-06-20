@@ -22,14 +22,15 @@ namespace NetFrame
 	//	return s_inst;
 	//}
 
-	Epoll::Epoll():
+	Epoll::Epoll(EventCentre* pCentre):
+		Poller(pCentre),
 		m_epfd(0),
 		m_evs(0)
 	{
 	}
 
 
-	Epoll:~Epoll()
+	Epoll::~Epoll()
 	{
 		if (m_evs)
 			delete[] m_evs;
@@ -51,26 +52,26 @@ namespace NetFrame
 
 
 	//void Epoll::WaitEvent()
-	void Epoll::Launch()
+	int Epoll::Launch()
 	{
 		int cnt = epoll_wait(m_epfd, m_evs, MAX_FD, NET_TICK);
 		if (0 > cnt)
 			return -1;
 
 		//IOEvent newEvent;
-		FdEvent fdEv;
+		//FdEvent fdEv;
 
 		for (int i = 0; i < cnt; ++i)
 		{
-		
+			short ev = 0;
 			if (m_evs[i].events & EPOLLIN)
-				fdEv.ev = EV_IOREAD;
+				ev = EV_IOREAD;
 
 			else if (m_evs[i].events & EPOLLOUT)
-				fdEv.ev = EV_IOWRITE;
+				ev = EV_IOWRITE;
 
 			else if (m_evs[i].events & EPOLLERR)
-				fdEv.ev = EV_IOEXCEPT;
+				ev = EV_IOEXCEPT;
 
 			else
 			{
@@ -79,16 +80,16 @@ namespace NetFrame
 				continue;
 			}
 
-			fdEv.fd = m_evs[i].data.fd;
+			//fdEv.fd = m_evs[i].data.fd;
 			/*addIOEvent(newEvent);*/
-			PushActiveFd(fdEv);
+			PushActiveEvent(m_evs[i].data.fd, ev);
 		}
 
 		return 0;
 	}
 
 
-	void Epoll::RegistFd(socket_t fd, short ev)
+	int Epoll::RegistFd(socket_t fd, short ev)
 	{
 		epoll_event epEv;
 		epEv.data.fd = fd;
@@ -98,7 +99,7 @@ namespace NetFrame
 	}
 
 
-	void Epoll::CancelFd(socket_t fd, short ev)
+	int Epoll::CancelFd(socket_t fd, short ev)
 	{
 		epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, NULL);
 	}

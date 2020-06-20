@@ -56,6 +56,8 @@ namespace NetFrame
 
 		int PushActiveEvent(Event* pEvent);
 
+		const NetEventMap& GetAllEvents() const { return m_events; }
+
 		//std::set<socket_t>* GetFds() { return &m_fds; }
 		
 	private:

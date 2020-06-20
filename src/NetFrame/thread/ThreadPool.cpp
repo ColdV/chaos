@@ -98,10 +98,16 @@ int ThreadPool::PushTask(ThreadTask* pTask)
 }
 
 
-unsigned int ThreadPool::PoolWorkFunc(void* arg)
+THREAD_FUNCTION_PRE ThreadPool::PoolWorkFunc(void* arg)
 {
 	if (!arg)
+	{
+#ifdef WIN32
 		return 1;
+#else
+		return NULL;
+#endif // WIN32
+	}
 
 	ThreadPool* pThreadPool = (ThreadPool*)arg;
 
@@ -144,7 +150,9 @@ unsigned int ThreadPool::PoolWorkFunc(void* arg)
 
 	printf("thread[%u] out!\n", GetCurrentThreadId());
 
+#ifdef WIN32
 	return 0;
+#endif // WIN32
 }
 
 
