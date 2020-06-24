@@ -218,7 +218,7 @@ namespace chaos
 
 				Event* pNewEv = NULL;
 
-#if defined WIN32
+#ifdef _WIN32
 				pNewEv = new AsynConnecter(pCentre, pNewSock, EV_IOREAD | EV_IOWRITE, key);
 #else
 				pNewEv = new Connecter(pCentre, pNewSock, EV_IOREAD | EV_IOWRITE, key);
@@ -309,7 +309,7 @@ namespace chaos
 	}
 
 
-#ifdef WIN32
+#ifdef _WIN32
 	void AsynConnecter::Handle()
 	{
 		if (!m_pSocket)

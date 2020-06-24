@@ -2,11 +2,11 @@
 
 #include "../../common/stdafx.h"
 
-#ifdef WIN32
+#ifdef _WIN32
 #define THREAD_FUNCTION_PRE unsigned int __stdcall
 #else
 #define THREAD_FUNCTION_PRE void*
-#endif // WIN32
+#endif // _WIN32
 
 
 

@@ -13,13 +13,13 @@ ThreadPool::ThreadPool(int nThreadNum /*= -1*/) :
 
 	if (0 > nThreadNum)
 	{
-#ifdef WIN32
+#ifdef _WIN32
 		SYSTEM_INFO systemInfo;
 		GetSystemInfo(&systemInfo);
 		m_threadNum = systemInfo.dwNumberOfProcessors * 2;
 #else
 		m_threadNum = sysconf(_SC_NPROCESSORS_ONLN);
-#endif // WIN32
+#endif // _WIN32
 	}
 }
 
@@ -102,11 +102,11 @@ THREAD_FUNCTION_PRE ThreadPool::PoolWorkFunc(void* arg)
 {
 	if (!arg)
 	{
-#ifdef WIN32
+#ifdef _WIN32
 		return 1;
 #else
 		return NULL;
-#endif // WIN32
+#endif // _WIN32
 	}
 
 	ThreadPool* pThreadPool = (ThreadPool*)arg;
@@ -150,9 +150,9 @@ THREAD_FUNCTION_PRE ThreadPool::PoolWorkFunc(void* arg)
 
 	printf("thread[%u] out!\n", GetCurrentThreadId());
 
-#ifdef WIN32
+#ifdef _WIN32
 	return 0;
-#endif // WIN32
+#endif // _WIN32
 }
 
 

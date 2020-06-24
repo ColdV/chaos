@@ -11,7 +11,15 @@
 
 #pragma once
 
+//#ifdef _WIN32
+//#include <time.h>
+//#include <Windows.h>
+//#else
+//#include <sys/time.h>
+//#endif // _WIN32
+
 #include <string>
+
 
 inline void strncpy_safe(char* des, const unsigned int desSize, const char* src, const unsigned int srcSize)
 {
@@ -31,6 +39,33 @@ inline void strncpy_safe(char* des, const unsigned int desSize, const char* src,
 
 #endif // _WIN32
 }
+
+
+//int GetCurrentMsec()
+//{
+//#ifdef _WIN32
+//	SYSTEMTIME st;
+//	GetLocalTime(&st);
+//	return st.wSecond * 1000 + st.wMilliseconds;
+//#else
+//	timeval tv;
+//	gettimeofday(&tv, NULL);
+//	return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+//#endif // _WIN32
+//}
+//
+//
+//tm* GetTM(tm* ptm, const time_t* ptime)
+//{
+//	if (!ptm || !ptime)
+//		return NULL;
+//#ifdef _WIN32
+//	localtime_s(ptm, ptime);
+//#else
+//	ptm = localtime(ptime);
+//#endif // _WIN32
+//	return ptm;
+//}
 
 
 #define SetBit(x, y)	(x |= (1<<y))

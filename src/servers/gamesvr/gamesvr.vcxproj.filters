@@ -18,25 +18,5 @@
     <ClCompile Include="main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="dbmysql\DBMsql.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="dbmysql\DBResult.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="..\package\Package.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="..\log\Logger.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="dbmysql\DBMysql.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="dbmysql\DBResult.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>

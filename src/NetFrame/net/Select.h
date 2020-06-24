@@ -47,8 +47,8 @@ namespace chaos
 		fd_set m_wfds;
 		fd_set m_efds;
 
-#ifdef WIN32
+#ifdef _WIN32
 		IOCP* m_iocp;
-#endif // WIN32
+#endif // _WIN32
 	};
 }

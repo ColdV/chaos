@@ -29,19 +29,19 @@ namespace chaos
 		FD_ZERO(&m_wfds);
 		FD_ZERO(&m_efds);
 
-#ifdef WIN32
+#ifdef _WIN32
 		m_iocp = new IOCP(pCentre);
-#endif // WIN32
+#endif // _WIN32
 
 	}
 
 
 	Select::~Select()
 	{
-#ifdef WIN32
+#ifdef _WIN32
 		if (m_iocp)
 			delete m_iocp;
-#endif // WIN32
+#endif // _WIN32
 
 	}
 
@@ -50,10 +50,10 @@ namespace chaos
 	{
 		int ret = 0;
 
-#ifdef WIN32
+#ifdef _WIN32
 		if (m_iocp)
 			ret = m_iocp->Init();
-#endif // WIN32
+#endif // _WIN32
 
 		return ret;
 	}
@@ -140,7 +140,7 @@ namespace chaos
 
 	int Select::RegistFd(socket_t fd, short ev)
 	{
-#ifdef WIN32
+#ifdef _WIN32
 		if (fd == INVALID_SOCKET)
 			return -1;
 
@@ -158,7 +158,7 @@ namespace chaos
 
 			return 0;
 		}
-#endif // WIN32
+#endif // _WIN32
 
 		if (ev & EV_IOREAD)
 			FD_SET(fd, &m_rfds);
@@ -173,9 +173,9 @@ namespace chaos
 
 	int Select::CancelFd(socket_t fd)
 	{
-#ifdef WIN32
+#ifdef _WIN32
 		m_iocp->DelEvent(fd);
-#endif // WIN32
+#endif // _WIN32
 
 		FD_CLR(fd, &m_rfds);
 		FD_CLR(fd, &m_wfds);

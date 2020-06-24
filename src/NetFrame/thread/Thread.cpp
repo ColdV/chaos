@@ -21,12 +21,12 @@ Thread::~Thread()
 	
 	if (m_started && !m_joined)
 	{
-#ifdef WIN32
+#ifdef _WIN32
 		if(m_hThread)
 			CloseHandle(m_hThread);
 #else
 		pthread_detach(m_tid);
-#endif // WIN32
+#endif // _WIN32
 	}
 }
 
@@ -57,7 +57,7 @@ int Thread::Start()
 int Thread::Join()
 {
 	m_joined = true;
-#ifdef WIN32
+#ifdef _WIN32
 	int ret = WaitForSingleObject(m_hThread, INFINITE);
 	if (0 == ret)
 	{
@@ -68,5 +68,5 @@ int Thread::Join()
 	return ret;
 #else
 	return pthread_join(m_tid, NULL);
-#endif // WIN32
+#endif // _WIN32
 }

@@ -3,6 +3,8 @@
 #include "dbmysql/DBMysql.h"
 #include <time.h>
 #include "../package/Package.h"
+#include <fstream>
+#include <io.h>
 
 #define MAX_BUF 102400
 #define LOOP 10240
@@ -72,23 +74,61 @@ private:
 
 int test::a = 1;
 
+#include "../log/Logger.h"
 
 int main()
 {
-	test a;
+	time_t t = time(NULL);
+	tm local;
+	localtime_s(&local, &t);
+	char buf[128]{ 0 };
 
-	char str[] = "hello world";
-	char pkg[1024]{ 0 };
+	strftime(buf, sizeof(buf), "%Y-%m-%d", &local);
 
-	uint32 size = Package::Instance().Pack(str, sizeof(str), pkg, sizeof(pkg));
+	printf("%s\n", buf);
+	
+	//std::string a(__FUNCTION__);
+	//std::string b(std::to_string(__LINE__));
+	//std::string c(__FILE__);
+	//c.reserve(256);
+	//std::string e = a + b + c;
+	//e.append(__FUNCTION__).append(std::to_string(__LINE__)).append(__FILE__);
 
-	printf("pack size:%d\n", size);
+	Logger& log = Logger::Instance();
+	log.Init("./log", 0);
+	
+	int loop = 10000;
 
-	char unpkg[128]{ 0 };
-	size = Package::Instance().Unpack(pkg, sizeof(pkg), unpkg, sizeof(unpkg));
+	while (loop > 0)
+	{
+		LOG_TRACE("hello world!:%d", loop);
+		--loop;
+	}
 
-	printf("unpack size:%d\n", size);
+	printf("log end!\n");
+
+	while (true)
+	{
+		Sleep(3000);
+	}
 
 	return 0;
 }
 //#endif
+
+
+#if 0
+int main()
+{
+	SYSTEMTIME st;
+	GetLocalTime(&st);
+	printf("%d:%d\n", st.wSecond, st.wMilliseconds);
+
+	tm nowTM;
+	time_t now = time(NULL);
+	localtime_s(&nowTM, &now);
+
+	printf("%d\n", nowTM.tm_mday);
+	return 0;
+}
+#endif

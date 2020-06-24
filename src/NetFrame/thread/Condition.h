@@ -10,29 +10,29 @@ public:
 	Condition(Mutex& mutex):
 		m_mutex(mutex)
 	{
-#ifdef WIN32
+#ifdef _WIN32
 		m_cond = CreateEvent(NULL, TRUE, FALSE, NULL);
 #else
 		pthread_cond_init(&m_cond, NULL);
-#endif // WIN32
+#endif // _WIN32
 		
 	}
 
 
 	~Condition()
 	{
-#ifdef WIN32
+#ifdef _WIN32
 		CloseHandle(m_cond);
 #else
 		pthread_cond_destroy(&m_cond);
-#endif // WIN32
+#endif // _WIN32
 
 	}
 
 
 	int CondWait(int timeOut = -1)
 	{
-#ifdef WIN32
+#ifdef _WIN32
 		if (0 > timeOut)
 			timeOut = INFINITE;
 
@@ -59,30 +59,30 @@ public:
 			return pthread_cond_timedwait(&m_cond, m_mutex.GetMutex(), &timeSpec);
 		}
 		return pthread_cond_wait(&m_cond, m_mutex.GetMutex());
-#endif // WIN32
+#endif // _WIN32
 
 	}
 
 
 	int CondSignal()
 	{
-#ifdef WIN32
+#ifdef _WIN32
 		SetEvent(m_cond);
 		return ResetEvent(m_cond);
 		//return SetEvent(m_cond);
 #else
 		return pthread_cond_signal(&m_cond);
-#endif // WIN32
+#endif // _WIN32
 	}
 
 
 	int CondBroadCast()
 	{
-#ifdef WIN32
+#ifdef _WIN32
 		return PulseEvent(m_cond);
 #else
 		return pthread_cond_broadcast(&m_cond);
-#endif // WIN32
+#endif // _WIN32
 
 	}
 

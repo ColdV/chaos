@@ -58,7 +58,7 @@ typedef long long int				int64;
 typedef unsigned long long int		uint64;
 typedef uint32						timer_id;
 
-#ifdef WIN32
+#ifdef _WIN32
 typedef SOCKET socket_t;
 typedef uint32 thread_t;
 typedef HANDLE sem_t;
@@ -78,7 +78,7 @@ typedef int sem_wait_ret;
 typedef int mutex_lock_ret;
 typedef int socket_unread_t;
 
-#endif // WIN32
+#endif // _WIN32
 
 
 const int MAX_INT = 0x7FFFFFFF;
@@ -88,5 +88,7 @@ const int MAX_INT = 0x7FFFFFFF;
 #define INVALID_SOCKET -1
 #endif // !INVALID_SOCKET
 
+
+const int DAY2SEC = 24 * 3600;
 
 

@@ -209,7 +209,7 @@ namespace chaos
 	};
 
 
-#ifdef WIN32
+#ifdef _WIN32
 	//Òì²½IOÊÂ¼þ(IOCP)
 	class AsynConnecter : public NetEvent
 	{
@@ -252,7 +252,7 @@ namespace chaos
 		Buffer* m_pWBuffer;
 		LPCOMPLETE_OVERLAPPED_DATA m_pOverlapped;
 	};
-#endif // WIN32
+#endif // _WIN32
 
 
 
