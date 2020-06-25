@@ -42,17 +42,9 @@ void Logger::WriteLog(int logLev, const char* fmt, ...)
 	//第一次写文件时打开文件、隔日新建文件
 	if (!m_fp || (now / DAY2SEC) != (m_lastSecond / DAY2SEC))
 	{
-		tm nowTm;
-		localtime_s(&nowTm, &now);
-		char timeStr[32]{ 0 };
-		snprintf(timeStr, sizeof(timeStr), "-%4d%02d%02d",
-			nowTm.tm_year + 1900, nowTm.tm_mon + 1, nowTm.tm_mday);
-
-		m_fp = OpenFile(m_fileName + timeStr + "." + std::to_string(++m_fillFileNum) + ".log");
+		m_fp = OpenLogFile();
 		if (!m_fp)
 			return;
-
-		m_curSize = _filelength(_fileno(m_fp));
 	}
 
 	//文件写满,新建一个文件
@@ -60,13 +52,11 @@ void Logger::WriteLog(int logLev, const char* fmt, ...)
 	{
 		while (MAX_SIZE <= m_curSize)
 		{
-			CloseFile();
-			m_fp = OpenFile((m_fileName + "." + std::to_string(++m_fillFileNum) + ".log").c_str());
-			
+			++m_fillFileNum;
+			CloseLogFile();
+			m_fp = OpenLogFile();	
 			if (!m_fp)
 				return;
-
-			m_curSize = _filelength(_fileno(m_fp));
 		}
 	}
 
@@ -96,18 +86,32 @@ void Logger::WriteLog(int logLev, const char* fmt, ...)
 }
 
 
-FILE* Logger::OpenFile(const std::string& name)
+FILE* Logger::OpenLogFile()
 {
+	time_t now = time(NULL);
+	tm nowTm;
+	localtime_s(&nowTm, &now);
+	char timeStr[32]{ 0 };
+	snprintf(timeStr, sizeof(timeStr), "-%4d%02d%02d",
+		nowTm.tm_year + 1900, nowTm.tm_mon + 1, nowTm.tm_mday);
+
+	std::string fileName = m_fileName + timeStr + "." + std::to_string(m_fillFileNum) + ".log";
 #ifdef _WIN32
-	return _fsopen(name.c_str(), "ab+", _SH_DENYNO);
+	m_fp = _fsopen(fileName.c_str(), "ab+", _SH_DENYNO);
 #else
-	return fopen(name.c_str(), "ab+");
+	m_fp = fopen(fileName.c_str(), "ab+");
 #endif // _WIN32
 
+	if (!m_fp)
+		return NULL;
+
+	m_curSize = _filelength(_fileno(m_fp));
+
+	return m_fp;
 }
 
 
-int Logger::CloseFile()
+int Logger::CloseLogFile()
 {
 	int ret = fclose(m_fp);
 	m_fp = NULL;

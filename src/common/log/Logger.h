@@ -41,9 +41,9 @@ public:
 	int GetLevel() const { return m_level; }
 
 private:
-	FILE* OpenFile(const std::string& name);
+	FILE* OpenLogFile();
 
-	int CloseFile();
+	int CloseLogFile();
 
 	void FormatTime(time_t t);
 
