@@ -16,6 +16,7 @@
 #include <map>
 #include <queue>
 #include <string.h>
+#include <string>
 #include <stack>
 #include <list>
 #include "noncopyable.h"

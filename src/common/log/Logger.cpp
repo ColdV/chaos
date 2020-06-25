@@ -1,7 +1,5 @@
 #include "Logger.h"
 #include <io.h>
-#include <iostream>
-#include <string>
 #include <time.h>
 #include "../common.h"
 
@@ -91,11 +89,11 @@ FILE* Logger::OpenLogFile()
 	time_t now = time(NULL);
 	tm nowTm;
 	localtime_s(&nowTm, &now);
-	char timeStr[32]{ 0 };
-	snprintf(timeStr, sizeof(timeStr), "-%4d%02d%02d",
-		nowTm.tm_year + 1900, nowTm.tm_mon + 1, nowTm.tm_mday);
+	char suffix[64]{ 0 };
+	snprintf(suffix, sizeof(suffix), "-%4d%02d%02d.%d.log",
+		nowTm.tm_year + 1900, nowTm.tm_mon + 1, nowTm.tm_mday, m_fillFileNum);
 
-	std::string fileName = m_fileName + timeStr + "." + std::to_string(m_fillFileNum) + ".log";
+	std::string fileName = m_fileName + suffix;
 #ifdef _WIN32
 	m_fp = _fsopen(fileName.c_str(), "ab+", _SH_DENYNO);
 #else

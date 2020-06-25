@@ -143,7 +143,40 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\common\log\Logger.cpp" />
+    <ClCompile Include="..\..\common\net\Buffer.cpp" />
+    <ClCompile Include="..\..\common\net\Epoll.cpp" />
+    <ClCompile Include="..\..\common\net\Event.cpp" />
+    <ClCompile Include="..\..\common\net\IOCP.cpp" />
+    <ClCompile Include="..\..\common\net\Poller.cpp" />
+    <ClCompile Include="..\..\common\net\Select.cpp" />
+    <ClCompile Include="..\..\common\net\Socket.cpp" />
+    <ClCompile Include="..\..\common\net\Timer.cpp" />
+    <ClCompile Include="..\..\common\thread\Thread.cpp" />
+    <ClCompile Include="..\..\common\thread\ThreadPool.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="mine_sweeper\MineSweeperMgr.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\common\common.h" />
+    <ClInclude Include="..\..\common\log\Logger.h" />
+    <ClInclude Include="..\..\common\net\Buffer.h" />
+    <ClInclude Include="..\..\common\net\Epoll.h" />
+    <ClInclude Include="..\..\common\net\Event.h" />
+    <ClInclude Include="..\..\common\net\IOCP.h" />
+    <ClInclude Include="..\..\common\net\Poller.h" />
+    <ClInclude Include="..\..\common\net\Select.h" />
+    <ClInclude Include="..\..\common\net\Socket.h" />
+    <ClInclude Include="..\..\common\net\Timer.h" />
+    <ClInclude Include="..\..\common\noncopyable.h" />
+    <ClInclude Include="..\..\common\stdafx.h" />
+    <ClInclude Include="..\..\common\thread\Condition.h" />
+    <ClInclude Include="..\..\common\thread\Mutex.h" />
+    <ClInclude Include="..\..\common\thread\Sem.h" />
+    <ClInclude Include="..\..\common\thread\Thread.h" />
+    <ClInclude Include="..\..\common\thread\ThreadPool.h" />
+    <ClInclude Include="..\..\common\thread\ThreadTask.h" />
+    <ClInclude Include="mine_sweeper\MineSweeperMgr.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

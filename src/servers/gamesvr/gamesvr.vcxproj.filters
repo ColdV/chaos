@@ -5,18 +5,115 @@
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
-    <Filter Include="头文件">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    <Filter Include="common">
+      <UniqueIdentifier>{de80139b-7e55-4c5e-9cae-2614a159f7c1}</UniqueIdentifier>
     </Filter>
-    <Filter Include="资源文件">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    <Filter Include="common\net">
+      <UniqueIdentifier>{b54ccaba-26d6-423a-aa54-e33f31b1b79c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="common\thread">
+      <UniqueIdentifier>{5bc3940e-971e-4bec-8598-5a838ac6c577}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="common\log">
+      <UniqueIdentifier>{093f359b-69d6-477a-8ae9-9ddf8c19025d}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\common\net\Buffer.cpp">
+      <Filter>common\net</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\net\Epoll.cpp">
+      <Filter>common\net</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\net\Event.cpp">
+      <Filter>common\net</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\net\IOCP.cpp">
+      <Filter>common\net</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\net\Poller.cpp">
+      <Filter>common\net</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\net\Select.cpp">
+      <Filter>common\net</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\net\Socket.cpp">
+      <Filter>common\net</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\net\Timer.cpp">
+      <Filter>common\net</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\thread\Thread.cpp">
+      <Filter>common\thread</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\thread\ThreadPool.cpp">
+      <Filter>common\thread</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\log\Logger.cpp">
+      <Filter>common\log</Filter>
+    </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="mine_sweeper\MineSweeperMgr.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\common\net\Buffer.h">
+      <Filter>common\net</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\net\Epoll.h">
+      <Filter>common\net</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\net\Event.h">
+      <Filter>common\net</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\net\IOCP.h">
+      <Filter>common\net</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\net\Poller.h">
+      <Filter>common\net</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\net\Select.h">
+      <Filter>common\net</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\net\Socket.h">
+      <Filter>common\net</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\net\Timer.h">
+      <Filter>common\net</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\thread\Condition.h">
+      <Filter>common\thread</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\thread\Mutex.h">
+      <Filter>common\thread</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\thread\Sem.h">
+      <Filter>common\thread</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\thread\Thread.h">
+      <Filter>common\thread</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\thread\ThreadPool.h">
+      <Filter>common\thread</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\thread\ThreadTask.h">
+      <Filter>common\thread</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\common.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\noncopyable.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\stdafx.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\log\Logger.h">
+      <Filter>common\log</Filter>
+    </ClInclude>
+    <ClInclude Include="mine_sweeper\MineSweeperMgr.h" />
   </ItemGroup>
 </Project>

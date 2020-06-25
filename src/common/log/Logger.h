@@ -2,6 +2,7 @@
 
 #include "../stdafx.h"
 #include "../template/Single.h"
+#include <string>
 
 static const char* s_logLevel2String[] =
 {
