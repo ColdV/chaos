@@ -7,6 +7,7 @@
 #include "Poller.h"
 #include "Buffer.h"
 #include "IOCP.h"
+#include "../thread/Mutex.h"
 
 enum
 {
@@ -33,13 +34,8 @@ namespace chaos
 	};
 
 
-	struct EvAndKey
-	{
-		uint32 ev;
-		EventKey key;
-	};
 
-	//抽象事件(资源类)
+	//事件
 	class Event : public NonCopyable
 	{
 	public:
@@ -60,21 +56,21 @@ namespace chaos
 		EventCentre* GetCentre() const { return m_pCenter; }
 
 	protected:
-		Event(EventCentre* pCentre, short ev, const EventKey& pEvKey) :
-			m_pCenter(pCentre),
-			m_ev(ev),
-			m_curEv(0)
-		{
-			memcpy(&m_evKey, &pEvKey, sizeof(EventKey));
-		}
-
+		Event(EventCentre* pCentre, short ev, const EventKey& evKey);
+		Event();
 
 		void CancelEvent();
 
+		void SetCenter(EventCentre* pCentre) { m_pCenter = pCentre; }
+
+		void SetEv(short ev) { m_ev = ev; }
+
+		void SetEvKey(const EventKey& evKey) { memcpy(&m_evKey, &evKey, sizeof(evKey)); }
+
 	private:
 		EventCentre* m_pCenter;		//所属的事件中心
-		short m_ev;		//注册的事件
-		short m_curEv;		//当前发生的事件
+		short m_ev;					//注册的事件
+		short m_curEv;				//当前发生的事件
 		EventKey	m_evKey;
 	};
 
@@ -84,9 +80,10 @@ namespace chaos
 	{
 	public:
 		typedef std::map<socket_t, Event*> NetEventMap;
-		typedef std::map<int, Event*>	TimerEventMap;
+		/*typedef std::map<int, Event*>	TimerEventMap;*/
 		typedef std::map<int, Event*>	SignalEventMap;
 		typedef std::list<Event*>	ActiveEventList;
+		typedef std::queue<Event*>	EvQueue;
 
 
 	public:
@@ -103,7 +100,7 @@ namespace chaos
 
 		int DispatchEvent();
 
-		void PushActiveEv(Event* pEvent) { m_activeEvs.push_back(pEvent); }
+		void PushActiveEv(Event* pEvent) { m_mutex.Lock(); m_activeEvs.push(pEvent); m_mutex.UnLock(); }
 
 	private:
 		int NetEventDispatch();
@@ -117,41 +114,48 @@ namespace chaos
 	private:
 		//NetEventMap m_netEvs;			//IOMasterEvent->AllIOEvent
 
-		Poller* m_pPoller;
+		Poller* m_pPoller;				//网络事件调度器
 
-		TimerEventMap m_timerEvs;
+		//TimerEventMap m_timerEvs;
 
-		Timer* m_pTimer;
+		Timer* m_pTimer;				//定时器
 
 		SignalEventMap m_signalEvs;
 
-		ActiveEventList m_activeEvs;
+		//ActiveEventList m_activeEvs;
+		EvQueue m_activeEvs;
 
 		bool m_running;
+
+		Mutex m_mutex;
 	};
 
 
 	class NetEvent :public Event
 	{
 	public:
-		NetEvent(EventCentre* pCentre, Socket* pSocket, short ev, const EventKey& evKey) :
-			Event(pCentre, ev, evKey),
-			m_pSocket(pSocket)
-		{
-		}
+		//NetEvent(EventCentre* pCentre, Socket* pSocket, short ev, const EventKey& evKey) :
+		//	Event(pCentre, ev, evKey),
+		//	m_pSocket(pSocket)
+		//{
+		//}
+
+		NetEvent(EventCentre* pCentre, short ev, socket_t fd) :
+			Event(pCentre, ev, (EventKey&)fd),
+			m_socket(fd)
+		{}
+
 
 		virtual ~NetEvent()
 		{
-			if (m_pSocket)
-				delete m_pSocket;
 		}
 
-		Socket* GetSocket() const { return m_pSocket; }
+		Socket& GetSocket() { return m_socket; }
 
 		//virtual void Handle() override;
 
 	protected:
-		Socket* m_pSocket;
+		Socket m_socket;
 	};
 
 
@@ -159,16 +163,16 @@ namespace chaos
 	class Listener :public NetEvent
 	{
 	public:
-		Listener(EventCentre* pCentre, Socket* pSocket, short ev, const EventKey& evKey) :
-			NetEvent(pCentre, pSocket, ev, evKey)
-		{
-		}
+		Listener(EventCentre* pCentre, socket_t fd) :
+			NetEvent(pCentre, EV_IOREAD, fd)
+		{}
+
 
 		~Listener()
 		{
-			if (m_pSocket)
-				delete m_pSocket;
 		}
+
+		int Listen(const char* ip, int port);
 
 		virtual void Handle() override;
 	};
@@ -177,8 +181,8 @@ namespace chaos
 	class Connecter : public NetEvent
 	{
 	public:
-		Connecter(EventCentre* pCentre, Socket* pSocket, short ev, const EventKey& evKey):
-			NetEvent(pCentre, pSocket, ev, evKey)
+		Connecter(EventCentre* pCentre, socket_t fd):
+			NetEvent(pCentre, EV_IOREAD | EV_IOWRITE, fd)
 		{
 			m_pRBuffer = new Buffer;
 			m_pWBuffer = new Buffer;
@@ -195,6 +199,12 @@ namespace chaos
 
 		virtual void Handle() override;
 
+		//讲数据写入到buff中, 并且推送一个EV_IOWRITE事件在下一帧写入socket
+		int WriteBuffer(const char* buf, int len);
+
+		//写入socket
+		int Write(const char* buf, int len);
+
 	private:
 		//int HandleListen();
 
@@ -205,7 +215,7 @@ namespace chaos
 	private:
 		Buffer* m_pRBuffer;
 		Buffer* m_pWBuffer;
-
+		Mutex m_mutex;
 	};
 
 
@@ -214,8 +224,8 @@ namespace chaos
 	class AsynConnecter : public NetEvent
 	{
 	public:
-		AsynConnecter(EventCentre* pCentre, Socket* pSocket, short ev, const EventKey& evKey) :
-			NetEvent(pCentre, pSocket, ev, evKey)
+		AsynConnecter(EventCentre* pCentre, socket_t fd) :
+			NetEvent(pCentre, EV_IOREAD | EV_IOWRITE, fd)
 		{
 			m_pRBuffer = new Buffer;
 			m_pWBuffer = new Buffer;
@@ -242,6 +252,8 @@ namespace chaos
 
 		virtual void Handle() override;
 
+		int AsynWrite(const char* buf, int len);
+
 	private:
 		int AsynRead();
 
@@ -251,6 +263,7 @@ namespace chaos
 		Buffer* m_pRBuffer;
 		Buffer* m_pWBuffer;
 		LPCOMPLETE_OVERLAPPED_DATA m_pOverlapped;
+		Mutex m_mutex;
 	};
 #endif // _WIN32
 

@@ -29,107 +29,107 @@ namespace chaos
 	}
 
 
-	int Buffer::ReadSocket(Socket* pSocket)
-	{
-		socket_t fd = pSocket->GetFd();
-
-#ifdef _WIN32
-		unsigned long n = 0;
-		if (ioctlsocket(fd, FIONREAD, &n) < 0)
-		{
-			printf("socket[%llu] ready recv msg len:%lu\n", fd, n);
-			return 0;
-		}
-
-#else
-		int n = 0;
-		if (ioctl(fd, FIONREAD, &n) >= 0)
-		{
-			printf("socket[%u] ready recv msg len:%llu\n", fd, n);
-			return 0;
-		}
-
-#endif // _WIN32
-
-		//适配空间
-		while (GetLeftSize() < n)
-		{
-			if (Expand() != 0)
-			{
-				return 0;
-			}
-		}
-
-		if (m_wNodeIt == m_buffList.end() || !(*m_wNodeIt))
-			return 0;
-
-		BufferNode* pCurNode = *m_wNodeIt;
-
-		int recvLen = 0;
-		unsigned int leftLen = n;
-
-		while (0 < leftLen)
-		{
-
-			//当前buffer节点数据已满 使用下一个节点
-			if (pCurNode->totalSize == pCurNode->useSize)
-			{
-				m_wNodeIt = GetNextWNodeIt();
-				pCurNode = *m_wNodeIt;
-			}
-
-			recvLen = pSocket->Recv(pCurNode->buffer + pCurNode->useSize, pCurNode->totalSize - pCurNode->useSize);
-			if (0 >= recvLen)
-				return recvLen;
-
-			pCurNode->useSize += recvLen;
-			//totalLen += recvLen;
-
-			leftLen -= recvLen;
-		}
-
-		m_useSize += n;
-
-		return n;
-	}
-
-
-	int Buffer::WriteSocket(Socket* pSocket, uint32 size)
-	{
-		if (!pSocket)
-			return -1;
-
-		uint32 realSize = size > 0 ? size : m_useSize;
-		uint32 leftSize = realSize;
-		
-		if (m_rNodeIt == m_buffList.end() || !(*m_rNodeIt))
-			return 0;
-
-		BufferNode* pCurNode = *m_rNodeIt;
-		int sendSize = 0;
-
-		while (0 < leftSize)
-		{
-			sendSize = leftSize > pCurNode->useSize ? pCurNode->useSize : leftSize;
-			sendSize = pSocket->Send(pCurNode->readCursor, sendSize);
-
-			if (0 >= sendSize)
-				return 0;
-
-			pCurNode->useSize -= sendSize;
-			pCurNode->readCursor += sendSize;
-
-			//当前节点数据读完
-			if (0 >= pCurNode->useSize)
-				pCurNode = *GetNextRNodeIt();
-
-			leftSize -= sendSize;
-		}
-
-		m_useSize -= realSize;
-
-		return realSize;
-	}
+//	int Buffer::ReadSocket(Socket* pSocket)
+//	{
+//		socket_t fd = pSocket->GetFd();
+//
+//#ifdef _WIN32
+//		unsigned long n = 0;
+//		if (ioctlsocket(fd, FIONREAD, &n) < 0)
+//		{
+//			printf("socket[%llu] ready recv msg len:%lu\n", fd, n);
+//			return 0;
+//		}
+//
+//#else
+//		int n = 0;
+//		if (ioctl(fd, FIONREAD, &n) >= 0)
+//		{
+//			printf("socket[%u] ready recv msg len:%llu\n", fd, n);
+//			return 0;
+//		}
+//
+//#endif // _WIN32
+//
+//		//适配空间
+//		while (GetLeftSize() < n)
+//		{
+//			if (Expand() != 0)
+//			{
+//				return 0;
+//			}
+//		}
+//
+//		if (m_wNodeIt == m_buffList.end() || !(*m_wNodeIt))
+//			return 0;
+//
+//		BufferNode* pCurNode = *m_wNodeIt;
+//
+//		int recvLen = 0;
+//		unsigned int leftLen = n;
+//
+//		while (0 < leftLen)
+//		{
+//
+//			//当前buffer节点数据已满 使用下一个节点
+//			if (pCurNode->totalSize == pCurNode->useSize)
+//			{
+//				m_wNodeIt = GetNextWNodeIt();
+//				pCurNode = *m_wNodeIt;
+//			}
+//
+//			recvLen = pSocket->Recv(pCurNode->buffer + pCurNode->useSize, pCurNode->totalSize - pCurNode->useSize);
+//			if (0 >= recvLen)
+//				return recvLen;
+//
+//			pCurNode->useSize += recvLen;
+//			//totalLen += recvLen;
+//
+//			leftLen -= recvLen;
+//		}
+//
+//		m_useSize += n;
+//
+//		return n;
+//	}
+//
+//
+//	int Buffer::WriteSocket(Socket* pSocket, uint32 size)
+//	{
+//		if (!pSocket)
+//			return -1;
+//
+//		uint32 realSize = size > 0 ? size : m_useSize;
+//		uint32 leftSize = realSize;
+//		
+//		if (m_rNodeIt == m_buffList.end() || !(*m_rNodeIt))
+//			return 0;
+//
+//		BufferNode* pCurNode = *m_rNodeIt;
+//		int sendSize = 0;
+//
+//		while (0 < leftSize)
+//		{
+//			sendSize = leftSize > pCurNode->useSize ? pCurNode->useSize : leftSize;
+//			sendSize = pSocket->Send(pCurNode->readCursor, sendSize);
+//
+//			if (0 >= sendSize)
+//				return 0;
+//
+//			pCurNode->useSize -= sendSize;
+//			pCurNode->readCursor += sendSize;
+//
+//			//当前节点数据读完
+//			if (0 >= pCurNode->useSize)
+//				pCurNode = *GetNextRNodeIt();
+//
+//			leftSize -= sendSize;
+//		}
+//
+//		m_useSize -= realSize;
+//
+//		return realSize;
+//	}
 
 
 	uint32 Buffer::ReadBuffer(char* buffer, uint32 size)
@@ -163,6 +163,28 @@ namespace chaos
 
 		m_useSize -= realSize;
 		return realSize;
+	}
+
+
+	char* Buffer::ReadBuffer(uint32* size)
+	{
+		if (!size)
+			return NULL;
+
+		*size = 0;
+
+		if (m_rNodeIt == m_buffList.end() || !(*m_rNodeIt))
+			return NULL;
+
+		BufferNode* pCurNode = *m_rNodeIt;
+		if (!pCurNode)
+			return NULL;
+
+		m_rNodeIt = GetNextRNodeIt();
+
+		*size = pCurNode->useSize;
+
+		return pCurNode->readCursor;
 	}
 
 

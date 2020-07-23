@@ -3,6 +3,7 @@
 
 #include "../../common/template/MinHeap.h"
 #include <set>
+#include <unordered_map>
 #include "Event.h"
 
 
@@ -11,7 +12,7 @@ namespace chaos
 
 	struct TimerCmp
 	{
-		bool operator()(TimerEvent* l, TimerEvent* r) const
+		bool operator()(const TimerEvent* l, const TimerEvent* r) const
 		{
 			return l->GetTimeOut() < r->GetTimeOut();
 		}
@@ -26,12 +27,16 @@ namespace chaos
 			INIT_ID_SIZE = 128,
 		};
 
+		typedef std::unordered_map<int, TimerEvent*> TimerMap;
+
 		Timer();
 		~Timer();
 
 		void DispatchTimer();
 
 		//添加定时器,返回定时器ID
+		uint32 AddTimer(Event* pTimerEv) { return AddTimer((TimerEvent*)pTimerEv); }
+
 		uint32 AddTimer(TimerEvent* pTimerEv);
 
 		uint32 DelTimer(TimerEvent* pTimerEv);
@@ -52,6 +57,7 @@ namespace chaos
 
 	private:
 		MinHeap<TimerEvent*, TimerCmp> m_timers;
+		TimerMap m_timerMap;
 		std::set<unsigned int>	m_delList;
 		std::set<unsigned int>	m_deled;
 		time_t	m_lastRunTime;

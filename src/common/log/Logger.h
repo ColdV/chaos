@@ -88,7 +88,7 @@ if(LOG_LEVEL_TRACE >= Logger::Instance().GetLevel()) \
 
 
 #define LOG_DEBUG(fmt, ...) \
-if(LOG_LEVEL_TRACE >= Logger::Instance().GetLevel()) \
+if(LOG_LEVEL_DEBUG >= Logger::Instance().GetLevel()) \
 { \
 	LOG_PREFIX(fmt) \
 	Logger::Instance().WriteLog(LOG_LEVEL_DEBUG, msg.c_str(), ##__VA_ARGS__); \

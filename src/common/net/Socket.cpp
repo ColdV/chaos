@@ -19,42 +19,47 @@ namespace chaos
 #endif // _WIN32
 
 
-	Socket::Socket(socket_t fd, sockaddr_in* addr, bool isBlock):
-		m_fd(fd),
-		m_isBlock(isBlock)
-	{
-		if (!addr)
-		{
-			m_port = -1;
-			m_ip[0] = 0x00;
-		}
-		else
-		{
-			m_port = addr->sin_port;
-			inet_ntop(AF_INET, &(addr->sin_addr), m_ip, MAX_IP_SIZE);
-		}
-	}
+//	Socket::Socket(socket_t fd, sockaddr_in* addr, bool isBlock):
+//		m_fd(fd),
+//		m_isBlock(isBlock)
+//	{
+//		if (!addr)
+//		{
+//			m_port = -1;
+//			m_ip[0] = 0x00;
+//		}
+//		else
+//		{
+//			m_port = addr->sin_port;
+//			inet_ntop(AF_INET, &(addr->sin_addr), m_ip, MAX_IP_SIZE);
+//		}
+//	}
+//
+//
+//	Socket::Socket(int af, int type, int protocol, bool isBlock):
+//		m_port(0),
+//		m_ip{ 0 }
+//	{
+//		m_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+//		if (isBlock)
+//		{
+//#ifdef _WIN32
+//			u_long mode = 1;
+//			if (SOCKET_ERROR == ioctlsocket(m_fd, FIONBIO, &mode))
+//			{
+//				printf("set socket nonblock failed!\n");
+//				return;
+//			}
+//#else
+//			fcntl(m_fd, F_SETFL, fcntl(m_fd, F_GETFL) | O_NONBLOCK);
+//
+//#endif // _WIN32
+//		}
+//	}
 
-
-	Socket::Socket(int af, int type, int protocol, bool isBlock):
-		m_port(0),
-		m_ip{ 0 }
+	Socket::Socket(int af, int type, int protocol)
 	{
 		m_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-		if (isBlock)
-		{
-#ifdef _WIN32
-			u_long mode = 1;
-			if (SOCKET_ERROR == ioctlsocket(m_fd, FIONBIO, &mode))
-			{
-				printf("set socket nonblock failed!\n");
-				return;
-			}
-#else
-			fcntl(m_fd, F_SETFL, fcntl(m_fd, F_GETFL) | O_NONBLOCK);
-
-#endif // _WIN32
-		}
 	}
 
 
@@ -77,8 +82,8 @@ namespace chaos
 		if (0 != bind(m_fd, (sockaddr*)&sockAddr, sizeof(sockaddr)))
 			return -1;
 
-		strncpy_safe(m_ip, sizeof(m_ip), strIP, sizeof(m_ip));
-		m_port = nPort;
+		//strncpy_safe(m_ip, sizeof(m_ip), strIP, sizeof(m_ip));
+		//m_port = nPort;
 
 		return 0;
 	}
@@ -86,29 +91,15 @@ namespace chaos
 
 	int Socket::Listen()
 	{
-#ifdef _WIN32
-		u_long mode = 1;
-		if (SOCKET_ERROR == ioctlsocket(m_fd, FIONBIO, &mode))
-		{
-			printf("set socket nonblock failed!\n");
-			return -1;
-		}
+		int ret = listen(m_fd, 128);
+		if (0 != ret)
+			return ret;
 
-#else
-		int oldFlags = fcntl(m_fd, F_GETFL);
-		fcntl(m_fd, F_SETFL, oldFlags | O_NONBLOCK);
-
-#endif // _WIN32
-
-		int res = listen(m_fd, 128);
-		if (0 != res)
-			return res;
-
-		return res;
+		return ret;
 	}
 
 
-	Socket* Socket::Accept()
+	socket_t Socket::Accept()
 	{
 		//printf("开始接受新的连接!\n");
 
@@ -117,15 +108,17 @@ namespace chaos
 		memset(&sockAddr, 0, sizeof(sockAddr));
 
 #ifdef _WIN32
-		socket_t fd = accept(m_fd, (sockaddr*)&sockAddr, &len);
+		socket_t connfd = accept(m_fd, (sockaddr*)&sockAddr, &len);
 #else
-		socket_t fd = accept4(m_fd, (sockaddr*)&sockAddr, &len, 2048);
+		socket_t connfd = accept4(m_fd, (sockaddr*)&sockAddr, &len, SOCK_NONBLOCK);
 #endif
 
-		if (0 > fd || errno == EAGAIN || fd == INVALID_SOCKET)
-			return new Socket(fd, NULL, m_isBlock);
+		//if (0 > fd || errno == EAGAIN || fd == INVALID_SOCKET)
+		//	return new Socket(fd, NULL, m_isBlock);
 
-		return new Socket(fd, &sockAddr, m_isBlock);
+		//return new Socket(fd, &sockAddr, m_isBlock);
+
+		return connfd;
 	}
 
 
@@ -178,13 +171,7 @@ namespace chaos
 			return -1;
 		}
 
-		printf("recv data[%s],from ip:%s,port:%d, fd:%llu\n", buf, m_ip, m_port, m_fd);
-
-
-		//len = send(m_fd, buf, strlen(buf), 0);
-		//printf("send data to socket[%llu] len:%d\n", m_fd, len);
-
-		//memset(m_recv_buf, 0, sizeof(m_recv_buf));
+		//printf("recv data[%s],from ip:%s,port:%d, fd:%llu\n", buf, m_ip, m_port, m_fd);
 
 		return len;
 	}
@@ -212,6 +199,22 @@ namespace chaos
 #endif // _WIN32
 
 		return n;
+	}
+
+
+	int Socket::SetNonBlock()
+	{
+#ifdef _WIN32
+		u_long mode = 1;
+		int ret = ioctlsocket(m_fd, FIONBIO, &mode);
+
+#else
+		int oldFlags = fcntl(m_fd, F_GETFL);
+		int ret = fcntl(m_fd, F_SETFL, oldFlags | O_NONBLOCK);
+
+#endif // _WIN32
+
+		return ret;
 	}
 
 }

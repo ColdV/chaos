@@ -23,18 +23,26 @@ namespace chaos
 	{
 	public:
 		//explicit Socket(socket_t fd, bool isBlock = false);			//不需要type了
-		Socket(socket_t fd, sockaddr_in* addr, bool isBlock);
-		Socket(int af, int type, int protocol, bool isBlock);
+		/*Socket(socket_t fd, sockaddr_in* addr, bool isBlock);
+		Socket(int af, int type, int protocol, bool isBlock);*/
 		~Socket();
+
+		explicit Socket(socket_t fd) :
+			m_fd(fd)
+		{}
+
+		Socket(int af, int type, int protocol);
 
 	public:
 		int Bind(const char* strIP, const int nPort);
 
 		int Listen();
 
-		Socket* Accept();
+		//Socket* Accept();
 
 		//Socket* Accept2();
+
+		socket_t Accept();
 
 		int Connect(const char* strIP, const int nPort);
 
@@ -46,26 +54,23 @@ namespace chaos
 
 		socket_t GetFd() const { return m_fd; }
 
-		const char* GetIP() const { return m_ip; }
+		//const char* GetIP() const { return m_ip; }
 
-		uint32 GetPort() const { return m_port; }
+		//uint32 GetPort() const { return m_port; }
 
-		bool Block() const { return m_isBlock; }
+		//bool Block() const { return m_isBlock; }
 
 		//缓冲区中的待接收数据大小
 		socket_unread_t GetUnreadByte() const;
 
+		//设置非阻塞
+		int SetNonBlock();
+
 	private:
-		Socket(const Socket&) {}
+		//Socket(const Socket&) {}
 
 	private:
 		socket_t m_fd;
-
-		bool m_isBlock;
-
-		int m_port;
-
-		char m_ip[MAX_IP_SIZE];
 	};
 
 

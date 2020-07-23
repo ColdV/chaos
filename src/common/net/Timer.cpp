@@ -87,6 +87,8 @@ namespace chaos
 			return 0;
 		}
 
+		m_timerMap.insert(std::make_pair(id, pTimerEv));
+
 		return id;
 
 	}
@@ -99,7 +101,7 @@ namespace chaos
 			if (*p == pTimerEv)
 			{
 				m_timers.Erase(p);
-				return 0;
+				break;
 			}
 		}
 
