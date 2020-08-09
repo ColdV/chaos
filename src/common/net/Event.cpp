@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 
+
 namespace chaos
 {
 	Event::Event(EventCentre* pCentre, short ev, const EventKey& evKey) :
@@ -34,7 +35,9 @@ namespace chaos
 		m_pPoller(0),
 		m_pTimer(0),
 		m_running(false)
+		//m_evcount(0)
 	{
+
 	}
 
 
@@ -64,29 +67,34 @@ namespace chaos
 	}
 
 
-	void EventCentre::EventLoop()
+	int EventCentre::EventLoop()
 	{
 		m_running = true;
 
 		while (m_running)
 		{
-			if (0 != DispatchEvent())
+			if (0 >= m_evcount)
+				break;
+
+			if (0 != Dispatch())
 				break;
 		}
+
+		return 0;
 	}
 
 
-	int EventCentre::DispatchEvent()
+	int EventCentre::Dispatch()
 	{
 		int ret = 0;
-
-		if (0 != (ret = TimerDispatch()))
-			return ret;
 
 		if (0 != (ret = NetEventDispatch()))
 			return ret;
 
 		if (0 != (ret = SignalDispatch()))
+			return ret;
+
+		if (0 != (ret = TimerDispatch()))
 			return ret;
 
 		if(0 != (ret = ProcessActiveEvent()))
@@ -108,8 +116,10 @@ namespace chaos
 
 			pev->Handle();
 
+			pev->Callback();
+
 			//清除此次已处理的事件
-			pev->SetCurEv(pev->GetCurEv() & (~EV_IOWRITE));
+			pev->SetCurEv(0);
 
 			m_activeEvs.pop();
 		}
@@ -129,24 +139,29 @@ namespace chaos
 
 		const EventKey& evKey = pEvent->GetEvKey();
 
+		int ret = 0;
+
 		if (ev & (EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT)
 			&& !(ev & ~(EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT))
 			&& m_pPoller)
 		{
-			//m_netEvs.insert(std::make_pair(pEvKey->fd, pEvent));
-			m_pPoller->AddEvent(pEvent);
+			ret = m_pPoller->AddEvent(pEvent);
 		}
 		else if (ev & EV_TIMEOUT && !(ev & ~EV_TIMEOUT) && m_pTimer)
 		{
-			//m_timerEvs.insert(std::make_pair(evKey.timerId, pEvent));
-			m_pTimer->AddTimer(pEvent);
+			ret = m_pTimer->AddTimer(pEvent);
 		}
 		else if (ev & EV_SIGNAL && !(ev & ~EV_SIGNAL))
 			m_signalEvs.insert(std::make_pair(evKey.signal, pEvent));
 		else
 			return -1;
+		
+		if (0 != ret)
+			return ret;
 
-		return 0;
+		++m_evcount;
+
+		return ret;
 	}
 
 
@@ -171,6 +186,8 @@ namespace chaos
 			m_signalEvs.erase(evKey.signal);
 		else
 			return -1;
+
+		--m_evcount;
 
 		return 0;
 	}
@@ -212,7 +229,7 @@ namespace chaos
 namespace chaos
 {
 
-	int Listener::Listen(const char* ip, int port)
+	int Listener::Listen(const sockaddr* sa, int salen)
 	{
 		Socket& s = GetSocket();
 
@@ -222,11 +239,29 @@ namespace chaos
 		if (0 > (ret = s.SetNonBlock()))
 			return ret;
 
-		if (0 != (ret = s.Bind(ip, port)))
+		if (0 != (ret = s.Bind(sa, salen)))
 			return ret;
 
 		if (0 != (ret = s.Listen()))
 			return ret;
+
+#ifdef _WIN32
+		//sockaddr_in addr;
+		//int addrlen = sizeof(addr);
+		//if (getsockname(s.GetFd(), (sockaddr*)&addr, &addrlen))
+		//	return WSAGetLastError();
+		
+		int type = 0;
+		int typelen = sizeof(type);
+		if (getsockopt(s.GetFd(), SOL_SOCKET, SO_TYPE, (char*)&type, &typelen))
+			return WSAGetLastError();
+
+		for (int i = 0; i < INIT_ASYNACCEPTINT; ++i)
+		{
+			socket_t fd = socket(sa->sa_family, type, 0);
+			AsynAccept(fd);
+		}
+#endif // _WIN32
 
 		return ret;
 	}
@@ -239,34 +274,116 @@ namespace chaos
 
 		if (ev & EV_IOREAD)
 		{
-			while(1)
+			EventCentre* pCentre = GetCentre();
+			if (!pCentre)
+				return;
+
+#ifdef _WIN32
+			if (!m_pOverlapped)
+				return;
+
+			NetEvent* pNewEv = new Connecter(pCentre, m_pOverlapped->acceptfd);
+			if (!pNewEv)
+				return;
+
+			int ret = pCentre->RegisterEvent(pNewEv);
+			if (0 != ret)
+				return;
+
+			CallListenerCb(pNewEv);
+
+			//投递新的accept事件
+			sockaddr_in addr;
+			int addrlen = sizeof(addr);
+			if (getsockname(s.GetFd(), (sockaddr*)&addr, &addrlen))
+				return;
+
+			int type = 0;
+			int typelen = sizeof(type);
+			if (getsockopt(s.GetFd(), SOL_SOCKET, SO_TYPE, (char*)&type, &typelen))
+				return ;
+
+			socket_t fd = socket(addr.sin_family, type, 0);
+			AsynAccept(fd);
+#else
+			while (1)
 			{
 				socket_t connfd = s.Accept();
 				if (0 > connfd || errno == EAGAIN || connfd == INVALID_SOCKET)
 					break;
 
-				EventKey key;
-
-				EventCentre* pCentre = GetCentre();
-				if (!pCentre)
-					return;
-
-				Event* pNewEv = NULL;
-#ifdef _WIN32
-				pNewEv = new AsynConnecter(pCentre, connfd);
-#else
+				NetEvent* pNewEv = NULL;
+//#ifdef _WIN32
+//				pNewEv = new AsynConnecter(pCentre, connfd);
+//#else
+//				pNewEv = new Connecter(pCentre, connfd);
+//#endif
 				pNewEv = new Connecter(pCentre, connfd);
-#endif
 				if (!pNewEv)
 				{
 					return;
 				}
 
-				pCentre->RegisterEvent(pNewEv);
+				int ret = pCentre->RegisterEvent(pNewEv);
+				if (0 != ret)
+					return;
+
+				CallListenerCb(pNewEv);
 			} 
+#endif // _WIN32
 		}
 
 	}
+
+
+#ifdef _WIN32
+	int Listener::AsynAccept(socket_t fd)
+	{
+		if (!m_pOverlapped)
+			return -1;
+
+		Socket& s = GetSocket();
+
+		socket_t listenfd = s.GetFd();
+
+		setsockopt(fd, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT,
+			(char*)&listenfd, sizeof(listenfd));
+		
+		if(!IOCP::AcceptEx)
+			return -1;
+
+		m_pOverlapped->acceptfd = fd;
+		m_pOverlapped->overlapped.fd = listenfd;
+		DWORD pending = 0;
+
+		if (IOCP::AcceptEx(listenfd, fd, m_pOverlapped->overlapped.databuf.buf, 0, m_pOverlapped->overlapped.databuf.len,
+			m_pOverlapped->overlapped.databuf.len, &pending, &m_pOverlapped->overlapped.overlapped))
+		{
+			EventCentre* pCentre = GetCentre();
+			if (!pCentre)
+				return -1;
+
+			NetEvent* pNetEvent = new Connecter(pCentre, fd);
+			if (!pNetEvent)
+				return -1;
+
+			int ret = pCentre->RegisterEvent(pNetEvent);
+			if (0 != ret)
+				return ret;
+
+			CallListenerCb(pNetEvent);
+		}
+		else
+		{
+			int err = WSAGetLastError();
+			if (ERROR_IO_PENDING != err)
+				return err;
+		}
+
+		return 0;
+	}
+#endif // _WIN32
+
 }
 
 
@@ -279,13 +396,22 @@ namespace chaos
 
 		if (ev & EV_IOREAD)
 		{
+#ifdef _WIN32
 
+#else
 			HandleRead();
+#endif // WIN32
+
+			CallbackRead();
 		}
 
 		if (ev & EV_IOWRITE)
 		{
+#ifdef _WIN32
+#else
 			HandleWrite();
+#endif // _WIN32
+			CallbackWrite();
 		}
 	}
 
@@ -408,26 +534,30 @@ namespace chaos
 	}
 
 
-#ifdef _WIN32
-	void AsynConnecter::Handle()
+//#ifdef _WIN32
+//	void AsynConnecter::Handle()
+//	{
+//		uint32 ev = GetCurEv();
+//
+//		if (ev & EV_IOREAD)
+//		{
+//			AsynRead();
+//
+//			CallbackRead();
+//		}
+//
+//		if (ev & EV_IOWRITE)
+//		{
+//			AsynWrite();
+//
+//			CallbackWrite();
+//		}
+//	}
+
+
+	int Connecter::AsynRead()
 	{
-		uint32 ev = GetCurEv();
-
-		if (ev & EV_IOREAD)
-		{
-			AsynRead();
-		}
-
-		if (ev & EV_IOWRITE)
-		{
-			AsynWrite();
-		}
-	}
-
-
-	int AsynConnecter::AsynRead()
-	{
-		if (!m_pOverlapped)
+		if (!m_pROverlapped)
 		{
 			CancelEvent();
 			return -1;
@@ -435,7 +565,9 @@ namespace chaos
 
 		Socket& s = GetSocket();
 
-		if (INVALID_IOCP_RET != m_pOverlapped->asynRet && 0 == m_pOverlapped->databuf.len)
+		m_mutex.Lock();
+
+		if (INVALID_IOCP_RET != m_pROverlapped->asynRet && 0 == m_pROverlapped->bytes/*m_pROverlapped->databuf.len*/)
 		{
 			printf("AsynRead close socket[%d]\n", s.GetFd());
 			CancelEvent();
@@ -443,35 +575,38 @@ namespace chaos
 		}
 		
 		//收完数据后调整buffer的位置
-		if(0 < m_pOverlapped->databuf.len)
-			m_pRBuffer->MoveWriteBuffer(m_pOverlapped->databuf.len);
+		if(0 < m_pROverlapped->bytes/*m_pROverlapped->databuf.len*/)
+			m_pRBuffer->MoveWriteBuffer(m_pROverlapped->databuf.len);
 
 		uint32 size = 0;
-		m_pOverlapped->databuf.buf = m_pRBuffer->GetWriteBuffer(&size);
-		m_pOverlapped->databuf.len = size;
+		m_pROverlapped->databuf.buf = m_pRBuffer->GetWriteBuffer(&size);
+		m_pROverlapped->databuf.len = size;
 
-		m_pOverlapped->key.fd = s.GetFd();
+		m_pROverlapped->fd = s.GetFd();
 
 		DWORD bytesRead = 0;
 		DWORD flags = 0;
 
-		int ret = WSARecv(m_pOverlapped->key.fd, &m_pOverlapped->databuf, 1, &bytesRead, &flags, &m_pOverlapped->overlapped, NULL);
+		int ret = WSARecv(m_pROverlapped->fd, &m_pROverlapped->databuf, 1, &bytesRead, &flags, &m_pROverlapped->overlapped, NULL);
 		if (ret)
 		{
 			if(GetLastError() != WSA_IO_PENDING)
 				CancelEvent();
 		}
 
+		m_mutex.UnLock();
+
 		return 0;
 	}
 
 
-	int AsynConnecter::AsynWrite()
+	int Connecter::AsynWrite()
 	{
+
 		return 0;
 	}
 
-#endif
+//#endif
 }
 
 

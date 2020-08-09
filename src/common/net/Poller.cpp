@@ -41,9 +41,10 @@ namespace chaos
 
 		const EventKey& key = pEvent->GetEvKey();
 
-		m_events.insert(std::make_pair(key.fd, pEvent));
+		if (0 != RegistFd(key.fd, pEvent->GetEv()))
+			return -1;
 
-		RegistFd(key.fd, pEvent->GetEv());
+		m_events.insert(std::make_pair(key.fd, pEvent));
 
 		return 0;
 	}
@@ -116,7 +117,8 @@ namespace chaos
 	{
 #ifdef _WIN32
 		//return &Select::Instance();
-		return new Select(pCentre);
+		//return new Select(pCentre);
+		return new IOCP(pCentre);
 #else
 		/*return &Epoll:Instance();*/
 		return new Epoll(pCentre);

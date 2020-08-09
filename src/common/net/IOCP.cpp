@@ -22,6 +22,11 @@ namespace chaos
 		return s_iocp;
 	}*/
 
+	IOCP::AcceptExPtr IOCP::s_acceptEx = NULL;
+	//IOCP::ConnectExPtr IOCP::s_connectEx = NULL;
+	IOCP::GetAcceptExSockaddrsPtr IOCP::s_getAcceptExSockaddrs = NULL;
+
+
 	IOCP::IOCP(EventCentre* pCentre):
 		Poller(pCentre),
 		m_completionPort(0),
@@ -48,14 +53,14 @@ namespace chaos
 
 	IOCP::~IOCP()
 	{
-		for (int i = 0; i < m_workThreads; ++i)
+		for (DWORD i = 0; i < m_workThreads; ++i)
 		{
 			PostQueuedCompletionStatus(m_completionPort, 0, NOTIFY_SHUTDOWN_KEY, NULL);
 		}
 
 		if (m_threadHandles)
 		{
-			for (int i = 0; i < m_workThreads; ++i)
+			for (DWORD i = 0; i < m_workThreads; ++i)
 			{
 				CloseHandle(m_threadHandles[i]); 
 			}
@@ -89,15 +94,65 @@ namespace chaos
 				return -1;
 		}
 
+		if (!s_acceptEx || /*!s_connectEx ||*/ !s_getAcceptExSockaddrs)
+		{
+			//获取Ex系列函数
+			GUID acceptex = WSAID_ACCEPTEX;
+			//GUID connectex = WSAID_CONNECTEX;
+			GUID getacceptexsockaddrs = WSAID_GETACCEPTEXSOCKADDRS;
+			Socket s(AF_INET, SOCK_STREAM, 0);
+
+			if (INVALID_SOCKET == s.GetFd())
+				return -1;
+
+			socket_t fd = s.GetFd();
+			DWORD bytes = 0;
+
+			if (0 != WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &acceptex, sizeof(acceptex),
+				&s_acceptEx, sizeof(s_acceptEx), &bytes, NULL, NULL))
+				return -1;
+
+			/*if (0 != WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &connectex, sizeof(connectex),
+				&s_connectEx, sizeof(s_connectEx), &bytes, NULL, NULL))
+				return -1;*/
+
+			if (0 != WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &getacceptexsockaddrs, sizeof(getacceptexsockaddrs),
+				&s_getAcceptExSockaddrs, sizeof(s_getAcceptExSockaddrs), &bytes, NULL, NULL))
+				return -1;
+		}
+
 		return 0;
+	}
+
+
+	BOOL IOCP::AcceptEx(SOCKET sListenSocket, SOCKET sAcceptSocket, PVOID lpOutputBuffer, DWORD dwReceiveDataLength,
+		DWORD dwLocalAddressLength, DWORD dwRemoteAddressLength, LPDWORD lpdwBytesReceived, LPOVERLAPPED lpOverlapped)
+	{
+		if (!s_acceptEx)
+			return false;
+		
+		return s_acceptEx(sListenSocket, sAcceptSocket, lpOutputBuffer, dwReceiveDataLength,
+			dwLocalAddressLength, dwRemoteAddressLength, lpdwBytesReceived, lpOverlapped);
+	}
+
+
+	void IOCP::GetAcceptExSockeaddrs(PVOID lpOutputBuffer, DWORD dwReceiveDataLength, DWORD dwLocalAddressLength,
+		DWORD dwRemoteAddressLength, LPSOCKADDR* LocalSockaddr, LPINT LocalSockaddrLength, LPSOCKADDR * RemoteSockaddr, LPINT RemoteSockaddrLength)
+	{
+		if (!s_getAcceptExSockaddrs)
+			return;
+
+		s_getAcceptExSockaddrs(lpOutputBuffer, dwReceiveDataLength, dwLocalAddressLength, dwRemoteAddressLength,
+			LocalSockaddr, LocalSockaddrLength, RemoteSockaddr, RemoteSockaddrLength);
 	}
 
 
 	int IOCP::RegistFd(socket_t fd, short ev)
 	{
-		CreateIoCompletionPort((HANDLE)fd, m_completionPort, NULL/*(DWORD)pKeyData*/, 0);
+		HANDLE ret = CreateIoCompletionPort((HANDLE)fd, m_completionPort, NULL/*(DWORD)pKeyData*/, 0);
 
-		return PushActiveEvent(fd, EV_IOREAD);
+		//return PushActiveEvent(fd, ev);
+		return 0;
 	}
 
 
@@ -110,6 +165,8 @@ namespace chaos
 
 	int IOCP::Launch()
 	{
+		Sleep(NET_TICK);
+
 		return 0;
 	}
 
@@ -142,13 +199,14 @@ namespace chaos
 			{
 				printf("completion port sucess!\n");
 
-				data->databuf.len = bytes;
+				//data->databuf.len = bytes;
+				data->bytes = bytes;
 
 				if(0 != bytes)
-					printf("recv[%d]:%s\n", data->key.fd, data->databuf.buf);
+					printf("recv[%d]:%s\n", data->fd, data->databuf.buf);
 
 				if(pThreadParam->pIOCP)
-					pThreadParam->pIOCP->PushActiveEvent(data->key.fd, EV_IOREAD);
+					pThreadParam->pIOCP->PushActiveEvent(data->fd, EV_IOREAD);
 			}
 
 			else

@@ -30,7 +30,7 @@
 #include <WS2tcpip.h>
 #include <WinSock2.h>
 #include <process.h>
-
+#include <MSWSock.h>
 #pragma comment(lib, "ws2_32.lib")
 
 #else

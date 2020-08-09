@@ -26,13 +26,8 @@ namespace chaos
 
 	void Timer::DispatchTimer()
 	{
-
-		/*if (!pCentre)
-			return;*/
-
 		time_t curTime = time(NULL);
 
-		//TimerEvent* ev = TopTimer();
 		TimerEvent* ev = NULL;
 		if (0 < m_timers.Size())
 			ev = m_timers.Front();
@@ -40,15 +35,10 @@ namespace chaos
 		if (!ev)
 			return;
 
-		std::list<TimerEvent*> addEv;		//这里可以考虑优化
-
 		while (ev && curTime - m_lastRunTime >= ev->GetTimeOut())
 		{
 			if (ev->IsLoop())
-				/*AddTimer(ev);*/
-				addEv.push_back(ev);
-
-			/*pCentre->PushActiveEv(ev);*/
+				AddTimer(ev);
 
 			if (ev->GetCentre())
 				ev->GetCentre()->PushActiveEv(ev);
@@ -59,11 +49,6 @@ namespace chaos
 				break;
 
 			ev = m_timers.Front();
-		}
-
-		for (auto it = addEv.begin(); it != addEv.end(); ++it)
-		{
-			AddTimer(ev);
 		}
 
 		m_lastRunTime = time(NULL);

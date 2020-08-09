@@ -177,6 +177,8 @@
     <ClInclude Include="..\..\common\thread\ThreadPool.h" />
     <ClInclude Include="..\..\common\thread\ThreadTask.h" />
     <ClInclude Include="mine_sweeper\MineSweeperMgr.h" />
+    <ClInclude Include="network\NetWork.h" />
+    <ClInclude Include="world\World.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -115,5 +115,7 @@
       <Filter>common\log</Filter>
     </ClInclude>
     <ClInclude Include="mine_sweeper\MineSweeperMgr.h" />
+    <ClInclude Include="network\NetWork.h" />
+    <ClInclude Include="world\World.h" />
   </ItemGroup>
 </Project>

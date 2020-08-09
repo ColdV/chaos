@@ -59,7 +59,7 @@ namespace chaos
 
 	Socket::Socket(int af, int type, int protocol)
 	{
-		m_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+		m_fd = socket(af, type, protocol);
 	}
 
 
@@ -70,16 +70,19 @@ namespace chaos
 	}
 
 
-	int Socket::Bind(const char* strIP, const int nPort)
+	int Socket::Bind(const sockaddr* sa, int salen)
 	{
-		sockaddr_in sockAddr;
-		memset(&sockAddr, 0, sizeof(sockAddr));
+		//sockaddr_in sockAddr;
+		//memset(&sockAddr, 0, sizeof(sockAddr));
 
-		sockAddr.sin_family = AF_INET;
-		sockAddr.sin_port = htons(nPort);
-		inet_pton(AF_INET, strIP, &sockAddr.sin_addr);
+		//sockAddr.sin_family = AF_INET;
+		//sockAddr.sin_port = htons(3307);
+		//inet_pton(AF_INET, "192.168.0.101", &sockAddr.sin_addr);
 
-		if (0 != bind(m_fd, (sockaddr*)&sockAddr, sizeof(sockaddr)))
+		if (!sa)
+			return -1;
+
+		if (0 != bind(m_fd, sa, salen))
 			return -1;
 
 		//strncpy_safe(m_ip, sizeof(m_ip), strIP, sizeof(m_ip));
@@ -215,6 +218,18 @@ namespace chaos
 #endif // _WIN32
 
 		return ret;
+	}
+
+
+	int Socket::CloseOnExec()
+	{
+#ifndef _WIN32
+		if (fcntl(m_fd, F_SETFD, FD_CLOEXEC) == -1) 
+		{
+			return -1;
+		}
+#endif
+		return 0;
 	}
 
 }

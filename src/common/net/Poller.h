@@ -50,6 +50,8 @@ namespace chaos
 	protected:
 		virtual int RegistFd(socket_t fd, short ev) { return 0; }
 
+		virtual int RegistFd(const Event* pEvent) { return 0; }
+
 		virtual int CancelFd(socket_t fd) { return 0; }
 
 		int PushActiveEvent(socket_t fd, short ev);
@@ -57,8 +59,6 @@ namespace chaos
 		int PushActiveEvent(Event* pEvent);
 
 		const NetEventMap& GetAllEvents() const { return m_events; }
-
-		//std::set<socket_t>* GetFds() { return &m_fds; }
 		
 	private:
 		Poller(const Poller&);

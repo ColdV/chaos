@@ -34,7 +34,7 @@ namespace chaos
 		Socket(int af, int type, int protocol);
 
 	public:
-		int Bind(const char* strIP, const int nPort);
+		int Bind(const sockaddr* sa, int salen);
 
 		int Listen();
 
@@ -65,6 +65,8 @@ namespace chaos
 
 		//ÉèÖÃ·Ç×èÈû
 		int SetNonBlock();
+
+		int CloseOnExec();
 
 	private:
 		//Socket(const Socket&) {}

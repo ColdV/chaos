@@ -66,6 +66,15 @@ namespace chaos
 		fd_set wfds = m_wfds;
 		fd_set efds = m_efds;
 
+#ifdef _WIN32
+		if (0 >= (rfds.fd_count + wfds.fd_count + efds.fd_count))
+		{
+			Sleep(NET_TICK);
+			return 0;
+		}
+#endif // _WIN32
+
+
 		timeval val{0, NET_TICK * 1000};
 
 		int cnt = select(MAX_FD, &rfds, &wfds, &efds, &val);
@@ -138,8 +147,15 @@ namespace chaos
 	}
 
 
-	int Select::RegistFd(socket_t fd, short ev)
+	int Select::RegistFd(const Event* pEvent)
 	{
+		if (!pEvent)
+			return -1;
+
+		const EventKey& key = pEvent->GetEvKey();
+		socket_t fd = key.fd;
+		short ev = pEvent->GetEv();
+
 #ifdef _WIN32
 		if (fd == INVALID_SOCKET)
 			return -1;

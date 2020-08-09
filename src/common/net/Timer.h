@@ -19,7 +19,7 @@ namespace chaos
 
 	};
 
-	class Timer	//:public MinHeap<TimerEvent, TimerCmp>  每次调整位置后 设置TimerEvent中的POS字段
+	class Timer
 	{
 	public:
 		enum 
@@ -58,13 +58,13 @@ namespace chaos
 	private:
 		MinHeap<TimerEvent*, TimerCmp> m_timers;
 		TimerMap m_timerMap;
-		std::set<unsigned int>	m_delList;
-		std::set<unsigned int>	m_deled;
+		//std::set<unsigned int>	m_delList;
+		//std::set<unsigned int>	m_deled;
 		time_t	m_lastRunTime;
 
 	private:
 		static char* s_ids;
-		static uint32 s_curTimers;
+		static uint32 s_curTimers;			//定时器个数
 		static timer_id s_maxIDSize;
 	};
 

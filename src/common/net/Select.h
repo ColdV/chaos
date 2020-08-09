@@ -35,7 +35,7 @@ namespace chaos
 		virtual int Launch() override;
 
 	protected:
-		virtual int RegistFd(socket_t fd, short ev) override;
+		virtual int RegistFd(const Event* pEvent) override;
 		
 		virtual int CancelFd(socket_t fd) override;
 
