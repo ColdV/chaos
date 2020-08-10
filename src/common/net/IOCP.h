@@ -30,6 +30,8 @@ namespace chaos
 	//}COMPLETE_KEY_DATA, *LPCOMPLETE_KEY_DATA;
 
 
+	typedef std::function<void(OVERLAPPED* o, bool sucess)> IOCP_CALLBACK;
+
 	typedef struct
 	{
 		OVERLAPPED overlapped;
@@ -38,6 +40,7 @@ namespace chaos
 		socket_t fd;
 		int32 bytes;		//´æ´¢GetQueuedCompletionStatus·µ»ØµÄbytes
 		int asynRet;
+		IOCP_CALLBACK	cb;
 	}COMPLETE_OVERLAPPED_DATA, *LPCOMPLETE_OVERLAPPED_DATA;
 
 

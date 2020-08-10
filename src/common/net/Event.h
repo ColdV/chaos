@@ -114,6 +114,8 @@ namespace chaos
 
 		void PushActiveEv(Event* pEvent) { m_mutex.Lock(); m_activeEvs.push(pEvent); m_mutex.UnLock(); }
 
+		void PushActiveEv(Event* pEvent, short ev);
+
 	private:
 		int Dispatch();
 
@@ -222,7 +224,7 @@ namespace chaos
 	class Listener :public NetEvent
 	{
 	public:
-		static const int INIT_ASYNACCEPTINT = 8;
+		static const int INIT_ASYNACCEPTING = 8;
 		static const int INIT_ACCEPTADDRBUF = 256;
 
 		typedef std::function<void(NetEvent*, NetEvent*, void*)>	ListenerCb;
@@ -247,6 +249,28 @@ namespace chaos
 
 			m_pOverlapped->acceptfd = INVALID_SOCKET;
 			m_pOverlapped->overlapped.fd = INVALID_SOCKET;
+
+			m_pAcceptOl = new ACCEPT_OVERLAPPED_DATA[INIT_ASYNACCEPTING];
+			if (!m_pAcceptOl)
+				return;
+
+			for (int i = 0; i < INIT_ASYNACCEPTING; ++i)
+			{
+				memset(&m_pAcceptOl[i], 0, sizeof(ACCEPT_OVERLAPPED_DATA));
+
+				m_pAcceptOl[i].overlapped.asynRet = INVALID_IOCP_RET;
+
+				m_pAcceptOl[i].overlapped.databuf.buf = new char[INIT_ACCEPTADDRBUF];
+
+				if (m_pAcceptOl[i].overlapped.databuf.buf)
+					m_pAcceptOl[i].overlapped.databuf.len = INIT_ACCEPTADDRBUF;
+
+				m_pAcceptOl[i].acceptfd = INVALID_SOCKET;
+				m_pAcceptOl[i].overlapped.fd = INVALID_SOCKET;
+
+				m_pAcceptOl[i].overlapped.cb = std::bind(&IocpCallback, this, std::placeholders::_1, std::placeholders::_2);
+			}
+
 #endif // _WIN32
 		}
 
@@ -270,7 +294,10 @@ namespace chaos
 
 	private:
 #ifdef _WIN32
-		int AsynAccept(socket_t s);
+		int AsynAccept(LPACCEPT_OVERLAPPED_DATA lo);
+
+		//GetQueuedCompletionStatus后的回调
+		void IocpCallback(OVERLAPPED* o, bool sucess);
 #endif // _WIN32
 
 	private:
@@ -280,6 +307,7 @@ namespace chaos
 
 #ifdef _WIN32
 		LPACCEPT_OVERLAPPED_DATA m_pOverlapped;
+		LPACCEPT_OVERLAPPED_DATA m_pAcceptOl;
 #endif // _WIN32
 
 	};

@@ -158,7 +158,9 @@ namespace chaos
 
 	int IOCP::CancelFd(socket_t fd)
 	{
-		CloseHandle((HANDLE)fd);
+		if (!CloseHandle((HANDLE)fd))
+			return GetLastError();
+
 		return 0;
 	}
 
@@ -188,11 +190,14 @@ namespace chaos
 			if (NOTIFY_SHUTDOWN_KEY == key)
 				break;
 
-			LPCOMPLETE_OVERLAPPED_DATA data = NULL;
-			if (overlapped)
+			LPCOMPLETE_OVERLAPPED_DATA lo = NULL;
+			if (lo)
 			{
-				data = (LPCOMPLETE_OVERLAPPED_DATA)overlapped;
-				data->asynRet = bOk;
+				lo = (LPCOMPLETE_OVERLAPPED_DATA)overlapped;
+				lo->asynRet = bOk;
+
+				if (lo->cb)
+					lo->cb(overlapped, bOk);
 			}
 
 			if (bOk)
@@ -200,20 +205,19 @@ namespace chaos
 				printf("completion port sucess!\n");
 
 				//data->databuf.len = bytes;
-				data->bytes = bytes;
+				lo->bytes = bytes;
 
 				if(0 != bytes)
-					printf("recv[%d]:%s\n", data->fd, data->databuf.buf);
+					printf("recv[%d]:%s\n", lo->fd, lo->databuf.buf);
 
 				if(pThreadParam->pIOCP)
-					pThreadParam->pIOCP->PushActiveEvent(data->fd, EV_IOREAD);
+					pThreadParam->pIOCP->PushActiveEvent(lo->fd, EV_IOREAD);
 			}
 
 			else
 			{
 				printf("iocp failed!\n");
 			}
-
 		}
 
 		return 0;
