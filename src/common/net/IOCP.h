@@ -37,6 +37,7 @@ namespace chaos
 		//COMPLETE_KEY_DATA key;
 		socket_t fd;
 		int32 bytes;		//´æ´¢GetQueuedCompletionStatus·µ»ØµÄbytes
+		short evType;		
 		int asynRet;
 	}COMPLETE_OVERLAPPED_DATA, *LPCOMPLETE_OVERLAPPED_DATA;
 

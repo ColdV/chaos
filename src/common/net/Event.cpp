@@ -354,6 +354,7 @@ namespace chaos
 
 		m_pOverlapped->acceptfd = fd;
 		m_pOverlapped->overlapped.fd = listenfd;
+		m_pOverlapped->overlapped.evType = EV_IOREAD;
 		DWORD pending = 0;
 
 		if (IOCP::AcceptEx(listenfd, fd, m_pOverlapped->overlapped.databuf.buf, 0, m_pOverlapped->overlapped.databuf.len,
@@ -583,6 +584,8 @@ namespace chaos
 		m_pROverlapped->databuf.len = size;
 
 		m_pROverlapped->fd = s.GetFd();
+
+		m_pROverlapped->evType = EV_IOREAD;
 
 		DWORD bytesRead = 0;
 		DWORD flags = 0;

@@ -193,6 +193,9 @@ namespace chaos
 			{
 				data = (LPCOMPLETE_OVERLAPPED_DATA)overlapped;
 				data->asynRet = bOk;
+				data->bytes = bytes;
+				if (pThreadParam->pIOCP)
+					pThreadParam->pIOCP->PushActiveEvent(data->fd, data->evType);
 			}
 
 			if (bOk)
@@ -200,13 +203,13 @@ namespace chaos
 				printf("completion port sucess!\n");
 
 				//data->databuf.len = bytes;
-				data->bytes = bytes;
+				//data->bytes = bytes;
 
 				if(0 != bytes)
 					printf("recv[%d]:%s\n", data->fd, data->databuf.buf);
 
-				if(pThreadParam->pIOCP)
-					pThreadParam->pIOCP->PushActiveEvent(data->fd, EV_IOREAD);
+				/*if(pThreadParam->pIOCP)
+					pThreadParam->pIOCP->PushActiveEvent(data->fd, data->evType);*/
 			}
 
 			else
