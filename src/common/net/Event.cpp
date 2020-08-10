@@ -193,6 +193,17 @@ namespace chaos
 	}
 
 
+	void EventCentre::PushActiveEv(Event* pEvent, short ev)
+	{
+		if (!pEvent)
+			return;
+
+		pEvent->SetCurEv(pEvent->GetCurEv() | ev);
+
+		PushActiveEv(pEvent);
+	}
+
+
 	int EventCentre::NetEventDispatch()
 	{
 		if (!m_pPoller)
@@ -251,15 +262,19 @@ namespace chaos
 		//if (getsockname(s.GetFd(), (sockaddr*)&addr, &addrlen))
 		//	return WSAGetLastError();
 		
+		if (!m_pAcceptOl)
+			return -1;
+
 		int type = 0;
 		int typelen = sizeof(type);
 		if (getsockopt(s.GetFd(), SOL_SOCKET, SO_TYPE, (char*)&type, &typelen))
 			return WSAGetLastError();
 
-		for (int i = 0; i < INIT_ASYNACCEPTINT; ++i)
+		for (int i = 0; i < INIT_ASYNACCEPTING; ++i)
 		{
 			socket_t fd = socket(sa->sa_family, type, 0);
-			AsynAccept(fd);
+			m_pAcceptOl[i].acceptfd = fd;
+			AsynAccept(&m_pAcceptOl[i]);
 		}
 #endif // _WIN32
 
@@ -279,32 +294,32 @@ namespace chaos
 				return;
 
 #ifdef _WIN32
-			if (!m_pOverlapped)
-				return;
+			//if (!m_pOverlapped)
+			//	return;
 
-			NetEvent* pNewEv = new Connecter(pCentre, m_pOverlapped->acceptfd);
-			if (!pNewEv)
-				return;
+			//NetEvent* pNewEv = new Connecter(pCentre, m_pOverlapped->acceptfd);
+			//if (!pNewEv)
+			//	return;
 
-			int ret = pCentre->RegisterEvent(pNewEv);
-			if (0 != ret)
-				return;
+			//int ret = pCentre->RegisterEvent(pNewEv);
+			//if (0 != ret)
+			//	return;
 
-			CallListenerCb(pNewEv);
+			//CallListenerCb(pNewEv);
 
-			//投递新的accept事件
-			sockaddr_in addr;
-			int addrlen = sizeof(addr);
-			if (getsockname(s.GetFd(), (sockaddr*)&addr, &addrlen))
-				return;
+			////投递新的accept事件
+			//sockaddr_in addr;
+			//int addrlen = sizeof(addr);
+			//if (getsockname(s.GetFd(), (sockaddr*)&addr, &addrlen))
+			//	return;
 
-			int type = 0;
-			int typelen = sizeof(type);
-			if (getsockopt(s.GetFd(), SOL_SOCKET, SO_TYPE, (char*)&type, &typelen))
-				return ;
+			//int type = 0;
+			//int typelen = sizeof(type);
+			//if (getsockopt(s.GetFd(), SOL_SOCKET, SO_TYPE, (char*)&type, &typelen))
+			//	return ;
 
-			socket_t fd = socket(addr.sin_family, type, 0);
-			AsynAccept(fd);
+			//socket_t fd = socket(addr.sin_family, type, 0);
+			//AsynAccept(fd);
 #else
 			while (1)
 			{
@@ -337,42 +352,44 @@ namespace chaos
 
 
 #ifdef _WIN32
-	int Listener::AsynAccept(socket_t fd)
+	int Listener::AsynAccept(LPACCEPT_OVERLAPPED_DATA lo)
 	{
-		if (!m_pOverlapped)
+		if (!lo)
 			return -1;
 
 		Socket& s = GetSocket();
 
 		socket_t listenfd = s.GetFd();
 
-		setsockopt(fd, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT,
-			(char*)&listenfd, sizeof(listenfd));
+		if (0 != setsockopt(lo->acceptfd, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT,
+			(char*)&listenfd, sizeof(listenfd)))
+			return WSAGetLastError();
 		
 		if(!IOCP::AcceptEx)
 			return -1;
 
-		m_pOverlapped->acceptfd = fd;
-		m_pOverlapped->overlapped.fd = listenfd;
-		m_pOverlapped->overlapped.evType = EV_IOREAD;
+		//lo->acceptfd = fd;
+		lo->overlapped.fd = listenfd;
 		DWORD pending = 0;
 
-		if (IOCP::AcceptEx(listenfd, fd, m_pOverlapped->overlapped.databuf.buf, 0, m_pOverlapped->overlapped.databuf.len,
-			m_pOverlapped->overlapped.databuf.len, &pending, &m_pOverlapped->overlapped.overlapped))
+		if (IOCP::AcceptEx(listenfd, lo->acceptfd, lo->overlapped.databuf.buf, 0, lo->overlapped.databuf.len,
+			lo->overlapped.databuf.len, &pending, &lo->overlapped.overlapped))
 		{
-			EventCentre* pCentre = GetCentre();
-			if (!pCentre)
-				return -1;
+			//EventCentre* pCentre = GetCentre();
+			//if (!pCentre)
+			//	return -1;
 
-			NetEvent* pNetEvent = new Connecter(pCentre, fd);
-			if (!pNetEvent)
-				return -1;
+			//NetEvent* pNetEvent = new Connecter(pCentre, lo->acceptfd);
+			//if (!pNetEvent)
+			//	return -1;
 
-			int ret = pCentre->RegisterEvent(pNetEvent);
-			if (0 != ret)
-				return ret;
+			//int ret = pCentre->RegisterEvent(pNetEvent);
+			//if (0 != ret)
+			//	return ret;
 
-			CallListenerCb(pNetEvent);
+			//CallListenerCb(pNetEvent);
+
+			IocpCallback(&lo->overlapped.overlapped, true);
 		}
 		else
 		{
@@ -382,6 +399,53 @@ namespace chaos
 		}
 
 		return 0;
+	}
+
+
+	void Listener::IocpCallback(OVERLAPPED* o, bool sucess)
+	{
+		if (!sucess || !o)
+			return;
+
+		EventCentre* pCentre = GetCentre();
+		if (!pCentre)
+			return;
+
+		//pCentre->PushActiveEv(this, EV_IOREAD);
+
+		Socket& s = GetSocket();
+
+		sockaddr_in addr;
+		int addrlen = sizeof(addr);
+		if (getsockname(s.GetFd(), (sockaddr*)&addr, &addrlen))
+			return;
+
+		int type = 0;
+		int typelen = sizeof(type);
+		if (getsockopt(s.GetFd(), SOL_SOCKET, SO_TYPE, (char*)&type, &typelen))
+			return ;
+
+		LPACCEPT_OVERLAPPED_DATA lo = (LPACCEPT_OVERLAPPED_DATA)o;
+		socket_t acceptedfd = lo->acceptfd;		//已经连接成功的fd
+
+		NetEvent* pNewEv = new Connecter(pCentre, acceptedfd);
+		if (!pNewEv)
+			return;
+
+		int ret = pCentre->RegisterEvent(pNewEv);
+		if (0 != ret)
+			return;
+
+		//对该次连接成功的fd投递WSARecv
+		pCentre->PushActiveEv(pNewEv, EV_IOREAD);
+
+		CallListenerCb(pNewEv);
+
+		socket_t fd = socket(addr.sin_family, type, 0);
+		lo->acceptfd = fd;
+
+		AsynAccept(lo);
+
 	}
 #endif // _WIN32
 
@@ -584,8 +648,6 @@ namespace chaos
 		m_pROverlapped->databuf.len = size;
 
 		m_pROverlapped->fd = s.GetFd();
-
-		m_pROverlapped->evType = EV_IOREAD;
 
 		DWORD bytesRead = 0;
 		DWORD flags = 0;
