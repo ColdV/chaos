@@ -13,7 +13,7 @@
 #ifdef _WIN32
 
 #include "Poller.h"
-
+#include <functional>
 
 namespace chaos
 {
@@ -30,7 +30,7 @@ namespace chaos
 	//}COMPLETE_KEY_DATA, *LPCOMPLETE_KEY_DATA;
 
 
-	typedef std::function<void(OVERLAPPED* o, bool sucess)> IOCP_CALLBACK;
+	typedef std::function<void(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool ok)> IOCP_CALLBACK;
 
 	typedef struct
 	{
@@ -38,18 +38,18 @@ namespace chaos
 		WSABUF databuf;
 		//COMPLETE_KEY_DATA key;
 		socket_t fd;
-		int32 bytes;		//存储GetQueuedCompletionStatus返回的bytes
-		short evType;		
-		int asynRet;
+		//int32 bytes;		//存储GetQueuedCompletionStatus返回的bytes
+		//short evType;		
+		//int asynRet;
 		IOCP_CALLBACK	cb;
-	}COMPLETE_OVERLAPPED_DATA, *LPCOMPLETE_OVERLAPPED_DATA;
+	}COMPLETION_OVERLAPPED, *LPCOMPLETION_OVERLAPPED;
 
 
 	typedef struct
 	{
-		COMPLETE_OVERLAPPED_DATA overlapped;
+		COMPLETION_OVERLAPPED overlapped;
 		socket_t acceptfd;
-	}ACCEPT_OVERLAPPED_DATA, *LPACCEPT_OVERLAPPED_DATA;
+	}ACCEPT_OVERLAPPED, *LPACCEPT_OVERLAPPED;
 
 	class IOCP;
 
@@ -78,7 +78,7 @@ namespace chaos
 		static BOOL AcceptEx(SOCKET sListenSocket, SOCKET sAcceptSocket, PVOID lpOutputBuffer, DWORD dwReceiveDataLength, 
 			DWORD dwLocalAddressLength, DWORD dwRemoteAddressLength, LPDWORD lpdwBytesReceived, LPOVERLAPPED lpOverlapped);
 
-		//static BOOL ConnectEx(const LPCOMPLETE_OVERLAPPED_DATA pOverlapped);
+		//static BOOL ConnectEx(const LPCOMPLETION_OVERLAPPED pOverlapped);
 
 		static void GetAcceptExSockeaddrs(PVOID lpOutputBuffer, DWORD dwReceiveDataLength, DWORD dwLocalAddressLength, 
 			DWORD dwRemoteAddressLength, LPSOCKADDR* LocalSockaddr, LPINT LocalSockaddrLength, LPSOCKADDR * RemoteSockaddr, LPINT RemoteSockaddrLength);

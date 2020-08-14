@@ -32,24 +32,22 @@ namespace chaos
 		Buffer();
 		virtual ~Buffer();
 
-		////从socket中读出数据   写入到m_bufferList
-		//int ReadSocket(Socket* pSocket);
-
-		////读出m_bufferList中的数据  写入到socket
-		////如果没有指定size 将所有数据写入socket
-		//int WriteSocket(Socket* pSocket, uint32 size = 0);
-
 		//读出m_bufferList中的数据 写入到参数buffer中
+		//@param size:待读取的字节数
+		//@return:已读取的字节数
 		uint32 ReadBuffer(char* buffer, uint32 size);
 
-		//读出buffer
-		//@param size:读出大小
+		//读出当前buffer节点的数据
+		//@param in/out size:待读取/已读取 字节数
+		//@return 当前节点数据地址
 		char* ReadBuffer(uint32* size);
 
 		//获取当前可读数据大小
 		uint32 GetReadSize();
 
 		//将buffer数据写入到m_bufferList中
+		//@param size:待写入的字节数
+		//return:已写入的字节数
 		uint32 WriteBuffer(const char* buffer, uint32 size);
 
 		//可写缓冲区
@@ -58,7 +56,7 @@ namespace chaos
 
 		//移动可写缓冲区
 		//将可写缓冲区浮标从当前位置移动size个位置
-		void MoveWriteBuffer(uint32 size);
+		void MoveWriteBufferPos(uint32 size);
 
 	private:
 		//扩张Buffer,每次新增一个BUFFER_INIT_SIZE大小的节点
@@ -74,8 +72,11 @@ namespace chaos
 
 	private:
 		BufferList m_buffList;
+
 		BufferNodeIt m_wNodeIt;				//当前写入点
+
 		BufferNodeIt m_rNodeIt;				//当前读出点
-		uint32 m_useSize;
+
+		uint32 m_useSize;					//已使用的总大小
 	};
 }

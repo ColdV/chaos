@@ -187,36 +187,42 @@ namespace chaos
 			OVERLAPPED *overlapped = NULL;
 			bool bOk = GetQueuedCompletionStatus(pThreadParam->iocp, &bytes, &key, &overlapped, WSA_INFINITE);
 
+			//结束GetQueuedCompletionStatus 准备退出工作线程
 			if (NOTIFY_SHUTDOWN_KEY == key)
 				break;
 
-			LPCOMPLETE_OVERLAPPED_DATA lo = NULL;
-			if (lo)
+			if (overlapped)
 			{
-				lo = (LPCOMPLETE_OVERLAPPED_DATA)overlapped;
-				lo->asynRet = bOk;
-
+				LPCOMPLETION_OVERLAPPED lo = (LPCOMPLETION_OVERLAPPED)overlapped;
+				//lo->asynRet = bOk;
+				//lo->bytes = bytes;
 				if (lo->cb)
-					lo->cb(overlapped, bOk);
-			}
+					lo->cb(overlapped, bytes, key, bOk);
 
-			if (bOk)
-			{
-				printf("completion port sucess!\n");
+				if (bOk)
+				{
+					printf("GetQueuedCompletionStatus sucess!\n");
 
-				//data->databuf.len = bytes;
-				lo->bytes = bytes;
-
-				if(0 != bytes)
-					printf("recv[%d]:%s\n", lo->fd, lo->databuf.buf);
-
-				if(pThreadParam->pIOCP)
-					pThreadParam->pIOCP->PushActiveEvent(lo->fd, EV_IOREAD);
+					if (0 != bytes)
+						printf("recv[%d]:%s\n", lo->fd, lo->databuf.buf);
+				}
+				else
+				{
+					printf("GetQueuedCompletionStatus failed:%d\n", WSAGetLastError());
+				}
 			}
 
 			else
 			{
-				printf("iocp failed!\n");
+				printf("GetQueuedCompletionStatus return overlapped is null!\n");
+				if (bOk)
+				{
+					printf("GetQueuedCompletionStatus sucess but overlapped is null!\n");
+				}
+				else
+				{
+					printf("GetQueuedCompletionStatus failed:%d\n", WSAGetLastError());
+				}
 			}
 		}
 

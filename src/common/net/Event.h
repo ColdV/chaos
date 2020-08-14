@@ -152,16 +152,9 @@ namespace chaos
 	class NetEvent :public Event
 	{
 	public:
-		typedef std::function<void(NetEvent*, void*)> NetCallback;
-
-
 		NetEvent(EventCentre* pCentre, short ev, socket_t fd) :
 			Event(pCentre, ev, (EventKey&)fd),
-			m_socket(fd)/*,
-			m_readcb(0),
-			m_readData(0),
-			m_writecb(0),
-			m_writeData(0)*/
+			m_socket(fd)
 		{}
 
 
@@ -169,54 +162,19 @@ namespace chaos
 		{
 		}
 
-		//讲数据写入到buff中, 并且推送一个EV_IOWRITE事件在下一帧写入socket
-		virtual int WriteBuffer(const char* buf, int len) { return 0; }
+		////讲数据写入到buff中, 并且推送一个EV_IOWRITE事件在下一帧写入socket
+		//virtual int WriteBuffer(const char* buf, int len) { return 0; }
 
-		//写入socket
-		virtual int Write(const char* buf, int len) { return 0; }
+		////写入socket
+		//virtual int Write(const char* buf, int len) { return 0; }
 
-		//读取buffer中的数据
-		virtual int ReadBuffer(char* buf, int len) { return 0; }
+		////读取buffer中的数据
+		//virtual int ReadBuffer(char* buf, int len) { return 0; }
 
 		Socket& GetSocket() { return m_socket; }
 
-	//	void SetCallback(NetCallback readcb, void* readData, NetCallback writecb, void* writeData)
-	//	{
-	//		m_readcb = readcb;
-	//		m_readData = readData;
-	//		m_writecb = writecb;
-	//		m_writeData = writeData;
-	//	}
-
-	//	void SetReadCallback(NetCallback readcb, void* readData)
-	//	{
-	//		m_readcb = readcb;
-	//		m_readData = readData;
-	//	}
-
-	//	void SetWriteCallback(NetCallback writecb, void* writeData)
-	//	{
-	//		m_writecb = writecb;
-	//		m_writeData = writeData;
-	//	}
-
-	//	//virtual void Handle() override;
-
-	//protected:
-	//	void CallbackRead() { if (m_readcb) m_readcb(this, m_readData); }
-
-	//	void CallbackWrite() { if (m_writecb) m_writecb(this, m_writeData); }
-
 	protected:
 		Socket m_socket;
-
-		//NetCallback m_readcb;
-
-		//void* m_readData;
-
-		//NetCallback m_writecb;
-
-		//void* m_writeData;
 	};
 
 
@@ -230,17 +188,18 @@ namespace chaos
 		typedef std::function<void(NetEvent*, NetEvent*, void*)>	ListenerCb;
 
 		Listener(EventCentre* pCentre, socket_t fd) :
-			NetEvent(pCentre, EV_IOREAD, fd)
+			NetEvent(pCentre, EV_IOREAD, fd),
+			m_cbArg(0)
 		{
 #ifdef _WIN32
-			m_pOverlapped = new ACCEPT_OVERLAPPED_DATA;
+			m_pOverlapped = new ACCEPT_OVERLAPPED;
 
 			if (!m_pOverlapped)
 				return;
 
-			memset(m_pOverlapped, 0, sizeof(ACCEPT_OVERLAPPED_DATA));
+			memset(m_pOverlapped, 0, sizeof(ACCEPT_OVERLAPPED));
 
-			m_pOverlapped->overlapped.asynRet = INVALID_IOCP_RET;
+			//m_pOverlapped->overlapped.asynRet = INVALID_IOCP_RET;
 
 			m_pOverlapped->overlapped.databuf.buf = new char[INIT_ACCEPTADDRBUF];
 			
@@ -250,15 +209,15 @@ namespace chaos
 			m_pOverlapped->acceptfd = INVALID_SOCKET;
 			m_pOverlapped->overlapped.fd = INVALID_SOCKET;
 
-			m_pAcceptOl = new ACCEPT_OVERLAPPED_DATA[INIT_ASYNACCEPTING];
+			m_pAcceptOl = new ACCEPT_OVERLAPPED[INIT_ASYNACCEPTING];
 			if (!m_pAcceptOl)
 				return;
 
 			for (int i = 0; i < INIT_ASYNACCEPTING; ++i)
 			{
-				memset(&m_pAcceptOl[i], 0, sizeof(ACCEPT_OVERLAPPED_DATA));
+				memset(&m_pAcceptOl[i], 0, sizeof(ACCEPT_OVERLAPPED));
 
-				m_pAcceptOl[i].overlapped.asynRet = INVALID_IOCP_RET;
+				//m_pAcceptOl[i].overlapped.asynRet = INVALID_IOCP_RET;
 
 				m_pAcceptOl[i].overlapped.databuf.buf = new char[INIT_ACCEPTADDRBUF];
 
@@ -268,7 +227,8 @@ namespace chaos
 				m_pAcceptOl[i].acceptfd = INVALID_SOCKET;
 				m_pAcceptOl[i].overlapped.fd = INVALID_SOCKET;
 
-				m_pAcceptOl[i].overlapped.cb = std::bind(&IocpCallback, this, std::placeholders::_1, std::placeholders::_2);
+				m_pAcceptOl[i].overlapped.cb = std::bind(&Listener::IocpCallback, this, std::placeholders::_1, std::placeholders::_2, 
+					std::placeholders::_3, std::placeholders::_4);
 			}
 
 #endif // _WIN32
@@ -288,26 +248,29 @@ namespace chaos
 
 		virtual void Handle() override;
 
-		void SetListenerCb(ListenerCb cb, void* pCbData) { m_cb = cb; m_cbData = pCbData; }
+		void SetListenerCb(ListenerCb cb, void* pCbData) { m_cb = cb; m_cbArg = pCbData; }
 
-		void CallListenerCb(NetEvent* pNewEv) { if (m_cb) m_cb(this, pNewEv, m_cbData); }
+		void CallListenerCb(NetEvent* pNewEv) { if (m_cb) m_cb(this, pNewEv, m_cbArg); }
 
 	private:
 #ifdef _WIN32
-		int AsynAccept(LPACCEPT_OVERLAPPED_DATA lo);
+		int AsynAccept(LPACCEPT_OVERLAPPED lo);
 
 		//GetQueuedCompletionStatus后的回调
-		void IocpCallback(OVERLAPPED* o, bool sucess);
+		void IocpCallback(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool ok);
 #endif // _WIN32
 
 	private:
 		ListenerCb m_cb;
 
-		void* m_cbData;
+		void* m_cbArg;
 
 #ifdef _WIN32
-		LPACCEPT_OVERLAPPED_DATA m_pOverlapped;
-		LPACCEPT_OVERLAPPED_DATA m_pAcceptOl;
+		LPACCEPT_OVERLAPPED m_pOverlapped;
+
+		LPACCEPT_OVERLAPPED m_pAcceptOl;
+
+		std::queue<LPACCEPT_OVERLAPPED> m_acceptedq;
 #endif // _WIN32
 
 	};
@@ -316,6 +279,8 @@ namespace chaos
 	class Connecter : public NetEvent
 	{
 	public:
+		typedef std::function<void(NetEvent*, int, void*)> NetCallback;
+
 		Connecter(EventCentre* pCentre, socket_t fd):
 			NetEvent(pCentre, EV_IOREAD | EV_IOWRITE, fd)
 		{
@@ -323,19 +288,23 @@ namespace chaos
 			m_pWBuffer = new Buffer;
 
 #ifdef _WIN32
-			m_pROverlapped = new COMPLETE_OVERLAPPED_DATA;
+			m_pROverlapped = new COMPLETION_OVERLAPPED;
 
 			if (m_pROverlapped)
 			{
-				memset(m_pROverlapped, 0, sizeof(COMPLETE_OVERLAPPED_DATA));
-				m_pROverlapped->asynRet = INVALID_IOCP_RET;
+				memset(m_pROverlapped, 0, sizeof(COMPLETION_OVERLAPPED));
+				//m_pROverlapped->asynRet = INVALID_IOCP_RET;
+				m_pROverlapped->cb = std::bind(&Connecter::IocpReadCallback, this, std::placeholders::_1, std::placeholders::_2,
+					std::placeholders::_3, std::placeholders::_4);
 			}
 
-			m_pWOverlapped = new COMPLETE_OVERLAPPED_DATA;
+			m_pWOverlapped = new COMPLETION_OVERLAPPED;
 			if (m_pWOverlapped)
 			{
-				memset(m_pROverlapped, 0, sizeof(COMPLETE_OVERLAPPED_DATA));
-				m_pROverlapped->asynRet = INVALID_IOCP_RET;
+				memset(m_pWOverlapped, 0, sizeof(COMPLETION_OVERLAPPED));
+				//m_pWOverlapped->asynRet = INVALID_IOCP_RET;
+				m_pWOverlapped->cb = std::bind(&Connecter::IocpWriteCallback, this, std::placeholders::_1, std::placeholders::_2,
+					std::placeholders::_3, std::placeholders::_4);
 			}
 #endif // WIN32
 		}
@@ -360,39 +329,39 @@ namespace chaos
 		virtual void Handle() override;
 
 		//讲数据写入到buff中, 并且推送一个EV_IOWRITE事件在下一帧写入socket
-		int WriteBuffer(const char* buf, int len) override;
+		int WriteBuffer(const char* buf, int len);
 
 		//写入socket
-		int Write(const char* buf, int len) override;
+		int Write(const char* buf, int len);
 
-		int ReadBuffer(char* buf, int len) override { return 0; };
+		int ReadBuffer(char* buf, int len) { return 0; };
 
 
-		void SetCallback(NetCallback readcb, void* readData, NetCallback writecb, void* writeData)
+		void SetCallback(NetCallback readcb, void* readCbArg, NetCallback writecb, void* writeCbArg)
 		{
 			m_readcb = readcb;
-			m_readData = readData;
+			m_readCbArg = readCbArg;
 			m_writecb = writecb;
-			m_writeData = writeData;
+			m_writeCbArg = writeCbArg;
 		}
 
-		void SetReadCallback(NetCallback readcb, void* readData)
+		void SetReadCallback(NetCallback readcb, void* readCbArg)
 		{
 			m_readcb = readcb;
-			m_readData = readData;
+			m_readCbArg = readCbArg;
 		}
 
-		void SetWriteCallback(NetCallback writecb, void* writeData)
+		void SetWriteCallback(NetCallback writecb, void* writeCbArg)
 		{
 			m_writecb = writecb;
-			m_writeData = writeData;
+			m_writeCbArg = writeCbArg;
 		}
 
 
 	private:
-		void CallbackRead() { if (m_readcb) m_readcb(this, m_readData); }
+		void CallbackRead(int nTransferBytes) { if (m_readcb) m_readcb(this, nTransferBytes, m_readCbArg); }
 
-		void CallbackWrite() { if (m_writecb) m_writecb(this, m_writeData); }
+		void CallbackWrite(int nTransferBytes) { if (m_writecb) m_writecb(this, nTransferBytes, m_writeCbArg); }
 
 
 		int HandleRead();
@@ -403,6 +372,10 @@ namespace chaos
 		int AsynRead();
 
 		int AsynWrite();
+
+		void IocpReadCallback(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool ok);
+
+		void IocpWriteCallback(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool ok);
 #endif // _WIN32
 
 	private:
@@ -411,18 +384,18 @@ namespace chaos
 		Buffer* m_pWBuffer;
 
 #ifdef _WIN32
-		LPCOMPLETE_OVERLAPPED_DATA m_pROverlapped;
+		LPCOMPLETION_OVERLAPPED m_pROverlapped;
 
-		LPCOMPLETE_OVERLAPPED_DATA m_pWOverlapped;
+		LPCOMPLETION_OVERLAPPED m_pWOverlapped;
 #endif // _WIN32
 
 		NetCallback m_readcb;
 
-		void* m_readData;
+		void* m_readCbArg;
 
 		NetCallback m_writecb;
 
-		void* m_writeData;
+		void* m_writeCbArg;
 
 
 		Mutex m_mutex;
@@ -439,11 +412,11 @@ namespace chaos
 //		{
 //			m_pRBuffer = new Buffer;
 //			m_pWBuffer = new Buffer;
-//			m_pOverlapped = new COMPLETE_OVERLAPPED_DATA;
+//			m_pOverlapped = new COMPLETION_OVERLAPPED;
 //
 //			if (m_pOverlapped)
 //			{
-//				memset(m_pOverlapped, 0, sizeof(COMPLETE_OVERLAPPED_DATA));
+//				memset(m_pOverlapped, 0, sizeof(COMPLETION_OVERLAPPED));
 //				m_pOverlapped->asynRet = INVALID_IOCP_RET;
 //			}
 //		}
@@ -476,7 +449,7 @@ namespace chaos
 //	private:
 //		Buffer* m_pRBuffer;
 //		Buffer* m_pWBuffer;
-//		LPCOMPLETE_OVERLAPPED_DATA m_pOverlapped;
+//		LPCOMPLETION_OVERLAPPED m_pOverlapped;
 //		Mutex m_mutex;
 //	};
 //#endif // _WIN32
