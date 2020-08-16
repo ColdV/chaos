@@ -29,6 +29,7 @@ namespace chaos
 
 		typedef std::unordered_map<int, TimerEvent*> TimerMap;
 
+		//Timer& Instance();
 		Timer();
 		~Timer();
 
@@ -43,7 +44,7 @@ namespace chaos
 
 		int Size() { return m_timers.Size(); }
 
-		int TotalSize() { return m_timers.TotalSize(); }
+		//int TotalSize() { return m_timers.TotalSize(); }
 
 
 	public:
@@ -51,20 +52,23 @@ namespace chaos
 		static timer_id CreateTimerID();
 
 	private:
+		//Timer();
 
 		//扩展ID
 		static int ExpandID();
 
 	private:
 		MinHeap<TimerEvent*, TimerCmp> m_timers;
+
 		TimerMap m_timerMap;
-		//std::set<unsigned int>	m_delList;
-		//std::set<unsigned int>	m_deled;
+
 		time_t	m_lastRunTime;
 
 	private:
 		static char* s_ids;
+
 		static uint32 s_curTimers;			//定时器个数
+
 		static timer_id s_maxIDSize;
 	};
 

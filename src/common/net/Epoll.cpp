@@ -52,14 +52,14 @@ namespace chaos
 
 
 	//void Epoll::WaitEvent()
-	int Epoll::Launch()
+	int Epoll::Launch(timeoutMs)
 	{
-		int cnt = epoll_wait(m_epfd, m_evs, MAX_FD, NET_TICK);
+		if (0 >= timeoutMs)
+			timeoutMs = NET_TICK;
+
+		int cnt = epoll_wait(m_epfd, m_evs, MAX_FD, timeoutMs);
 		if (0 > cnt)
 			return -1;
-
-		//IOEvent newEvent;
-		//FdEvent fdEv;
 
 		for (int i = 0; i < cnt; ++i)
 		{
@@ -75,13 +75,10 @@ namespace chaos
 
 			else
 			{
-
 				printf("unexpected event:%d\n", m_evs[i].events);
 				continue;
 			}
 
-			//fdEv.fd = m_evs[i].data.fd;
-			/*addIOEvent(newEvent);*/
 			PushActiveEvent(m_evs[i].data.fd, ev);
 		}
 

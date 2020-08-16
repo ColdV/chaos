@@ -6,19 +6,27 @@ namespace chaos
 {
 
 	timer_id Timer::s_maxIDSize = Timer::INIT_ID_SIZE;
+
 	char* Timer::s_ids = new char[INIT_ID_SIZE];
+
 	uint32 Timer::s_curTimers = 0;
+
+
+	//Timer& Timer::Instance()
+	//{
+	//	static Timer g_timer;
+	//	return g_timer;
+	//}
+
 
 	Timer::Timer() :
 		m_lastRunTime(0)
 	{
-		++s_curTimers;
 	}
 
 
 	Timer::~Timer()
 	{
-		--s_curTimers;
 		if (s_ids && 0 >= s_curTimers)
 			delete [] s_ids;
 	}
@@ -28,27 +36,29 @@ namespace chaos
 	{
 		time_t curTime = time(NULL);
 
-		TimerEvent* ev = NULL;
-		if (0 < m_timers.Size())
-			ev = m_timers.Front();
-
-		if (!ev)
-			return;
-
-		while (ev && curTime - m_lastRunTime >= ev->GetTimeOut())
+		while (!m_timers.Empty())
 		{
-			if (ev->IsLoop())
-				AddTimer(ev);
+			TimerEvent* ev = m_timers.Front();
+			if (!ev)
+				continue;
 
-			if (ev->GetCentre())
-				ev->GetCentre()->PushActiveEv(ev);
-
-			m_timers.Pop();
-
-			if (0 >= m_timers.Size())
+			if (m_lastRunTime < ev->GetNextTime())
 				break;
 
-			ev = m_timers.Front();
+			EventCentre* pCentre = ev->GetCentre();
+			if (!pCentre)
+				continue;
+
+			pCentre->PushActiveEv(ev);
+
+			//循环定时任务
+			if (ev->IsLoop())
+			{
+				ev->SetNextTime();
+				AddTimer(ev);
+			}
+
+			m_timers.Pop();
 		}
 
 		m_lastRunTime = time(NULL);
@@ -72,7 +82,11 @@ namespace chaos
 			return 0;
 		}
 
-		m_timerMap.insert(std::make_pair(id, pTimerEv));
+		if (m_timerMap.find(id) == m_timerMap.end())
+		{
+			m_timerMap.insert(std::make_pair(id, pTimerEv));
+			++s_curTimers;
+		}
 
 		return id;
 
@@ -86,6 +100,7 @@ namespace chaos
 			if (*p == pTimerEv)
 			{
 				m_timers.Erase(p);
+				--s_curTimers;
 				break;
 			}
 		}

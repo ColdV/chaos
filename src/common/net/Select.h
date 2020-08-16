@@ -32,7 +32,7 @@ namespace chaos
 
 		virtual int Init() override;
 
-		virtual int Launch() override;
+		virtual int Launch(int timeoutMs) override;
 
 	protected:
 		virtual int RegistFd(const Event* pEvent) override;
@@ -46,9 +46,5 @@ namespace chaos
 		fd_set m_rfds;
 		fd_set m_wfds;
 		fd_set m_efds;
-
-#ifdef _WIN32
-		IOCP* m_iocp;
-#endif // _WIN32
 	};
 }

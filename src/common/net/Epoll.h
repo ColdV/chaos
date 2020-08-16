@@ -34,7 +34,7 @@ namespace chaos
 
 		virtual int Init();
 
-		virtual int Launch();
+		virtual int Launch(int timeoutMs) override;
 
 	protected:
 		virtual int RegistFd(socket_t fd, short ev);

@@ -24,6 +24,8 @@ namespace chaos
 {
 	class Event;
 	class EventCentre;
+	class Listener;
+	class Connecter;
 	class Timer;
 
 
@@ -40,7 +42,7 @@ namespace chaos
 	{
 	public:
 
-		typedef std::function<void(Event* pEv, short ev, void* pUserData)> EventCallback;
+		typedef std::function<void(Event* pEv, short ev, void* arg)> EventCallback;
 
 		virtual ~Event()
 		{
@@ -60,9 +62,9 @@ namespace chaos
 
 		EventCentre* GetCentre() const { return m_pCenter; }
 
-		void SetCallback(EventCallback cb, void* pUserData) { m_callback = cb; m_cbUserData = pUserData; }
+		void SetEventCallback(EventCallback cb, void* pUserData) { m_callback = cb; m_cbArg = pUserData; }
 
-		void Callback() { if (m_callback) m_callback(this, m_curEv, m_cbUserData); }
+		void Callback() { if (m_callback) m_callback(this, m_curEv, m_cbArg); }
 
 	protected:
 		Event(EventCentre* pCentre, short ev, const EventKey& evKey);
@@ -85,7 +87,7 @@ namespace chaos
 
 		EventCallback m_callback;
 
-		void* m_cbUserData;
+		void* m_cbArg;
 	};
 
 
@@ -106,7 +108,7 @@ namespace chaos
 
 		int Init();
 
-		int EventLoop();
+		int EventLoop(int loopTickTimeMs = 0);
 
 		int RegisterEvent(Event* pEvent);
 
@@ -117,13 +119,13 @@ namespace chaos
 		void PushActiveEv(Event* pEvent, short ev);
 
 	private:
-		int Dispatch();
+		//int Dispatch();
 
-		int NetEventDispatch();
+		//int NetEventDispatch();
 
 		int SignalDispatch();
 
-		int TimerDispatch();
+		//int TimerDispatch();
 
 		int ProcessActiveEvent();
 
@@ -145,6 +147,8 @@ namespace chaos
 
 		int m_evcount;
 
+		bool m_isInit;
+
 		Mutex m_mutex;
 	};
 
@@ -162,15 +166,6 @@ namespace chaos
 		{
 		}
 
-		////讲数据写入到buff中, 并且推送一个EV_IOWRITE事件在下一帧写入socket
-		//virtual int WriteBuffer(const char* buf, int len) { return 0; }
-
-		////写入socket
-		//virtual int Write(const char* buf, int len) { return 0; }
-
-		////读取buffer中的数据
-		//virtual int ReadBuffer(char* buf, int len) { return 0; }
-
 		Socket& GetSocket() { return m_socket; }
 
 	protected:
@@ -185,49 +180,37 @@ namespace chaos
 		static const int INIT_ASYNACCEPTING = 8;
 		static const int INIT_ACCEPTADDRBUF = 256;
 
-		typedef std::function<void(NetEvent*, NetEvent*, void*)>	ListenerCb;
+		typedef std::function<void(Listener* pListener, Connecter* pConnecter, void* arg)>	ListenerCb;
 
 		Listener(EventCentre* pCentre, socket_t fd) :
 			NetEvent(pCentre, EV_IOREAD, fd),
 			m_cbArg(0)
 		{
 #ifdef _WIN32
-			m_pOverlapped = new ACCEPT_OVERLAPPED;
-
-			if (!m_pOverlapped)
+			m_acceptOls = new ACCEPT_OVERLAPPED[INIT_ASYNACCEPTING];
+			if (!m_acceptOls)
 				return;
 
-			memset(m_pOverlapped, 0, sizeof(ACCEPT_OVERLAPPED));
-
-			//m_pOverlapped->overlapped.asynRet = INVALID_IOCP_RET;
-
-			m_pOverlapped->overlapped.databuf.buf = new char[INIT_ACCEPTADDRBUF];
-			
-			if (m_pOverlapped->overlapped.databuf.buf)
-				m_pOverlapped->overlapped.databuf.len = INIT_ACCEPTADDRBUF;
-
-			m_pOverlapped->acceptfd = INVALID_SOCKET;
-			m_pOverlapped->overlapped.fd = INVALID_SOCKET;
-
-			m_pAcceptOl = new ACCEPT_OVERLAPPED[INIT_ASYNACCEPTING];
-			if (!m_pAcceptOl)
+			m_acceptBuffers = new Buffer[INIT_ASYNACCEPTING];
+			if (!m_acceptBuffers)
 				return;
 
 			for (int i = 0; i < INIT_ASYNACCEPTING; ++i)
 			{
-				memset(&m_pAcceptOl[i], 0, sizeof(ACCEPT_OVERLAPPED));
+				memset(&m_acceptOls[i], 0, sizeof(ACCEPT_OVERLAPPED));
 
-				//m_pAcceptOl[i].overlapped.asynRet = INVALID_IOCP_RET;
+				m_acceptBuffers[i].Reserver(INIT_ACCEPTADDRBUF);
 
-				m_pAcceptOl[i].overlapped.databuf.buf = new char[INIT_ACCEPTADDRBUF];
+				//acceptex只使用一个数据块 用于存放连接后的地址信息
+				//之后可通过GetAcceptExSockaddrs获得本地或远程的地址
+				uint32 n = 0;
+				m_acceptOls[i].overlapped.databufs[0].buf = m_acceptBuffers[i].GetWriteBuffer(&n);
+				m_acceptOls[i].overlapped.databufs[0].len = n;
 
-				if (m_pAcceptOl[i].overlapped.databuf.buf)
-					m_pAcceptOl[i].overlapped.databuf.len = INIT_ACCEPTADDRBUF;
+				m_acceptOls[i].acceptfd = INVALID_SOCKET;
+				m_acceptOls[i].overlapped.fd = INVALID_SOCKET;
 
-				m_pAcceptOl[i].acceptfd = INVALID_SOCKET;
-				m_pAcceptOl[i].overlapped.fd = INVALID_SOCKET;
-
-				m_pAcceptOl[i].overlapped.cb = std::bind(&Listener::IocpCallback, this, std::placeholders::_1, std::placeholders::_2, 
+				m_acceptOls[i].overlapped.cb = std::bind(&Listener::IocpListenCallback, this, std::placeholders::_1, std::placeholders::_2, 
 					std::placeholders::_3, std::placeholders::_4);
 			}
 
@@ -238,8 +221,11 @@ namespace chaos
 		~Listener()
 		{
 #ifdef _WIN32
-			if (m_pOverlapped)
-				delete m_pOverlapped;
+			if (m_acceptOls)
+				delete[] m_acceptOls;
+
+			if (m_acceptBuffers)
+				delete[] m_acceptBuffers;
 #endif // _WIN32
 
 		}
@@ -250,14 +236,14 @@ namespace chaos
 
 		void SetListenerCb(ListenerCb cb, void* pCbData) { m_cb = cb; m_cbArg = pCbData; }
 
-		void CallListenerCb(NetEvent* pNewEv) { if (m_cb) m_cb(this, pNewEv, m_cbArg); }
+		void CallListenerCb(Connecter* pConner) { if (m_cb) m_cb(this, pConner, m_cbArg); }
 
 	private:
 #ifdef _WIN32
 		int AsynAccept(LPACCEPT_OVERLAPPED lo);
 
 		//GetQueuedCompletionStatus后的回调
-		void IocpCallback(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool ok);
+		void IocpListenCallback(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool ok);
 #endif // _WIN32
 
 	private:
@@ -266,9 +252,9 @@ namespace chaos
 		void* m_cbArg;
 
 #ifdef _WIN32
-		LPACCEPT_OVERLAPPED m_pOverlapped;
+		LPACCEPT_OVERLAPPED m_acceptOls;
 
-		LPACCEPT_OVERLAPPED m_pAcceptOl;
+		Buffer* m_acceptBuffers;
 
 		std::queue<LPACCEPT_OVERLAPPED> m_acceptedq;
 #endif // _WIN32
@@ -279,7 +265,7 @@ namespace chaos
 	class Connecter : public NetEvent
 	{
 	public:
-		typedef std::function<void(NetEvent*, int, void*)> NetCallback;
+		typedef std::function<void(Connecter* pConnect, int nTransBytes, void* arg)> NetCallback;
 
 		Connecter(EventCentre* pCentre, socket_t fd):
 			NetEvent(pCentre, EV_IOREAD | EV_IOWRITE, fd)
@@ -332,10 +318,14 @@ namespace chaos
 		int WriteBuffer(const char* buf, int len);
 
 		//写入socket
-		int Write(const char* buf, int len);
+		int Write(const char* buf, int size);
 
-		int ReadBuffer(char* buf, int len) { return 0; };
+		//从RBuffer中读取len个字节到buf中
+		//return:返回实际读取的字节数
+		int ReadBuffer(char* buf, int size);
 
+		//获取RBuffer中可读取的字节数
+		int GetReadableSize() { if (!m_pRBuffer) return 0; return m_pRBuffer->GetReadSize(); }
 
 		void SetCallback(NetCallback readcb, void* readCbArg, NetCallback writecb, void* writeCbArg)
 		{
@@ -460,17 +450,22 @@ namespace chaos
 	class TimerEvent : public Event
 	{
 	public:
-		TimerEvent(EventCentre* pCentre, uint32 ev, const EventKey& evKey, uint32 timeOut, bool isLoop = false) :
-			Event(pCentre, ev, evKey),
-			m_timeOut(timeOut),
+		friend class Timer;
+
+		TimerEvent(EventCentre* pCentre, timer_id timerId, uint32 timeout, bool isLoop = false) :
+			Event(pCentre, EV_TIMEOUT, (EventKey&)timerId),
+			m_timeout(timeout),
 			m_isLoop(isLoop)
 		{
+			m_nextTime = time(NULL) + m_timeout;
 		}
 
 		virtual ~TimerEvent()
 		{}
 
-		uint32 GetTimeOut() const { return m_timeOut; }
+		uint32 GetTimeOut() const { return m_timeout; }
+
+		time_t GetNextTime() const { return m_nextTime; }
 
 		bool IsLoop() const { return m_isLoop; }
 		void SetLoop(bool isLoop) { m_isLoop = isLoop; }
@@ -478,7 +473,13 @@ namespace chaos
 		virtual void Handle() override;
 
 	private:
-		uint32 m_timeOut;
+		void SetNextTime() { m_nextTime = time(NULL) + m_timeout; }
+
+	private:
+		uint32 m_timeout;
+
+		time_t m_nextTime;
+
 		bool m_isLoop;
 	};
 

@@ -30,6 +30,7 @@ namespace chaos
 	IOCP::IOCP(EventCentre* pCentre):
 		Poller(pCentre),
 		m_completionPort(0),
+		m_isInit(false),
 		m_workThreads(0),
 		m_threadHandles(0),
 		m_tids(0),
@@ -80,6 +81,9 @@ namespace chaos
 
 	int IOCP::Init()
 	{
+		if (m_isInit)
+			return 0;
+
 		if (!m_pThreadParam)
 		{
 			m_pThreadParam = new THREAD_PARAM();
@@ -120,6 +124,8 @@ namespace chaos
 				&s_getAcceptExSockaddrs, sizeof(s_getAcceptExSockaddrs), &bytes, NULL, NULL))
 				return -1;
 		}
+
+		m_isInit = true;
 
 		return 0;
 	}
@@ -165,9 +171,12 @@ namespace chaos
 	}
 
 
-	int IOCP::Launch()
+	int IOCP::Launch(int timeoutMs)
 	{
-		Sleep(NET_TICK);
+		if (0 >= timeoutMs)
+			timeoutMs = NET_TICK;
+
+		Sleep(timeoutMs);
 
 		return 0;
 	}
@@ -196,16 +205,18 @@ namespace chaos
 				LPCOMPLETION_OVERLAPPED lo = (LPCOMPLETION_OVERLAPPED)overlapped;
 				//lo->asynRet = bOk;
 				//lo->bytes = bytes;
-				if (lo->cb)
-					lo->cb(overlapped, bytes, key, bOk);
 
 				if (bOk)
 				{
 					printf("GetQueuedCompletionStatus sucess!\n");
 
 					if (0 != bytes)
-						printf("recv[%d]:%s\n", lo->fd, lo->databuf.buf);
+						printf("recv[%d]:%s\n", lo->fd, lo->databufs[0].buf);
 				}
+
+				if (lo->cb)
+					lo->cb(overlapped, bytes, key, bOk);
+
 				else
 				{
 					printf("GetQueuedCompletionStatus failed:%d\n", WSAGetLastError());
@@ -217,7 +228,7 @@ namespace chaos
 				printf("GetQueuedCompletionStatus return overlapped is null!\n");
 				if (bOk)
 				{
-					printf("GetQueuedCompletionStatus sucess but overlapped is null!\n");
+					printf("GetQueuedCompletionStatus sucess but overlapped is null!\n"); 
 				}
 				else
 				{

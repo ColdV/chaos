@@ -34,7 +34,7 @@ namespace chaos
 	public:
 		virtual int Init() = 0;
 
-		virtual int Launch() = 0;
+		virtual int Launch(int timeoutMs) = 0;
 
 		int AddEvent(Event* pEvent);
 

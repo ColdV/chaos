@@ -29,53 +29,40 @@ namespace chaos
 		FD_ZERO(&m_wfds);
 		FD_ZERO(&m_efds);
 
-#ifdef _WIN32
-		m_iocp = new IOCP(pCentre);
-#endif // _WIN32
-
 	}
 
 
 	Select::~Select()
 	{
-#ifdef _WIN32
-		if (m_iocp)
-			delete m_iocp;
-#endif // _WIN32
 
 	}
 
 
 	int Select::Init()
 	{
-		int ret = 0;
-
-#ifdef _WIN32
-		if (m_iocp)
-			ret = m_iocp->Init();
-#endif // _WIN32
-
-		return ret;
+		return 0;
 	}
 
 
-	int Select::Launch()
+	int Select::Launch(int timeoutMs)
 	{
+		if (0 >= timeoutMs)
+			timeoutMs = NET_TICK;
 
 		fd_set rfds = m_rfds;
 		fd_set wfds = m_wfds;
 		fd_set efds = m_efds;
 
 #ifdef _WIN32
+		//windows中的select调用不允许传入空的fd_set
 		if (0 >= (rfds.fd_count + wfds.fd_count + efds.fd_count))
 		{
-			Sleep(NET_TICK);
+			Sleep(timeoutMs);
 			return 0;
 		}
 #endif // _WIN32
 
-
-		timeval val{0, NET_TICK * 1000};
+		timeval val{0, timeoutMs * 1000};
 
 		int cnt = select(MAX_FD, &rfds, &wfds, &efds, &val);
 
@@ -156,26 +143,6 @@ namespace chaos
 		socket_t fd = key.fd;
 		short ev = pEvent->GetEv();
 
-#ifdef _WIN32
-		if (fd == INVALID_SOCKET)
-			return -1;
-
-		if (0 < m_rfds.fd_count && m_iocp)
-		{
-			Event* pEvent = GetEvent(fd);
-
-			if (!pEvent)
-				return -1;
-
-			//这里会把event添加到iocp的events中
-			//所以删除当前events中的event
-			m_iocp->AddEvent(pEvent);
-			m_events.erase(fd);
-
-			return 0;
-		}
-#endif // _WIN32
-
 		if (ev & EV_IOREAD)
 			FD_SET(fd, &m_rfds);
 		if (ev & EV_IOWRITE)
@@ -189,10 +156,6 @@ namespace chaos
 
 	int Select::CancelFd(socket_t fd)
 	{
-#ifdef _WIN32
-		m_iocp->DelEvent(fd);
-#endif // _WIN32
-
 		FD_CLR(fd, &m_rfds);
 		FD_CLR(fd, &m_wfds);
 		FD_CLR(fd, &m_efds);

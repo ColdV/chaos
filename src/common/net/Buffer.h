@@ -32,6 +32,9 @@ namespace chaos
 		Buffer();
 		virtual ~Buffer();
 
+		//预分配size个字节空间
+		bool Reserver(uint32 size);
+
 		//读出m_bufferList中的数据 写入到参数buffer中
 		//@param size:待读取的字节数
 		//@return:已读取的字节数

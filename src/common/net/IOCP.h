@@ -17,10 +17,10 @@
 
 namespace chaos
 {
-	enum
-	{
-		INVALID_IOCP_RET = -1,
-	};
+	//enum
+	//{
+	//	INVALID_IOCP_RET = -1,
+	//};
 
 	const int NOTIFY_SHUTDOWN_KEY = -1;
 
@@ -32,10 +32,12 @@ namespace chaos
 
 	typedef std::function<void(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool ok)> IOCP_CALLBACK;
 
+#define MAX_WSABUFS 8
+
 	typedef struct
 	{
 		OVERLAPPED overlapped;
-		WSABUF databuf;
+		WSABUF databufs[MAX_WSABUFS];
 		//COMPLETE_KEY_DATA key;
 		socket_t fd;
 		//int32 bytes;		//存储GetQueuedCompletionStatus返回的bytes
@@ -73,7 +75,7 @@ namespace chaos
 
 		virtual int Init();
 
-		virtual int Launch();
+		virtual int Launch(int timeoutMs) override;
 
 		static BOOL AcceptEx(SOCKET sListenSocket, SOCKET sAcceptSocket, PVOID lpOutputBuffer, DWORD dwReceiveDataLength, 
 			DWORD dwLocalAddressLength, DWORD dwRemoteAddressLength, LPDWORD lpdwBytesReceived, LPOVERLAPPED lpOverlapped);
@@ -93,6 +95,8 @@ namespace chaos
 
 	private:
 		HANDLE m_completionPort;
+
+		bool m_isInit;
 
 		DWORD m_workThreads;				//线程数量
 

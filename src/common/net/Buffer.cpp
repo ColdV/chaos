@@ -29,6 +29,20 @@ namespace chaos
 	}
 
 
+	bool Buffer::Reserver(uint32 size)
+	{
+		while (GetLeftSize() < size)
+		{
+			if (Expand() != 0)
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+
 	uint32 Buffer::ReadBuffer(char* buffer, uint32 size)
 	{
 		if (!buffer)
@@ -87,34 +101,36 @@ namespace chaos
 
 	uint32 Buffer::GetReadSize()
 	{
-		if (m_rNodeIt == m_buffList.end() || m_wNodeIt == m_buffList.end())
-			return 0;
+		//if (m_rNodeIt == m_buffList.end() || m_wNodeIt == m_buffList.end())
+		//	return 0;
 
-		uint32 size = 0;
+		//uint32 size = 0;
 
-		BufferNodeIt rIt = m_rNodeIt;
-		BufferNodeIt wIt = m_wNodeIt;
+		//BufferNodeIt rIt = m_rNodeIt;
+		//BufferNodeIt wIt = m_wNodeIt;
 
-		while (rIt != wIt)
-		{
-			BufferNode* node = *rIt;
-			if (!node)
-				break;
+		//while (rIt != wIt)
+		//{
+		//	BufferNode* node = *rIt;
+		//	if (!node)
+		//		break;
 
-			//当前节点的可读大小等于 可读数据(已写入大小) - 已读数据(当前读出游标-buffer起点)
-			size += (node->useSize - (node->readCursor - node->buffer));
+		//	//当前节点的可读大小等于 可读数据(已写入大小) - 已读数据(当前读出游标-buffer起点)
+		//	size += (node->useSize - (node->readCursor - node->buffer));
 
-			if (++rIt == m_buffList.end())
-				rIt = m_buffList.begin();
+		//	if (++rIt == m_buffList.end())
+		//		rIt = m_buffList.begin();
 
-			if (rIt == wIt)
-			{
-				size += (node->useSize - (node->readCursor - node->buffer));
-				break;
-			}
-		}
+		//	if (rIt == wIt)
+		//	{
+		//		size += (node->useSize - (node->readCursor - node->buffer));
+		//		break;
+		//	}
+		//}
 
-		return size;
+		//return size;
+
+		return m_useSize;
 	}
 
 

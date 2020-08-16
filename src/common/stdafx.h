@@ -31,6 +31,7 @@
 #include <WinSock2.h>
 #include <process.h>
 #include <MSWSock.h>
+#include <time.h>
 #pragma comment(lib, "ws2_32.lib")
 
 #else
