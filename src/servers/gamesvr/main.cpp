@@ -62,6 +62,7 @@ void Test::TimerCb(chaos::Event* pev, short ev, void* arg)
 #define IP "192.168.0.101"
 #define PORT 3307
 
+
 int main()
 {
 	//---------log test begin-----------//
@@ -92,16 +93,17 @@ int main()
 
 	p->Init();
 
-	chaos::Socket s(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	chaos::Socket* s = new chaos::Socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
-	chaos::Listener* ev = new chaos::Listener(p, s.GetFd());
+	chaos::Listener* ev = new chaos::Listener(p, s->GetFd());
 
-	printf("listen socket:%d\n", s.GetFd());
+	printf("listen socket:%d\n", s->GetFd());
 
 	sockaddr_in sa;
+	memset(&sa, 0, sizeof(sa));
 	sa.sin_family = AF_INET;
 	sa.sin_port = htons(PORT);
-	inet_pton(AF_INET, IP, &sa.sin_addr);
+	//inet_pton(AF_INET, IP, &sa.sin_addr);
 
 	if (0 != ev->Listen((sockaddr*)&sa, sizeof(sa)))
 	{
@@ -121,6 +123,11 @@ int main()
 	p->RegisterEvent(timerEv);
 
 	p->EventLoop();
+
+	delete p;
+	delete s;
+	delete ev;
+	delete timerEv;
 
 	//---------net test end-----------//
 

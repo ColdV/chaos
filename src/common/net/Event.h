@@ -41,6 +41,8 @@ namespace chaos
 	class Event : public NonCopyable
 	{
 	public:
+		friend class EventCentre;
+		friend class Poller;
 
 		typedef std::function<void(Event* pEv, short ev, void* arg)> EventCallback;
 
@@ -56,8 +58,6 @@ namespace chaos
 
 		short GetCurEv() const { return m_curEv; }
 
-		void SetCurEv(short ev) { m_curEv = ev; }
-
 		const EventKey& GetEvKey() const { return m_evKey; }
 
 		EventCentre* GetCentre() const { return m_pCenter; }
@@ -71,6 +71,9 @@ namespace chaos
 		Event();
 
 		void CancelEvent();
+
+	private:
+		void SetCurEv(short ev) { m_curEv = ev; }
 
 		void SetCenter(EventCentre* pCentre) { m_pCenter = pCentre; }
 

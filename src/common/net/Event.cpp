@@ -236,6 +236,9 @@ namespace chaos
 		if (!pEvent)
 			return;
 
+		if (!(pEvent->GetEv() & ev))
+			return;
+
 		pEvent->SetCurEv(pEvent->GetCurEv() | ev);
 
 		PushActiveEv(pEvent);
@@ -510,9 +513,7 @@ namespace chaos
 		if (!pCentre)
 			return -1;
 
-		SetCurEv(GetCurEv() | EV_IOWRITE);
-
-		pCentre->PushActiveEv(this);
+		pCentre->PushActiveEv(this, GetCurEv() | EV_IOWRITE);
 
 		return written;
 	}
