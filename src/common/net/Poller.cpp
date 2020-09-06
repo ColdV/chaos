@@ -70,7 +70,7 @@ namespace chaos
 		if (it == m_events.end())
 			return -1;
 
-		delete it->second;
+		//delete it->second;
 		m_events.erase(fd);
 
 

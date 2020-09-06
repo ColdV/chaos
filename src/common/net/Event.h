@@ -48,6 +48,7 @@ namespace chaos
 
 		virtual ~Event()
 		{
+			CancelEvent();
 		}
 
 		virtual void Handle() = 0;
@@ -62,7 +63,7 @@ namespace chaos
 
 		EventCentre* GetCentre() const { return m_pCenter; }
 
-		void SetEventCallback(EventCallback cb, void* pUserData) { m_callback = cb; m_cbArg = pUserData; }
+		void SetEventCallback(const EventCallback& cb, void* pUserData) { m_callback = cb; m_cbArg = pUserData; }
 
 		void Callback() { if (m_callback) m_callback(this, m_curEv, m_cbArg); }
 
@@ -183,7 +184,7 @@ namespace chaos
 		static const int INIT_ASYNACCEPTING = 8;
 		static const int INIT_ACCEPTADDRBUF = 256;
 
-		typedef std::function<void(Listener* pListener, Connecter* pConnecter, void* arg)>	ListenerCb;
+		typedef std::function<void(Listener* pListener, /*Connecter* pConnecter*/socket_t fd, void* arg)>	ListenerCb;
 
 		Listener(EventCentre* pCentre, socket_t fd) :
 			NetEvent(pCentre, EV_IOREAD, fd),
@@ -237,9 +238,9 @@ namespace chaos
 
 		virtual void Handle() override;
 
-		void SetListenerCb(ListenerCb cb, void* pCbData) { m_cb = cb; m_cbArg = pCbData; }
+		void SetListenerCb(const ListenerCb& cb, void* pCbData) { m_cb = cb; m_cbArg = pCbData; }
 
-		void CallListenerCb(Connecter* pConner) { if (m_cb) m_cb(this, pConner, m_cbArg); }
+		void CallListenerCb(/*Connecter* pConner*/socket_t fd) { if (m_cb) m_cb(this, /*pConner*/fd, m_cbArg); }
 
 	private:
 #ifdef _WIN32
@@ -330,24 +331,16 @@ namespace chaos
 		//获取RBuffer中可读取的字节数
 		int GetReadableSize() { if (!m_pRBuffer) return 0; return m_pRBuffer->GetReadSize(); }
 
-		void SetCallback(NetCallback readcb, void* readCbArg, NetCallback writecb, void* writeCbArg)
+		void SetCallback(const NetCallback& readcb, void* readCbArg, const NetCallback& writecb, void* writeCbArg);
+
+		void SetReadCallback(const NetCallback& readcb, void* readCbArg)
 		{
-			m_readcb = readcb;
-			m_readCbArg = readCbArg;
-			m_writecb = writecb;
-			m_writeCbArg = writeCbArg;
+			SetCallback(readcb, readCbArg, NULL, NULL);
 		}
 
-		void SetReadCallback(NetCallback readcb, void* readCbArg)
+		void SetWriteCallback(const NetCallback& writecb, void* writeCbArg)
 		{
-			m_readcb = readcb;
-			m_readCbArg = readCbArg;
-		}
-
-		void SetWriteCallback(NetCallback writecb, void* writeCbArg)
-		{
-			m_writecb = writecb;
-			m_writeCbArg = writeCbArg;
+			SetCallback(NULL, NULL, writecb, writeCbArg);
 		}
 
 
@@ -454,11 +447,15 @@ namespace chaos
 	{
 	public:
 		friend class Timer;
+		typedef std::function<void()> TimerHandler;
 
 		TimerEvent(EventCentre* pCentre, timer_id timerId, uint32 timeout, bool isLoop = false) :
 			Event(pCentre, EV_TIMEOUT, (EventKey&)timerId),
 			m_timeout(timeout),
-			m_isLoop(isLoop)
+			m_isLoop(isLoop),
+			m_isCancel(false),
+			m_isSuspend(false),
+			m_handleFunc(NULL)
 		{
 			m_nextTime = time(NULL) + m_timeout;
 		}
@@ -475,6 +472,20 @@ namespace chaos
 
 		virtual void Handle() override;
 
+		void DefaultHandle();
+
+		void Cancel() { m_isCancel = true; };
+
+		void Suspend() { m_isSuspend = true; };
+
+		void Resume() { m_isSuspend = false; }
+
+		bool IsCancel() const { return m_isCancel; }
+
+		bool IsSuspend() const { return m_isSuspend; }
+
+		void SetTimerHandle(const TimerHandler& func) { m_handleFunc = func; };
+
 	private:
 		void SetNextTime() { m_nextTime = time(NULL) + m_timeout; }
 
@@ -483,7 +494,13 @@ namespace chaos
 
 		time_t m_nextTime;
 
-		bool m_isLoop;
+		bool m_isLoop;						//循环定时器
+
+		bool m_isCancel;					//取消定时器
+
+		bool m_isSuspend;					//暂停定时器
+
+		TimerHandler m_handleFunc;
 	};
 
 

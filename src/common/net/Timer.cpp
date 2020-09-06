@@ -42,6 +42,28 @@ namespace chaos
 			if (!ev)
 				continue;
 
+			if (ev->IsCancel())
+			{
+				//delete ev;
+				continue;
+			}
+
+			if (ev->IsSuspend())
+			{
+				//暂停的定时器如果不是循环的就直接删除
+				if (ev->IsLoop())
+				{
+					ev->SetNextTime();
+					AddTimer(ev);
+				}
+				else
+				{
+					m_timers.Pop();
+				}
+
+				continue;
+			}
+
 			if (m_lastRunTime < ev->GetNextTime())
 				break;
 
@@ -68,18 +90,18 @@ namespace chaos
 	uint32 Timer::AddTimer(TimerEvent* pTimerEv)
 	{
 		if (!pTimerEv)
-			return 0;
+			return -1;
 
 		const EventKey& key = pTimerEv->GetEvKey();
 
 		int id = key.timerId;
-		if (0 == id)
-			return 0;
+		if (0 >= id)
+			return -1;
 
 		if (0 != m_timers.Push(pTimerEv))
 		{
 			s_ids[id] = 0;
-			return 0;
+			return -1;
 		}
 
 		if (m_timerMap.find(id) == m_timerMap.end())
@@ -88,14 +110,14 @@ namespace chaos
 			++s_curTimers;
 		}
 
-		return id;
+		return 0;
 
 	}
 
 
 	uint32 Timer::DelTimer(TimerEvent* pTimerEv)
 	{
-		for (TimerEvent* const* p = m_timers.Begin(); p != m_timers.End(); ++p)
+		/*for (TimerEvent* const* p = m_timers.Begin(); p != m_timers.End(); ++p)
 		{
 			if (*p == pTimerEv)
 			{
@@ -103,7 +125,14 @@ namespace chaos
 				--s_curTimers;
 				break;
 			}
-		}
+		}*/
+
+		if (!pTimerEv)
+			return 0;
+
+		pTimerEv->Cancel();
+
+		--s_curTimers;
 
 		return 0;
 	}

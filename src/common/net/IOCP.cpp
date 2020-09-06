@@ -210,8 +210,8 @@ namespace chaos
 				{
 					printf("GetQueuedCompletionStatus sucess!\n");
 
-					if (0 != bytes)
-						printf("recv[%d]:%s\n", lo->fd, lo->databufs[0].buf);
+					//if (0 != bytes)
+					//	printf("recv[%d]:%s\n", lo->fd, lo->databufs[0].buf);
 				}
 
 				if (lo->cb)

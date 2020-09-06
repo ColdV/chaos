@@ -173,6 +173,9 @@ namespace chaos
 		if (!pEvent)
 			return -1;
 
+		if (this != pEvent->GetCentre())
+			return -1;
+
 		uint32 ev = pEvent->GetEv();
 
 		const EventKey& evKey = pEvent->GetEvKey();
@@ -340,18 +343,18 @@ namespace chaos
 				if (0 > connfd || errno == EAGAIN || connfd == INVALID_SOCKET)
 					break;
 
-				Connecter* pConner = new Connecter(pCentre, connfd);
-				if (!pConner)
-				{
-					printf("accept assign new connecter failed!\n");
-					return;
-				}
+				//Connecter* pConner = new Connecter(pCentre, connfd);
+				//if (!pConner)
+				//{
+				//	printf("accept assign new connecter failed!\n");
+				//	return;
+				//}
 
-				int ret = pCentre->RegisterEvent(pConner);
-				if (0 != ret)
-					return;
+				//int ret = pCentre->RegisterEvent(pConner);
+				//if (0 != ret)
+				//	return;
 
-				CallListenerCb(pConner);
+				CallListenerCb(/*pConner*/connfd);
 			} 
 #endif // _WIN32
 		}
@@ -443,23 +446,22 @@ namespace chaos
 			return;
 		}
 
-		Connecter* pConner = new Connecter(pCentre, acceptedfd);
-		if (!pConner)
-			return;
+		//Connecter* pConner = new Connecter(pCentre, acceptedfd);
+		//if (!pConner)
+		//	return;
 
-		int ret = pCentre->RegisterEvent(pConner);
-		if (0 != ret)
-			return;
+		//int ret = pCentre->RegisterEvent(pConner);
+		//if (0 != ret)
+		//	return;
 
-		//对该次连接成功的fd准备投递WSA事件
-		pCentre->PushActiveEv(pConner, EV_IOREAD | EV_IOWRITE);
-
-		m_acceptedq.push(lo);
+		////对该次连接成功的fd准备投递WSA事件
+		//pCentre->PushActiveEv(pConner, EV_IOREAD | EV_IOWRITE);
 
 		//准备投递下一次AcceptEx
+		m_acceptedq.push(lo);
 		pCentre->PushActiveEv(this, EV_IOREAD);
 
-		CallListenerCb(pConner);
+		CallListenerCb(/*pConner*/acceptedfd);
 
 	}
 #endif // _WIN32
@@ -548,6 +550,28 @@ namespace chaos
 	}
 
 
+	void Connecter::SetCallback(const NetCallback& readcb, void* readCbArg, const NetCallback& writecb, void* writeCbArg)
+	{
+		if (readcb)
+		{
+			m_readcb = readcb;
+			m_readCbArg = readCbArg;
+#ifdef _WIN32
+			AsynRead();
+#endif // _WIN32
+		}
+
+		if (writecb)
+		{
+			m_writecb = writecb;
+			m_writeCbArg = writeCbArg;
+#ifdef _WIN32
+			AsynWrite();
+#endif // _WIN32
+		}
+	}
+
+
 	int Connecter::HandleRead()
 	{
 		if (!m_pRBuffer)
@@ -573,9 +597,11 @@ namespace chaos
 
 			int read = s.Recv(buf, size);
 
-			if (0 >= read)
+			if (0 >= read && (errno != EINTR || errno != EWOULDBLOCK || errno != EAGAIN))
 			{
 				CancelEvent();
+				GetSocket().Close();
+				transferBytes = 0;
 				break;
 			}
 
@@ -619,10 +645,10 @@ namespace chaos
 				size -= sendSize;
 				tranferBytes += sendSize;
 
-				if (0 > sendSize)
+				if (0 >= sendSize && (errno != EINTR || errno != EWOULDBLOCK || errno != EAGAIN))
 					break;
 				
-			} while (readSize > 0 && 0 >= sendSize);
+			} while (readSize > 0);
 		}
 
 		m_mutex.UnLock();
@@ -754,6 +780,7 @@ namespace chaos
 		if (0 == bytes)
 		{
 			CancelEvent();
+			GetSocket().Close();
 			return;
 		}
 	
@@ -799,6 +826,15 @@ namespace chaos
 {
 	void TimerEvent::Handle()
 	{
-		printf("test!\n");
+		if (m_handleFunc)
+			m_handleFunc();
+		else
+			DefaultHandle();
+	}
+
+	
+	void TimerEvent::DefaultHandle()
+	{
+		printf("test default timer handle!\n");
 	}
 }

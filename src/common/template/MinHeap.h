@@ -3,9 +3,6 @@
 #include <stdio.h>
 #include <cstring>
 
-
-//有空可以实现一个iterater
-
 template <typename T = void>
 struct Less
 {
@@ -42,9 +39,9 @@ public:
 	bool Empty() const { return 0 >= m_curSize ? true : false; }
 
 	//因为是连续内存, Begin和End这两个函数可以充当下iterator的遍历作用
-	const T* Begin() const { return &m_heap[0]; }
+	//const T* Begin() const { return &m_heap[0]; }
 
-	const T* End() const { return &m_heap[m_curSize + 1]; }
+	//const T* End() const { return &m_heap[m_curSize + 1]; }
 
 protected:
 	//pos从1开始

@@ -9,7 +9,7 @@
 class Test
 {
 public:
-	void ListenCb(chaos::Listener* ev, chaos::Connecter*, void* arg);
+	void ListenCb(chaos::Listener* ev, /*chaos::Connecter**/socket_t fd, void* arg);
 
 	void ReadCb(chaos::Connecter* ev, int nTransBytes, void* arg);
 
@@ -19,12 +19,16 @@ public:
 };
 
 
-void Test::ListenCb(chaos::Listener* ev, chaos::Connecter* pConner, void* arg)
+void Test::ListenCb(chaos::Listener* ev, /*chaos::Connecter* pConner*/socket_t fd, void* arg)
 {
+	chaos::Connecter* pConner = new chaos::Connecter(ev->GetCentre(), fd);
+
 	if (pConner)
 	{
 		pConner->SetCallback(std::bind(&Test::ReadCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), NULL,
 			std::bind(&Test::WriteCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), NULL);
+
+		ev->GetCentre()->RegisterEvent(pConner);
 	}
 
 	printf("socket:%d, newsocket:%d\n", ev->GetSocket().GetFd(), pConner->GetSocket().GetFd());
@@ -41,6 +45,10 @@ void Test::ReadCb(chaos::Connecter* ev, int nTransBytes, void* arg)
 		return;
 
 	ev->ReadBuffer(buf, readable);
+	ev->Write(buf, readable);
+	
+	if (0 == nTransBytes)
+		delete ev;
 
 	printf("read socket recv data:%s\n", buf);
 	delete[] buf;
