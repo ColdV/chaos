@@ -44,7 +44,8 @@ namespace chaos
 
 			if (ev->IsCancel())
 			{
-				//delete ev;
+				m_timers.Pop();
+				DelTimer(ev);
 				continue;
 			}
 
@@ -59,6 +60,7 @@ namespace chaos
 				else
 				{
 					m_timers.Pop();
+					DelTimer(ev);
 				}
 
 				continue;
@@ -98,7 +100,7 @@ namespace chaos
 		if (0 >= id)
 			return -1;
 
-		if (0 != m_timers.Push(pTimerEv))
+		if (0 > m_timers.Push(pTimerEv))
 		{
 			s_ids[id] = 0;
 			return -1;
@@ -130,7 +132,7 @@ namespace chaos
 		if (!pTimerEv)
 			return 0;
 
-		pTimerEv->Cancel();
+		m_timerMap.erase(pTimerEv->GetEvKey().timerId);
 
 		--s_curTimers;
 

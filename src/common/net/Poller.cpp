@@ -28,9 +28,9 @@ namespace chaos
 
 	Poller::~Poller()
 	{
-		if (m_pCentre)
-			delete m_pCentre;
-		printf("delete IO!\n");
+		//if (m_pCentre)
+		//	delete m_pCentre;
+		//printf("delete IO!\n");
 	}
 
 

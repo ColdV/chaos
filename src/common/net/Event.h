@@ -188,6 +188,7 @@ namespace chaos
 
 		Listener(EventCentre* pCentre, socket_t fd) :
 			NetEvent(pCentre, EV_IOREAD, fd),
+			m_cb(0),
 			m_cbArg(0)
 		{
 #ifdef _WIN32
@@ -472,8 +473,6 @@ namespace chaos
 
 		virtual void Handle() override;
 
-		void DefaultHandle();
-
 		void Cancel() { m_isCancel = true; };
 
 		void Suspend() { m_isSuspend = true; };
@@ -488,6 +487,8 @@ namespace chaos
 
 	private:
 		void SetNextTime() { m_nextTime = time(NULL) + m_timeout; }
+
+		void DefaultHandle();
 
 	private:
 		uint32 m_timeout;

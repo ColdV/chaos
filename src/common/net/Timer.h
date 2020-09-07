@@ -14,7 +14,7 @@ namespace chaos
 	{
 		bool operator()(const TimerEvent* l, const TimerEvent* r) const
 		{
-			return l->GetTimeOut() < r->GetTimeOut();
+			return l->GetNextTime() < r->GetNextTime();
 		}
 
 	};
