@@ -61,14 +61,12 @@ public:
 		:m_mutex(mutex)
 	{
 		m_mutex.Lock();
-		printf("mutex lock:%d\n", GetCurrentThreadId());
 	}
 
 
 	~MutexGuard()
 	{
 		m_mutex.UnLock();
-		printf("mutex unlock:%d\n", GetCurrentThreadId());
 	}
 
 private:

@@ -27,8 +27,8 @@ void Test::ListenCb(chaos::Listener* ev, /*chaos::Connecter* pConner*/socket_t f
 	{
 		//问题1:closesocket和closehandle重复调用会异常
 		//问题2:delete掉Event后在EvQueue仍可能存在当前已发生的Event
-		//问题4:在Event.cpp 410行 socket函数抛出异常 贼恶心
-		//问题5:上面的那个new会抛异常  最他妈恶心 操
+		//问题4:在Event.cpp 410行 socket函数抛出异常
+		//问题5:上面的那个new会抛异常
 		//考虑1:在Centre的CancelEvent中设置回调通知用户释放Event
 		pConner->SetCallback(std::bind(&Test::ReadCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), NULL,
 			std::bind(&Test::WriteCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), NULL);

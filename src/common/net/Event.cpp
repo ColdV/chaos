@@ -235,8 +235,6 @@ namespace chaos
 			return -1;
 		}
 
-		delete pEvent;
-
 		--m_evcount;
 
 		return 0;
