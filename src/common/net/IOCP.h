@@ -12,6 +12,8 @@
 
 #ifdef _WIN32
 
+#define	IOCP_ENABLE
+
 #include "Poller.h"
 #include <functional>
 

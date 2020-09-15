@@ -65,16 +65,19 @@ namespace chaos
 	{
 		CancelFd(fd);
 		
-		auto it = m_events.find(fd);
-		
-		if (it == m_events.end())
-			return -1;
+		//auto it = m_events.find(fd);
+		//
+		//if (it == m_events.end())
+		//	return -1;
 
 		//delete it->second;
+		/*if (0 != m_events.erase(fd))
+			return 0;
+
+		return 0;*/
+
 		m_events.erase(fd);
-
-
-		return 0;
+		return 0;//m_events.erase(fd) ? 0 : 1;
 	}
 
 

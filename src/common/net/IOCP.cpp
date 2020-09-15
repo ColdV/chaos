@@ -12,6 +12,7 @@
 
 #include "IOCP.h"
 #include "Event.h"
+#include "../log/Logger.h"
 
 namespace chaos
 {
@@ -156,16 +157,20 @@ namespace chaos
 	int IOCP::RegistFd(socket_t fd, short ev)
 	{
 		HANDLE ret = CreateIoCompletionPort((HANDLE)fd, m_completionPort, NULL/*(DWORD)pKeyData*/, 0);
+		if (!ret)
+			return -1;
 
-		//return PushActiveEvent(fd, ev);
 		return 0;
 	}
 
 
 	int IOCP::CancelFd(socket_t fd)
 	{
-		if (!CloseHandle((HANDLE)fd))
-			return GetLastError();
+		//if (!CloseHandle((HANDLE)fd))
+		//{
+		//	LOG_DEBUG("closehandle:%d\n", fd);
+		//	return GetLastError();
+		//}
 
 		return 0;
 	}
@@ -188,6 +193,7 @@ namespace chaos
 			return -1;
 
 		LPTHREAD_PARAM pThreadParam = (LPTHREAD_PARAM)arg;
+		EventCentre& centre = pThreadParam->pIOCP->GetCentre();
 
 		while (1)
 		{
@@ -213,13 +219,17 @@ namespace chaos
 					//if (0 != bytes)
 					//	printf("recv[%d]:%s\n", lo->fd, lo->databufs[0].buf);
 				}
-
-				if (lo->cb)
-					lo->cb(overlapped, bytes, key, bOk);
-
 				else
 				{
-					printf("GetQueuedCompletionStatus failed:%d\n", WSAGetLastError());
+					int err = GetLastError();
+					if ((err != WAIT_TIMEOUT) || (err != ERROR_NETNAME_DELETED))
+						printf("GetQueuedCompletionStatus failed:%d\n", WSAGetLastError());
+				}
+
+				if (lo->cb)
+				{
+					MutexGuard lock(centre.GetMutex());
+					lo->cb(overlapped, bytes, key, bOk);
 				}
 			}
 

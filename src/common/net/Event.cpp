@@ -1,13 +1,14 @@
 #include "Event.h"
 #include "Timer.h"
 #include <stdio.h>
-
+#include <stdexcept>
 
 
 namespace chaos
 {
-	Event::Event(EventCentre* pCentre, short ev, const EventKey& evKey) :
-		m_pCenter(pCentre),
+	Event::Event(/*EventCentre* pCentre,*/ short ev, const EventKey& evKey) :
+		//m_pCenter(pCentre),
+		m_pCenter(NULL),
 		m_ev(ev),
 		m_curEv(0)
 	{
@@ -27,10 +28,27 @@ namespace chaos
 	void Event::CancelEvent()
 	{
 		if (m_pCenter)
+		{
 			m_pCenter->CancelEvent(this);
+			ClearCentre();
+		}
 	}
 
 
+	void Event::CallErr(int errcode)
+	{
+		if (m_callback)
+			m_errCallback(this, errcode, m_errUserdata);
+		else
+			CancelEvent();
+	}
+
+}	//namespace chaos
+
+
+
+namespace chaos
+{
 	EventCentre::EventCentre() :
 		m_pPoller(0),
 		m_pTimer(0),
@@ -91,11 +109,9 @@ namespace chaos
 		while (m_running)
 		{
 			//没有任何事件的时候不做后续处理(直接退出还是continue?)
-			if (0 >= m_evcount)
-				continue;
+			/*if (0 >= m_evcount)
+				continue;*/
 
-			/*if (0 != Dispatch())
-				break;*/
 			if (0 != m_pPoller->Launch(loopTickTimeMs))
 			{
 				printf("called poller failed!\n");
@@ -105,8 +121,6 @@ namespace chaos
 			if (0 != SignalDispatch())
 				break;
 
-			/*if (0 != TimerDispatch())
-				break;*/
 			m_pTimer->DispatchTimer();
 
 			if (0 != ProcessActiveEvent())
@@ -122,29 +136,9 @@ namespace chaos
 	}
 
 
-	//int EventCentre::Dispatch()
-	//{
-	//	int ret = 0;
-
-	//	if (0 != (ret = NetEventDispatch()))
-	//		return ret;
-
-	//	if (0 != (ret = SignalDispatch()))
-	//		return ret;
-
-	//	if (0 != (ret = TimerDispatch()))
-	//		return ret;
-
-	//	if(0 != (ret = ProcessActiveEvent()))
-	//		return ret;
-
-	//	return ret;
-	//}
-
-
 	int EventCentre::ProcessActiveEvent()
 	{
-		m_mutex.Lock();
+		MutexGuard lock(m_mutex);
 
 		while (!m_activeEvs.empty())
 		{
@@ -162,25 +156,27 @@ namespace chaos
 			m_activeEvs.pop();
 		}
 
-		m_mutex.UnLock();
-
 		return 0;
 	}
 
 
 	int EventCentre::RegisterEvent(Event* pEvent)
 	{
-		if (!pEvent)
-			return -1;
+		//if (!pEvent)
+		//	return -1;
 
-		if (this != pEvent->GetCentre())
+		if (!pEvent || (pEvent->GetCentre() && this != pEvent->GetCentre()))
+		{
 			return -1;
+		}
 
 		uint32 ev = pEvent->GetEv();
 
 		const EventKey& evKey = pEvent->GetEvKey();
 
 		int ret = 0;
+
+		MutexGuard lock(m_mutex);
 
 		if (ev & (EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT)
 			&& !(ev & ~(EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT))
@@ -195,11 +191,18 @@ namespace chaos
 		else if (ev & EV_SIGNAL && !(ev & ~EV_SIGNAL))
 			m_signalEvs.insert(std::make_pair(evKey.signal, pEvent));
 		else
+		{
 			return -1;
+		}
 		
 		if (0 != ret)
+		{
 			return ret;
+		}
 
+		pEvent->SetCenter(this);
+		pEvent->CallbackRegister(ret);
+	
 		++m_evcount;
 
 		return ret;
@@ -215,6 +218,8 @@ namespace chaos
 
 		const EventKey& evKey = pEvent->GetEvKey();
 
+		MutexGuard lock(m_mutex);
+
 		if (ev & (EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT) && m_pPoller)
 		{
 			m_pPoller->DelEvent(pEvent);
@@ -226,7 +231,11 @@ namespace chaos
 		else if (ev & EV_SIGNAL)
 			m_signalEvs.erase(evKey.signal);
 		else
+		{
 			return -1;
+		}
+
+		delete pEvent;
 
 		--m_evcount;
 
@@ -248,34 +257,11 @@ namespace chaos
 	}
 
 
-	//int EventCentre::NetEventDispatch()
-	//{
-	//	if (!m_pPoller)
-	//		return -1;
-
-	//	int ret = 0;
-	//	if (0 != (ret = m_pPoller->Launch()))
-	//		return ret;
-
-	//	return ret;
-	//}
-
-
 	int EventCentre::SignalDispatch()
 	{
 		return 0;
 	}
 
-
-	//int EventCentre::TimerDispatch()
-	//{
-	//	if (!m_pTimer)
-	//		return -1;
-
-	//	m_pTimer->DispatchTimer();
-
-	//	return 0;
-	//}
 
 }
 
@@ -300,15 +286,15 @@ namespace chaos
 		if (0 != (ret = s.Listen()))
 			return ret;
 
-#ifdef _WIN32		
-		if (!m_acceptOls)
-			return -1;
+#ifdef IOCP_ENABLE		
+		//if (!m_acceptOls)
+		//	return -1;
 
-		for (int i = 0; i < INIT_ASYNACCEPTING; ++i)
-		{
-			AsynAccept(&m_acceptOls[i]);
-		}
-#endif // _WIN32
+		//for (int i = 0; i < INIT_ASYNACCEPTING; ++i)
+		//{
+		//	AsynAccept(&m_acceptOls[i]);
+		//}
+#endif // IOCP_ENABLE
 
 		return ret;
 	}
@@ -325,7 +311,7 @@ namespace chaos
 			if (!pCentre)
 				return;
 
-#ifdef _WIN32
+#ifdef IOCP_ENABLE
 			if (m_acceptedq.empty())
 				return;
 
@@ -356,26 +342,57 @@ namespace chaos
 
 				CallListenerCb(/*pConner*/connfd);
 			} 
-#endif // _WIN32
+#endif // IOCP_ENABLE
 		}
 
 	}
 
 
-#ifdef _WIN32
+	void Listener::RegisterCallback(int ret)
+	{
+		if (0 != ret)
+			return;
+
+#ifdef IOCP_ENABLE
+		StartAsynRequest();
+#endif // IOCP_ENABLE
+	}
+
+
+#ifdef IOCP_ENABLE
+	int Listener::StartAsynRequest()
+	{
+		if (!m_acceptOls)
+			return -1;
+
+		int ret = 0;
+		for (int i = 0; i < INIT_ASYNACCEPTING; ++i)
+		{
+			ret = AsynAccept(&m_acceptOls[i]);
+			if (0 != ret)
+				return ret;
+		}
+
+		return 0;
+	}
+
+
 	int Listener::AsynAccept(LPACCEPT_OVERLAPPED lo)
 	{
+		
 		if (!lo)
 			return -1;
 
 		Socket& s = GetSocket();
 		socket_t listenfd = s.GetFd();
 
+		//m_mutex.Lock();
 		sockaddr_in addr;
 		int addrlen = sizeof(addr);
 		if (getsockname(listenfd, (sockaddr*)&addr, &addrlen))
 		{
 			printf("getsocketname failed:%d\n", WSAGetLastError());
+			//m_mutex.UnLock();
 			return WSAGetLastError();
 		}
 
@@ -384,10 +401,13 @@ namespace chaos
 		if (getsockopt(listenfd, SOL_SOCKET, SO_TYPE, (char*)&type, &typelen))
 		{
 			printf("getsockopt failed:%d\n", WSAGetLastError());
+			//m_mutex.UnLock();
 			return WSAGetLastError();
 		}
 
 		socket_t acceptfd = socket(addr.sin_family, type, 0);
+
+		//m_mutex.UnLock();
 		
 		if (!IOCP::AcceptEx)
 		{
@@ -419,16 +439,16 @@ namespace chaos
 	{
 		if (!ok)
 		{
-			printf("GetQueuedCompletionStatus failed:%d\n", WSAGetLastError());
+			//printf("GetQueuedCompletionStatus failed:%d\n", WSAGetLastError());
 			return;
 		}
 
 		if (!o)
 		{
-			printf("GetQueuedCompletionStatus result overlapped is null!\n");
+			//printf("GetQueuedCompletionStatus result overlapped is null!\n");
 			return;
 		}
-
+		
 		EventCentre* pCentre = GetCentre();
 		if (!pCentre)
 			return;
@@ -446,17 +466,6 @@ namespace chaos
 			return;
 		}
 
-		//Connecter* pConner = new Connecter(pCentre, acceptedfd);
-		//if (!pConner)
-		//	return;
-
-		//int ret = pCentre->RegisterEvent(pConner);
-		//if (0 != ret)
-		//	return;
-
-		////对该次连接成功的fd准备投递WSA事件
-		//pCentre->PushActiveEv(pConner, EV_IOREAD | EV_IOWRITE);
-
 		//准备投递下一次AcceptEx
 		m_acceptedq.push(lo);
 		pCentre->PushActiveEv(this, EV_IOREAD);
@@ -464,7 +473,7 @@ namespace chaos
 		CallListenerCb(/*pConner*/acceptedfd);
 
 	}
-#endif // _WIN32
+#endif // IOCP_ENABLE
 
 }
 
@@ -478,20 +487,20 @@ namespace chaos
 
 		if (ev & EV_IOREAD)
 		{
-#ifdef _WIN32
+#ifdef IOCP_ENABLE
 			AsynRead();
 #else
 			HandleRead();
-#endif // WIN32
+#endif // IOCP_ENABLE
 		}
 
 		if (ev & EV_IOWRITE)
 		{
-#ifdef _WIN32
+#ifdef IOCP_ENABLE
 			AsynWrite();
 #else
 			HandleWrite();
-#endif // _WIN32
+#endif // IOCP_ENABLE
 		}
 	}
 
@@ -501,11 +510,7 @@ namespace chaos
 		if (!m_pWBuffer)
 			return -1;
 
-		m_mutex.Lock();
-
 		uint32 written = m_pWBuffer->WriteBuffer(buf, size);
-
-		m_mutex.UnLock();
 
 		if (0 >= written)
 			return -1;
@@ -556,18 +561,18 @@ namespace chaos
 		{
 			m_readcb = readcb;
 			m_readCbArg = readCbArg;
-#ifdef _WIN32
-			AsynRead();
-#endif // _WIN32
+#ifdef IOCP_ENABLE
+			//AsynRead();
+#endif // IOCP_ENABLE
 		}
 
 		if (writecb)
 		{
 			m_writecb = writecb;
 			m_writeCbArg = writeCbArg;
-#ifdef _WIN32
-			AsynWrite();
-#endif // _WIN32
+#ifdef IOCP_ENABLE
+			//AsynWrite();
+#endif // IOCP_ENABLE
 		}
 	}
 
@@ -576,8 +581,6 @@ namespace chaos
 	{
 		if (!m_pRBuffer)
 			return -1;
-
-		m_mutex.Lock();
 
 		Socket& s = GetSocket();
 
@@ -599,8 +602,9 @@ namespace chaos
 
 			if (0 >= read && (errno != EINTR || errno != EWOULDBLOCK || errno != EAGAIN))
 			{
-				CancelEvent();
-				GetSocket().Close();
+				//CancelEvent();
+				//CallErr(read);
+				//GetSocket().Close();
 				transferBytes = 0;
 				break;
 			}
@@ -610,8 +614,6 @@ namespace chaos
 			unread -= read;
 			transferBytes += read;
 		}
-
-		m_mutex.UnLock();
 
 		CallbackRead(transferBytes);
 
@@ -623,8 +625,6 @@ namespace chaos
 	{
 		if (!m_pWBuffer)
 			return -1;
-
-		m_mutex.Lock();
 
 		Socket& s = GetSocket();
 
@@ -651,25 +651,37 @@ namespace chaos
 			} while (readSize > 0);
 		}
 
-		m_mutex.UnLock();
-
 		CallbackWrite(tranferBytes);
 
 		return 0;
 	}
 
 
+	void Connecter::RegisterCallback(int ret)
+	{
+		if (0 != ret)
+			return;
+
+#ifdef IOCP_ENABLE
+		AsynRead();
+		AsynWrite();
+#endif // IOCP_ENABLE
+
+	}
+
+
+#ifdef IOCP_ENABLE
+
 	int Connecter::AsynRead()
 	{
 		if (!m_pROverlapped || !m_pRBuffer)
 		{
-			CancelEvent();
+			//CancelEvent();
+			CallErr(-1);
 			return -1;
 		}
 
 		Socket& s = GetSocket();
-
-		m_mutex.Lock();
 
 		uint32 size = 0;
 		m_pROverlapped->databufs[0].buf = m_pRBuffer->GetWriteBuffer(&size);
@@ -686,17 +698,17 @@ namespace chaos
 			if (WSAGetLastError() != WSA_IO_PENDING)
 			{
 				printf("WSARecv failed:%d\n", WSAGetLastError());
-				CancelEvent();
-				m_mutex.UnLock();
+				//CancelEvent();
+				CallErr(ret);
+				//IocpReadCallback(&m_pROverlapped->overlapped, ret, 0, true);
 				return ret;
 			}
 		}
+		//立即返回也会触发 GetQueuedCompletionStatus 所以这里不需要手动调用callback;
 		//else
 		//{
 		//	IocpReadCallback(&m_pROverlapped->overlapped, bytesRead, 0, true);
 		//}
-
-		m_mutex.UnLock();
 
 		return 0;
 	}
@@ -707,11 +719,10 @@ namespace chaos
 		if (!m_pWOverlapped || !m_pWBuffer)
 		{
 			return -1;
-			CancelEvent();
+			//CancelEvent();
+			CallErr(-1);
 		}
 
-
-		m_mutex.Lock();
 	
 		uint32 readySize = m_pWBuffer->GetReadSize();
 
@@ -736,8 +747,8 @@ namespace chaos
 				if (WSAGetLastError() != WSA_IO_PENDING)
 				{
 					printf("WSARecv failed:%d\n", WSAGetLastError());
-					CancelEvent();
-					m_mutex.UnLock();
+					//CancelEvent();
+					IocpWriteCallback(&m_pWOverlapped->overlapped, ret, 0, true);
 					return  WSAGetLastError();
 				}
 				else
@@ -745,13 +756,11 @@ namespace chaos
 					printf("WSASend failed:%d\n", WSAGetLastError());
 				}
 			}
-			else
-			{
-				IocpWriteCallback(&m_pWOverlapped->overlapped, sendBytes, 0, true);
-			}
+			//else
+			//{
+			//	IocpWriteCallback(&m_pWOverlapped->overlapped, sendBytes, 0, true);
+			//}
 		}
-
-		m_mutex.UnLock();
 
 		return 0;
 	}
@@ -761,42 +770,41 @@ namespace chaos
 	{
 		if (!ok)
 		{
-			printf("GetQueuedCompletionStatus failed:%d\n", WSAGetLastError());
+			//printf("GetQueuedCompletionStatus failed:%d\n", WSAGetLastError());
 		}
 
 		if (!o)
 		{
-			printf("GetQueuedCompletionStatus result overlapped is null!\n");
+			//printf("GetQueuedCompletionStatus result overlapped is null!\n");
 			return;
 		}
 
 		if (!m_pROverlapped)
 		{
 			printf("read overlapped is null\n");
-			CancelEvent();
+			//CancelEvent();
+			CallErr(-1);
 			return;
 		}
 
-		if (0 == bytes)
-		{
-			CancelEvent();
-			GetSocket().Close();
-			return;
-		}
-	
-		m_mutex.Lock();
+		//if (0 == bytes)
+		//{
+		//	//CancelEvent();
+		//	GetSocket().Close();
+		//	return;
+		//}
 
 		//收完数据后调整buffer下次写入的位置
 		m_pRBuffer->MoveWriteBufferPos(bytes);
 
-		m_mutex.UnLock();
-
-		CallbackRead(bytes);
-
 		EventCentre* pCentre = GetCentre();
+		if (!pCentre)
+			return;
 
 		//准备投递下一次WSARecv
 		pCentre->PushActiveEv(this, EV_IOREAD);
+
+		CallbackRead(bytes);
 	}
 
 
@@ -804,21 +812,21 @@ namespace chaos
 	{
 		if (!ok)
 		{
-			printf("GetQueuedCompletionStatus failed:%d\n", WSAGetLastError());
+			//printf("GetQueuedCompletionStatus failed:%d\n", WSAGetLastError());
 			return;
 		}
 
 		if (!o)
 		{
-			printf("GetQueuedCompletionStatus result overlapped is null!\n");
+			//printf("GetQueuedCompletionStatus result overlapped is null!\n");
 			return;
 		}
 
 		CallbackWrite(bytes);
 	}
 
+#endif // IOCP_ENABLE
 
-//#endif
 }
 
 

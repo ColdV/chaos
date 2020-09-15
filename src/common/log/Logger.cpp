@@ -37,12 +37,16 @@ void Logger::WriteLog(int logLev, const char* fmt, ...)
 
 	time_t now = time(NULL);
 
+	MutexGuard lock(m_mutex);
+
 	//第一次写文件时打开文件、隔日新建文件
 	if (!m_fp || (now / DAY2SEC) != (m_lastSecond / DAY2SEC))
 	{
 		m_fp = OpenLogFile();
 		if (!m_fp)
+		{
 			return;
+		}
 	}
 
 	//文件写满,新建一个文件
@@ -54,7 +58,9 @@ void Logger::WriteLog(int logLev, const char* fmt, ...)
 			CloseLogFile();
 			m_fp = OpenLogFile();	
 			if (!m_fp)
+			{
 				return;
+			}
 		}
 	}
 
@@ -75,7 +81,9 @@ void Logger::WriteLog(int logLev, const char* fmt, ...)
 	va_end(ap);
 
 	if (len <= 0)
+	{
 		return;
+	}
 
 	fflush(m_fp);
 

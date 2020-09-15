@@ -34,8 +34,6 @@ namespace chaos
 
 	void Timer::DispatchTimer()
 	{
-		time_t curTime = time(NULL);
-
 		while (!m_timers.Empty())
 		{
 			TimerEvent* ev = m_timers.Front();

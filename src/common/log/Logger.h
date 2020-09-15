@@ -3,6 +3,7 @@
 #include "../stdafx.h"
 #include "../template/Single.h"
 #include <string>
+#include "../thread/Mutex.h"
 
 static const char* s_logLevel2String[] =
 {
@@ -62,6 +63,8 @@ private:
 	char m_fmtTime[64];			//存储格式化后的当前时间
 
 	time_t m_lastSecond;
+
+	Mutex m_mutex;
 };
 
 

@@ -10,6 +10,7 @@
 
 #include "Socket.h"
 #include "../../common/common.h"
+#include "../log/Logger.h"
 
 namespace chaos
 {
@@ -72,21 +73,11 @@ namespace chaos
 
 	int Socket::Bind(const sockaddr* sa, int salen)
 	{
-		//sockaddr_in sockAddr;
-		//memset(&sockAddr, 0, sizeof(sockAddr));
-
-		//sockAddr.sin_family = AF_INET;
-		//sockAddr.sin_port = htons(3307);
-		//inet_pton(AF_INET, "192.168.0.101", &sockAddr.sin_addr);
-
 		if (!sa)
 			return -1;
 
 		if (0 != bind(m_fd, sa, salen))
 			return -1;
-
-		//strncpy_safe(m_ip, sizeof(m_ip), strIP, sizeof(m_ip));
-		//m_port = nPort;
 
 		return 0;
 	}
@@ -151,6 +142,7 @@ namespace chaos
 	int Socket::Close()
 	{
 #ifdef _WIN32
+		//LOG_DEBUG("close socket:%d", m_fd);
 		return closesocket(m_fd);
 
 #else

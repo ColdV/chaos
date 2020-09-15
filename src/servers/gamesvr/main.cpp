@@ -9,36 +9,40 @@
 class Test
 {
 public:
-	void ListenCb(chaos::Listener* ev, /*chaos::Connecter**/socket_t fd, void* arg);
+	void ListenCb(chaos::Listener* ev, /*chaos::Connecter**/socket_t fd, void* userdata);
 
-	void ReadCb(chaos::Connecter* ev, int nTransBytes, void* arg);
+	void ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata);
 
-	void WriteCb(chaos::Connecter* ev, int nTransBytes, void* arg);
+	void WriteCb(chaos::Connecter* ev, int nTransBytes, void* userdata);
 
-	void TimerCb(chaos::Event* pev, short ev, void* arg);
+	void TimerCb(chaos::Event* pev, short ev, void* userdata);
 };
 
 
-void Test::ListenCb(chaos::Listener* ev, /*chaos::Connecter* pConner*/socket_t fd, void* arg)
+void Test::ListenCb(chaos::Listener* ev, /*chaos::Connecter* pConner*/socket_t fd, void* userdata)
 {
-	chaos::Connecter* pConner = new chaos::Connecter(ev->GetCentre(), fd);
+	chaos::Connecter* pConner = new(std::nothrow) chaos::Connecter(/*ev->GetCentre(),*/ fd);
 
 	if (pConner)
 	{
+		//问题1:closesocket和closehandle重复调用会异常
+		//问题2:delete掉Event后在EvQueue仍可能存在当前已发生的Event
+		//问题4:在Event.cpp 410行 socket函数抛出异常 贼恶心
+		//问题5:上面的那个new会抛异常  最他妈恶心 操
+		//考虑1:在Centre的CancelEvent中设置回调通知用户释放Event
 		pConner->SetCallback(std::bind(&Test::ReadCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), NULL,
 			std::bind(&Test::WriteCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), NULL);
 
 		ev->GetCentre()->RegisterEvent(pConner);
 	}
 
-	printf("socket:%d, newsocket:%d\n", ev->GetSocket().GetFd(), pConner->GetSocket().GetFd());
+	LOG_DEBUG("socket:%d, newsocket:%d", ev->GetSocket().GetFd(), pConner->GetSocket().GetFd());
 }
 
 
-void Test::ReadCb(chaos::Connecter* ev, int nTransBytes, void* arg)
+void Test::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 {
-	printf("read socket:%d trans bytes:%d\n", ev->GetSocket().GetFd(), nTransBytes);
-
+	LOG_DEBUG("read socket:%d trans bytes:%d", ev->GetSocket().GetFd(), nTransBytes);
 	int readable = ev->GetReadableSize();
 	char* buf = new char[readable];
 	if (!buf)
@@ -48,22 +52,23 @@ void Test::ReadCb(chaos::Connecter* ev, int nTransBytes, void* arg)
 	ev->Write(buf, readable);
 	
 	if (0 == nTransBytes)
-		delete ev;
+		//delete ev;
+		ev->GetCentre()->CancelEvent(ev);
 
-	printf("read socket recv data:%s\n", buf);
+	LOG_DEBUG("read socket recv data:%s", buf);
 	delete[] buf;
 }
 
 
-void Test::WriteCb(chaos::Connecter* ev, int nTransBytes, void* arg)
+void Test::WriteCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 {
-	printf("write socket:%d trans bytes:%d\n", ev->GetSocket().GetFd(), nTransBytes);
+	LOG_DEBUG("write socket:%d trans bytes:%d", ev->GetSocket().GetFd(), nTransBytes);
 }
 
 
-void Test::TimerCb(chaos::Event* pev, short ev, void* arg)
+void Test::TimerCb(chaos::Event* pev, short ev, void* userdata)
 {
-	printf("timer:%d call back\n", pev->GetEvKey().timerId);
+	LOG_DEBUG("timer:%d call back", pev->GetEvKey().timerId);
 }
 
 
@@ -97,13 +102,17 @@ int main()
 
 
 	//---------net test begin-----------//
+
+	Logger& log = Logger::Instance();
+	log.Init("./log", 0);
+
 	chaos::EventCentre* p = new chaos::EventCentre;
 
 	p->Init();
 
 	chaos::Socket* s = new chaos::Socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
-	chaos::Listener* ev = new chaos::Listener(p, s->GetFd());
+	chaos::Listener* ev = new chaos::Listener(/*p, */s->GetFd());
 
 	printf("listen socket:%d\n", s->GetFd());
 
@@ -125,17 +134,19 @@ int main()
 	ev->SetListenerCb(cb, NULL);
 	p->RegisterEvent(ev);
 
-	timer_id timerId = chaos::Timer::CreateTimerID();
-	chaos::TimerEvent* timerEv = new chaos::TimerEvent(p, timerId, 3, true);
-	timerEv->SetEventCallback(std::bind(&Test::TimerCb, &t, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), NULL);
-	p->RegisterEvent(timerEv);
-
+	//timer_id timerId = chaos::Timer::CreateTimerID();
+	//chaos::TimerEvent* timerEv = new chaos::TimerEvent(p, timerId, 3, true);
+	//timerEv->SetEventCallback(std::bind(&Test::TimerCb, &t, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), NULL);
+	//p->RegisterEvent(timerEv);
 	p->EventLoop();
+
+	//socket_t fd = 1001;
+	//CloseHandle((HANDLE)fd);
 
 	delete p;
 	delete s;
 	delete ev;
-	delete timerEv;
+	//delete timerEv;
 
 	//---------net test end-----------//
 
