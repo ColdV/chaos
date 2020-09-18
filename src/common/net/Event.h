@@ -17,6 +17,7 @@ enum
 	EV_IOEXCEPT = 1 << 2,
 	EV_TIMEOUT = 1 << 3,
 	EV_SIGNAL = 1 << 4,
+	EV_CANCEL = 1 << 5,
 };
 
 
@@ -50,11 +51,11 @@ namespace chaos
 
 		typedef std::function<void(int ret)> EventRegisterCallback;
 
-		typedef std::function<void(Event* pEv)> EventCancelCallback;
+		//typedef std::function<void(Event* pEv)> EventCancelCallback;
 
 		virtual ~Event()
 		{
-			//CancelEvent();
+			CancelEvent();
 		}
 
 		virtual void Handle() = 0;
@@ -63,7 +64,8 @@ namespace chaos
 
 		void SetEv(short ev) { m_ev = ev; }
 
-		short GetCurEv() const { return m_curEv; }
+		//short GetCurEv() const { return m_curEv; }
+		short GetCurEv() { if (m_curEv.empty()) return 0; return m_curEv.front(); }
 
 		const EventKey& GetEvKey() const { return m_evKey; }
 
@@ -84,17 +86,18 @@ namespace chaos
 		void SetRegisterCallback(const EventRegisterCallback& cb) { m_registerCb = cb; }
 
 	private:
-		void Callback() { if (m_callback) m_callback(this, m_curEv, m_userdata); }
+		void Callback() { if (m_callback) m_callback(this, m_curEv.front(), m_userdata); }
 
-		void SetCurEv(short ev) { m_curEv = ev; }
+		//void SetCurEv(short ev) { m_curEv = ev; }
+		void PushCurEv(short ev) { m_curEv.push(ev); }
+
+		void PopCurEv() { if (!m_curEv.empty()) m_curEv.pop(); }
 
 		void SetCenter(EventCentre* pCentre) { m_pCenter = pCentre; }
 
 		void SetEvKey(const EventKey& evKey) { memcpy(&m_evKey, &evKey, sizeof(evKey)); }
 
 		void CancelEvent();
-
-		void ClearCentre() { m_pCenter = NULL; }
 
 		void CallbackRegister(int ret) { if (m_registerCb) m_registerCb(ret); }
 
@@ -103,7 +106,8 @@ namespace chaos
 
 		short m_ev;					//注册的事件
 
-		short m_curEv;				//当前发生的事件
+		//short m_curEv;				//当前发生的事件
+		std::queue<short> m_curEv;
 
 		EventKey	m_evKey;
 
@@ -116,8 +120,6 @@ namespace chaos
 		void* m_errUserdata;
 
 		EventRegisterCallback m_registerCb;
-
-		EventCancelCallback m_cancelCb;
 	};
 
 
@@ -125,13 +127,19 @@ namespace chaos
 	class EventCentre : public NonCopyable
 	{
 	public:
+		struct ActiveEvent
+		{
+			short ev;
+			Event* pEvent;
+		};
+
+
 		typedef std::map<socket_t, Event*> NetEventMap;
 		/*typedef std::map<int, Event*>	TimerEventMap;*/
 		typedef std::map<int, Event*>	SignalEventMap;
 		typedef std::list<Event*>	ActiveEventList;
 		typedef std::queue<Event*>	EvQueue;
-
-
+		
 	public:
 		EventCentre();
 		~EventCentre();
@@ -303,54 +311,9 @@ namespace chaos
 	public:
 		typedef std::function<void(Connecter* pConnect, int nTransBytes, void* userdata)> NetCallback;
 
-		Connecter(/*EventCentre* pCentre, */socket_t fd):
-			NetEvent(/*pCentre, */EV_IOREAD | EV_IOWRITE, fd)
-		{
-			m_pRBuffer = new Buffer;
-			m_pWBuffer = new Buffer;
+		Connecter(socket_t fd);
 
-#ifdef IOCP_ENABLE
-			m_pROverlapped = new COMPLETION_OVERLAPPED;
-
-			if (m_pROverlapped)
-			{
-				memset(m_pROverlapped, 0, sizeof(COMPLETION_OVERLAPPED));
-				//m_pROverlapped->asynRet = INVALID_IOCP_RET;
-				m_pROverlapped->cb = std::bind(&Connecter::IocpReadCallback, this, std::placeholders::_1, std::placeholders::_2,
-					std::placeholders::_3, std::placeholders::_4);
-			}
-
-			m_pWOverlapped = new COMPLETION_OVERLAPPED;
-			if (m_pWOverlapped)
-			{
-				memset(m_pWOverlapped, 0, sizeof(COMPLETION_OVERLAPPED));
-				//m_pWOverlapped->asynRet = INVALID_IOCP_RET;
-				m_pWOverlapped->cb = std::bind(&Connecter::IocpWriteCallback, this, std::placeholders::_1, std::placeholders::_2,
-					std::placeholders::_3, std::placeholders::_4);
-			}
-
-#endif // IOCP_ENABLE
-
-			SetRegisterCallback(std::bind(&Connecter::RegisterCallback, this, std::placeholders::_1));
-
-		}
-
-		~Connecter()
-		{
-			if (m_pRBuffer)
-				delete m_pRBuffer;
-
-			if (m_pWBuffer)
-				delete m_pWBuffer;
-
-#ifdef IOCP_ENABLE
-			if (m_pROverlapped)
-				delete m_pROverlapped;
-
-			if (m_pWOverlapped)
-				delete m_pWOverlapped;
-#endif // IOCP_ENABLE
-		}
+		~Connecter();
 
 		virtual void Handle() override;
 

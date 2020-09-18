@@ -21,7 +21,8 @@ namespace chaos
 		{
 			for (auto it = m_buffList.begin(); it != m_buffList.end(); ++it)
 			{
-				delete[] (*it);
+				delete[](*it)->buffer;
+				delete (*it);
 			}
 		}
 

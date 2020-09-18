@@ -92,13 +92,13 @@ namespace chaos
 		epEv.data.fd = fd;
 		epEv.events = EPOLLIN | EPOLLET;
 		
-		epoll_ctl(m_epfd, EPOLL_CTL_ADD, fd, &epEv);
+		return epoll_ctl(m_epfd, EPOLL_CTL_ADD, fd, &epEv);
 	}
 
 
 	int Epoll::CancelFd(socket_t fd, short ev)
 	{
-		epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, NULL);
+		return epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, NULL);
 	}
 
 }

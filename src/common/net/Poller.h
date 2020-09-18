@@ -62,7 +62,7 @@ namespace chaos
 
 		int PushActiveEvent(socket_t fd, short ev);
 
-		int PushActiveEvent(Event* pEvent);
+		//int PushActiveEvent(Event* pEvent);
 
 		const NetEventMap& GetAllEvents() const { return m_events; }
 

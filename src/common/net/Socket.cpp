@@ -85,7 +85,7 @@ namespace chaos
 
 	int Socket::Listen()
 	{
-		int ret = listen(m_fd, 128);
+		int ret = listen(m_fd, 1024);
 		if (0 != ret)
 			return ret;
 

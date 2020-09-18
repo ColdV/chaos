@@ -2,15 +2,15 @@
 #include "Timer.h"
 #include <stdio.h>
 #include <stdexcept>
-
+#include "../log/Logger.h"
 
 namespace chaos
 {
 	Event::Event(/*EventCentre* pCentre,*/ short ev, const EventKey& evKey) :
 		//m_pCenter(pCentre),
 		m_pCenter(NULL),
-		m_ev(ev),
-		m_curEv(0)
+		m_ev(ev)
+		//m_curEv(0)
 	{
 		memcpy(&m_evKey, &evKey, sizeof(EventKey));
 	}
@@ -18,8 +18,8 @@ namespace chaos
 
 	Event::Event() :
 		m_pCenter(NULL),
-		m_ev(0),
-		m_curEv(0)
+		m_ev(0)
+		//m_curEv(0)
 	{
 		memset(&m_evKey, 0, sizeof(m_evKey));
 	}
@@ -30,7 +30,7 @@ namespace chaos
 		if (m_pCenter)
 		{
 			m_pCenter->CancelEvent(this);
-			ClearCentre();
+			SetCenter(NULL);
 		}
 	}
 
@@ -64,7 +64,7 @@ namespace chaos
 		if (m_pPoller)
 			delete m_pPoller;
 
-		if (!m_pTimer)
+		if (m_pTimer)
 			delete m_pTimer;
 	}
 
@@ -143,17 +143,23 @@ namespace chaos
 		while (!m_activeEvs.empty())
 		{
 			Event* pev = m_activeEvs.front();
+			m_activeEvs.pop();
 			if (!pev)
 				continue;
+
+			if (pev->GetCurEv() & EV_CANCEL)
+			{
+				delete pev;
+				continue;
+			}
 
 			pev->Handle();
 
 			pev->Callback();
 
 			//清除此次已处理的事件
-			pev->SetCurEv(0);
-
-			m_activeEvs.pop();
+			//pev->SetCurEv(0);
+			pev->PopCurEv();
 		}
 
 		return 0;
@@ -237,6 +243,10 @@ namespace chaos
 
 		--m_evcount;
 
+		pEvent->SetCenter(NULL);
+
+		PushActiveEv(pEvent, EV_CANCEL);
+
 		return 0;
 	}
 
@@ -246,10 +256,11 @@ namespace chaos
 		if (!pEvent)
 			return;
 
-		if (!(pEvent->GetEv() & ev))
+		if (!(pEvent->GetEv() & ev) && ev != EV_CANCEL)
 			return;
 
-		pEvent->SetCurEv(pEvent->GetCurEv() | ev);
+		//pEvent->SetCurEv(pEvent->GetCurEv() | ev);
+		pEvent->PushCurEv(ev);
 
 		PushActiveEv(pEvent);
 	}
@@ -384,13 +395,12 @@ namespace chaos
 		Socket& s = GetSocket();
 		socket_t listenfd = s.GetFd();
 
-		//m_mutex.Lock();
 		sockaddr_in addr;
 		int addrlen = sizeof(addr);
+		memset(&addr, 0, addrlen);
 		if (getsockname(listenfd, (sockaddr*)&addr, &addrlen))
 		{
 			printf("getsocketname failed:%d\n", WSAGetLastError());
-			//m_mutex.UnLock();
 			return WSAGetLastError();
 		}
 
@@ -399,13 +409,10 @@ namespace chaos
 		if (getsockopt(listenfd, SOL_SOCKET, SO_TYPE, (char*)&type, &typelen))
 		{
 			printf("getsockopt failed:%d\n", WSAGetLastError());
-			//m_mutex.UnLock();
 			return WSAGetLastError();
 		}
 
 		socket_t acceptfd = socket(addr.sin_family, type, 0);
-
-		//m_mutex.UnLock();
 		
 		if (!IOCP::AcceptEx)
 		{
@@ -479,6 +486,62 @@ namespace chaos
 namespace chaos
 {
 
+	Connecter::Connecter(socket_t fd) :
+		NetEvent(EV_IOREAD | EV_IOWRITE, fd),
+		m_readcb(NULL),
+		m_readCbArg(NULL),
+		m_writecb(NULL),
+		m_writeCbArg(NULL)
+	{
+		m_pRBuffer = new Buffer;
+		m_pWBuffer = new Buffer;
+
+#ifdef IOCP_ENABLE
+		m_pROverlapped = new COMPLETION_OVERLAPPED;
+
+		if (m_pROverlapped)
+		{
+			memset(m_pROverlapped, 0, sizeof(COMPLETION_OVERLAPPED));
+			//m_pROverlapped->asynRet = INVALID_IOCP_RET;
+			m_pROverlapped->cb = std::bind(&Connecter::IocpReadCallback, this, std::placeholders::_1, std::placeholders::_2,
+				std::placeholders::_3, std::placeholders::_4);
+		}
+
+		m_pWOverlapped = new COMPLETION_OVERLAPPED;
+		if (m_pWOverlapped)
+		{
+			memset(m_pWOverlapped, 0, sizeof(COMPLETION_OVERLAPPED));
+			//m_pWOverlapped->asynRet = INVALID_IOCP_RET;
+			m_pWOverlapped->cb = std::bind(&Connecter::IocpWriteCallback, this, std::placeholders::_1, std::placeholders::_2,
+				std::placeholders::_3, std::placeholders::_4);
+		}
+
+#endif // IOCP_ENABLE
+
+		SetRegisterCallback(std::bind(&Connecter::RegisterCallback, this, std::placeholders::_1));
+
+	}
+
+
+	Connecter::~Connecter()
+	{
+		LOG_DEBUG("destroy connecter:%p\n", this);
+		if (m_pRBuffer)
+			delete m_pRBuffer;
+
+		if (m_pWBuffer)
+			delete m_pWBuffer;
+
+#ifdef IOCP_ENABLE
+		if (m_pROverlapped)
+			delete m_pROverlapped;
+
+		if (m_pWOverlapped)
+			delete m_pWOverlapped;
+#endif // IOCP_ENABLE
+	}
+
+
 	void Connecter::Handle()
 	{
 		uint32 ev = GetCurEv();
@@ -518,7 +581,7 @@ namespace chaos
 		if (!pCentre)
 			return -1;
 
-		pCentre->PushActiveEv(this, GetCurEv() | EV_IOWRITE);
+		pCentre->PushActiveEv(this, EV_IOWRITE);
 
 		return written;
 	}
@@ -698,7 +761,7 @@ namespace chaos
 				printf("WSARecv failed:%d\n", WSAGetLastError());
 				//CancelEvent();
 				CallErr(ret);
-				//IocpReadCallback(&m_pROverlapped->overlapped, ret, 0, true);
+				IocpReadCallback(&m_pROverlapped->overlapped, ret, 0, true);
 				return ret;
 			}
 		}
@@ -800,7 +863,8 @@ namespace chaos
 			return;
 
 		//准备投递下一次WSARecv
-		pCentre->PushActiveEv(this, EV_IOREAD);
+		if(0 < bytes)
+			pCentre->PushActiveEv(this, EV_IOREAD);
 
 		CallbackRead(bytes);
 	}

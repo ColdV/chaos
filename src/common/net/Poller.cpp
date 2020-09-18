@@ -99,21 +99,27 @@ namespace chaos
 		if (it == m_events.end())
 			return -1;
 
-		it->second->SetCurEv(it->second->GetCurEv() | ev);
+		//it->second->SetCurEv(it->second->GetCurEv() | ev);
 
-		return PushActiveEvent(it->second);
-	}
-
-
-	int Poller::PushActiveEvent(Event* pEvent)
-	{
-		if (!pEvent || !m_pCentre)
+		if (!m_pCentre)
 			return -1;
-
-		m_pCentre->PushActiveEv(pEvent);
+		
+		m_pCentre->PushActiveEv(it->second, ev);
 
 		return 0;
+		//return PushActiveEvent(it->second, ev);
 	}
+
+
+	//int Poller::PushActiveEvent(Event* pEvent)
+	//{
+	//	if (!pEvent || !m_pCentre)
+	//		return -1;
+
+	//	m_pCentre->PushActiveEv(pEvent);
+
+	//	return 0;
+	//}
 
 
 	Poller* Poller::AdapterNetDrive(EventCentre* pCentre)
