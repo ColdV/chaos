@@ -21,16 +21,11 @@ namespace chaos
 	Poller::Poller(EventCentre* pCentre):
 		m_pCentre(pCentre)
 	{
-		//m_fds.clear();
-		//m_activeFd.clear();
 	}
 
 
 	Poller::~Poller()
 	{
-		//if (m_pCentre)
-		//	delete m_pCentre;
-		//printf("delete IO!\n");
 	}
 
 
@@ -64,20 +59,10 @@ namespace chaos
 	int Poller::DelEvent(socket_t fd)
 	{
 		CancelFd(fd);
-		
-		//auto it = m_events.find(fd);
-		//
-		//if (it == m_events.end())
-		//	return -1;
-
-		//delete it->second;
-		/*if (0 != m_events.erase(fd))
-			return 0;
-
-		return 0;*/
 
 		m_events.erase(fd);
-		return 0;//m_events.erase(fd) ? 0 : 1;
+
+		return 0;
 	}
 
 
@@ -99,27 +84,28 @@ namespace chaos
 		if (it == m_events.end())
 			return -1;
 
-		//it->second->SetCurEv(it->second->GetCurEv() | ev);
-
 		if (!m_pCentre)
 			return -1;
 		
 		m_pCentre->PushActiveEv(it->second, ev);
 
 		return 0;
-		//return PushActiveEvent(it->second, ev);
 	}
 
 
-	//int Poller::PushActiveEvent(Event* pEvent)
-	//{
-	//	if (!pEvent || !m_pCentre)
-	//		return -1;
+	void Poller::Clear()
+	{
+		NetEventMap evs(m_events);
+		
+		//CancelEvent中会删除m_events中的成员 这里使用m_events的拷贝
+		for (auto it = evs.begin(); it != evs.end(); ++it)
+		{
+			if (!it->second)
+				continue;
 
-	//	m_pCentre->PushActiveEv(pEvent);
-
-	//	return 0;
-	//}
+			it->second->CancelEvent();
+		}
+	}
 
 
 	Poller* Poller::AdapterNetDrive(EventCentre* pCentre)

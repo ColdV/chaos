@@ -27,6 +27,8 @@ namespace chaos
 			INIT_ID_SIZE = 128,
 		};
 
+		friend EventCentre;
+
 		typedef std::unordered_map<int, TimerEvent*> TimerMap;
 
 		//Timer& Instance();
@@ -44,15 +46,14 @@ namespace chaos
 
 		int Size() { return m_timers.Size(); }
 
-		//int TotalSize() { return m_timers.TotalSize(); }
-
+		void Clear();
 
 	public:
 		//分配一个定时器ID, 返回0表示无ID可用
 		static timer_id CreateTimerID();
 
 	private:
-		//Timer();
+		TimerMap& GetAllTimer() { return m_timerMap; }
 
 		//扩展ID
 		static int ExpandID();

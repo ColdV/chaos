@@ -12,7 +12,6 @@
 #include "Socket.h"
 #include <list>
 #include <set>
-#include "../thread/Mutex.h"
 
 namespace chaos
 {
@@ -25,6 +24,8 @@ namespace chaos
 	class Poller : public NonCopyable
 	{
 	public:
+		friend EventCentre;
+
 		typedef std::map<socket_t, Event*> NetEventMap;
 
 		Poller(EventCentre* pCentre);
@@ -44,11 +45,9 @@ namespace chaos
 
 		Event* GetEvent(socket_t);
 
-		//mutex_lock_ret Lock() { return m_mutex.Lock(); }
-
-		//void UnLock() { return m_mutex.UnLock(); }
-
 		EventCentre& GetCentre() const { return *m_pCentre; }
+
+		void Clear();
 
 		static Poller* AdapterNetDrive(EventCentre* pCentre);
 
@@ -62,19 +61,16 @@ namespace chaos
 
 		int PushActiveEvent(socket_t fd, short ev);
 
-		//int PushActiveEvent(Event* pEvent);
-
 		const NetEventMap& GetAllEvents() const { return m_events; }
 
 	private:
+		NetEventMap& GetAllEvents() { return m_events; }
+
 		Poller(const Poller&);
 
 	protected:
 		EventCentre* m_pCentre;
-		//std::set<socket_t> m_fds;
 		NetEventMap m_events;
-
-		//Mutex m_mutex;
 	};
 
 }

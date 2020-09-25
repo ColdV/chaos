@@ -10,7 +10,6 @@
 
 #include "Socket.h"
 #include "../../common/common.h"
-#include "../log/Logger.h"
 
 namespace chaos
 {
@@ -20,44 +19,6 @@ namespace chaos
 #endif // _WIN32
 
 
-//	Socket::Socket(socket_t fd, sockaddr_in* addr, bool isBlock):
-//		m_fd(fd),
-//		m_isBlock(isBlock)
-//	{
-//		if (!addr)
-//		{
-//			m_port = -1;
-//			m_ip[0] = 0x00;
-//		}
-//		else
-//		{
-//			m_port = addr->sin_port;
-//			inet_ntop(AF_INET, &(addr->sin_addr), m_ip, MAX_IP_SIZE);
-//		}
-//	}
-//
-//
-//	Socket::Socket(int af, int type, int protocol, bool isBlock):
-//		m_port(0),
-//		m_ip{ 0 }
-//	{
-//		m_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-//		if (isBlock)
-//		{
-//#ifdef _WIN32
-//			u_long mode = 1;
-//			if (SOCKET_ERROR == ioctlsocket(m_fd, FIONBIO, &mode))
-//			{
-//				printf("set socket nonblock failed!\n");
-//				return;
-//			}
-//#else
-//			fcntl(m_fd, F_SETFL, fcntl(m_fd, F_GETFL) | O_NONBLOCK);
-//
-//#endif // _WIN32
-//		}
-//	}
-
 	Socket::Socket(int af, int type, int protocol)
 	{
 		m_fd = socket(af, type, protocol);
@@ -66,7 +27,7 @@ namespace chaos
 
 	Socket::~Socket()
 	{
-		printf("close socket:%d\n", m_fd);
+		printf("close socket:%llu\n", m_fd);
 		Close();
 	}
 
@@ -106,20 +67,8 @@ namespace chaos
 #else
 		socket_t connfd = accept4(m_fd, (sockaddr*)&sockAddr, &len, SOCK_NONBLOCK);
 #endif
-
-		//if (0 > fd || errno == EAGAIN || fd == INVALID_SOCKET)
-		//	return new Socket(fd, NULL, m_isBlock);
-
-		//return new Socket(fd, &sockAddr, m_isBlock);
-
 		return connfd;
 	}
-
-
-	//Socket* Socket::Accept2()
-	//{
-	//	return Accept();
-	//}
 
 
 	int Socket::Connect(const char* strIP, const int nPort)
@@ -142,7 +91,6 @@ namespace chaos
 	int Socket::Close()
 	{
 #ifdef _WIN32
-		//LOG_DEBUG("close socket:%d", m_fd);
 		return closesocket(m_fd);
 
 #else
@@ -174,7 +122,6 @@ namespace chaos
 	int Socket::Send(const char* buf, const int size)
 	{
 		int len = send(m_fd, buf, size, 0);
-		printf("send data to socket[%u] len:%d\n", m_fd, len);
 
 		return len;
 	}

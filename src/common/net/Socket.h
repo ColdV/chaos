@@ -22,9 +22,6 @@ namespace chaos
 	class Socket : public NonCopyable
 	{
 	public:
-		//explicit Socket(socket_t fd, bool isBlock = false);			//不需要type了
-		/*Socket(socket_t fd, sockaddr_in* addr, bool isBlock);
-		Socket(int af, int type, int protocol, bool isBlock);*/
 		~Socket();
 
 		explicit Socket(socket_t fd) :
@@ -38,10 +35,6 @@ namespace chaos
 
 		int Listen();
 
-		//Socket* Accept();
-
-		//Socket* Accept2();
-
 		socket_t Accept();
 
 		int Connect(const char* strIP, const int nPort);
@@ -54,12 +47,6 @@ namespace chaos
 
 		socket_t GetFd() const { return m_fd; }
 
-		//const char* GetIP() const { return m_ip; }
-
-		//uint32 GetPort() const { return m_port; }
-
-		//bool Block() const { return m_isBlock; }
-
 		//缓冲区中的待接收数据大小
 		socket_unread_t GetUnreadByte() const;
 
@@ -67,9 +54,6 @@ namespace chaos
 		int SetNonBlock();
 
 		int CloseOnExec();
-
-	private:
-		//Socket(const Socket&) {}
 
 	private:
 		socket_t m_fd;

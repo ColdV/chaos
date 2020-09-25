@@ -19,18 +19,8 @@
 
 namespace chaos
 {
-	//enum
-	//{
-	//	INVALID_IOCP_RET = -1,
-	//};
 
 	const int NOTIFY_SHUTDOWN_KEY = -1;
-
-	//typedef struct
-	//{
-	//	socket_t fd;
-	//}COMPLETE_KEY_DATA, *LPCOMPLETE_KEY_DATA;
-
 
 	typedef std::function<void(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool ok)> IOCP_CALLBACK;
 
@@ -40,11 +30,7 @@ namespace chaos
 	{
 		OVERLAPPED overlapped;
 		WSABUF databufs[MAX_WSABUFS];
-		//COMPLETE_KEY_DATA key;
 		socket_t fd;
-		//int32 bytes;		//´æ´¢GetQueuedCompletionStatus·µ»ØµÄbytes
-		//short evType;		
-		//int asynRet;
 		IOCP_CALLBACK	cb;
 	}COMPLETION_OVERLAPPED, *LPCOMPLETION_OVERLAPPED;
 

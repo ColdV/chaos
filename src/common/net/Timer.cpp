@@ -71,7 +71,7 @@ namespace chaos
 			if (!pCentre)
 				continue;
 
-			pCentre->PushActiveEv(ev);
+			pCentre->PushActiveEv(ev, EV_TIMEOUT);
 
 			//循环定时任务
 			if (ev->IsLoop())
@@ -117,16 +117,6 @@ namespace chaos
 
 	uint32 Timer::DelTimer(TimerEvent* pTimerEv)
 	{
-		/*for (TimerEvent* const* p = m_timers.Begin(); p != m_timers.End(); ++p)
-		{
-			if (*p == pTimerEv)
-			{
-				m_timers.Erase(p);
-				--s_curTimers;
-				break;
-			}
-		}*/
-
 		if (!pTimerEv)
 			return 0;
 
@@ -135,6 +125,21 @@ namespace chaos
 		--s_curTimers;
 
 		return 0;
+	}
+
+
+	void Timer::Clear()
+	{
+		while (!m_timers.Empty())
+		{
+			TimerEvent* ev = m_timers.Front();
+			m_timers.Pop();
+
+			if (!ev)
+				continue;
+
+			ev->Cancel();
+		}
 	}
 
 

@@ -222,7 +222,7 @@ namespace chaos
 				else
 				{
 					int err = GetLastError();
-					if ((err != WAIT_TIMEOUT) || (err != ERROR_NETNAME_DELETED))
+					if ((err != WAIT_TIMEOUT) && (err != ERROR_NETNAME_DELETED))
 						printf("GetQueuedCompletionStatus failed:%d\n", WSAGetLastError());
 				}
 
