@@ -64,6 +64,8 @@ private:
 
 	time_t m_lastSecond;
 
+	bool m_isInit;
+
 	Mutex m_mutex;
 };
 

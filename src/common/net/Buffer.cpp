@@ -3,12 +3,8 @@
 namespace chaos
 {
 	Buffer::Buffer():
-		//m_totalSize(BUFFER_INIT_SIZE),
-		//m_pCurNode(0),
 		m_useSize(0)
 	{
-		/*m_buffList = new char[BUFFER_INIT_SIZE];
-		m_cursor = m_buffList;*/
 		m_buffList.clear();
 		m_wNodeIt = m_buffList.end();
 		m_rNodeIt = m_buffList.end();
@@ -102,35 +98,6 @@ namespace chaos
 
 	uint32 Buffer::GetReadSize()
 	{
-		//if (m_rNodeIt == m_buffList.end() || m_wNodeIt == m_buffList.end())
-		//	return 0;
-
-		//uint32 size = 0;
-
-		//BufferNodeIt rIt = m_rNodeIt;
-		//BufferNodeIt wIt = m_wNodeIt;
-
-		//while (rIt != wIt)
-		//{
-		//	BufferNode* node = *rIt;
-		//	if (!node)
-		//		break;
-
-		//	//当前节点的可读大小等于 可读数据(已写入大小) - 已读数据(当前读出游标-buffer起点)
-		//	size += (node->useSize - (node->readCursor - node->buffer));
-
-		//	if (++rIt == m_buffList.end())
-		//		rIt = m_buffList.begin();
-
-		//	if (rIt == wIt)
-		//	{
-		//		size += (node->useSize - (node->readCursor - node->buffer));
-		//		break;
-		//	}
-		//}
-
-		//return size;
-
 		return m_useSize;
 	}
 
@@ -235,11 +202,6 @@ namespace chaos
 		pNewNode->readCursor = pNewNode->buffer;
 		pNewNode->totalSize = BUFFER_INIT_SIZE;
 		pNewNode->useSize = 0;
-
-		//if (m_buffList.empty())
-		//{
-		//	m_pCurNode = pNewNode;
-		//}
 
 		if (m_buffList.empty())
 		{

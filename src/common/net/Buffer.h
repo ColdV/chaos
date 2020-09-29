@@ -1,14 +1,13 @@
 #pragma once 
 
 #include "../../common/stdafx.h"
-#include "Socket.h"
 #include <list>
 
 
 
 namespace chaos
 {
-	const uint32 BUFFER_INIT_SIZE = 256;
+	const uint32 BUFFER_INIT_SIZE = 1024;
 
 	//该Buffer是一个环状结构,写入数据时,当前空间不够会自动扩张环
 	//扩张点从当前的写入游标指向的节点开始,在此节点后插入新节点

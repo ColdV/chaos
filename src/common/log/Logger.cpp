@@ -25,6 +25,7 @@ bool Logger::Init(const std::string& name, int logLevel)
 {
 	m_fileName = name;
 	m_level = logLevel;
+	m_isInit = true;
 
 	return true;
 }
@@ -32,6 +33,9 @@ bool Logger::Init(const std::string& name, int logLevel)
 
 void Logger::WriteLog(int logLev, const char* fmt, ...)
 {
+	if (!m_isInit)
+		return;
+
 	if (!fmt || LOG_LEVEL_TRACE > logLev || LOG_LEVEDL_MAX <= logLev)
 		return;
 

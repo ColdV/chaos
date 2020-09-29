@@ -178,36 +178,16 @@ namespace chaos
 	};
 
 
-	//class NetEvent :public Event
-	//{
-	//public:
-	//	NetEvent(short ev, socket_t fd) :
-	//		Event(ev, (EventKey&)fd),
-	//		m_socket(fd)
-	//	{}
 
-
-	//	virtual ~NetEvent()
-	//	{
-	//	}
-
-	//	Socket& GetSocket() { return m_socket; }
-
-	//protected:
-	//	Socket m_socket;
-	//};
-
-
-	//可以再封装一个 Connecter 和 Listener 一起继承自NetEvent
-	class Listener :public Event//public NetEvent
+	class Listener :public Event
 	{
 	public:
 #ifdef IOCP_ENABLE
-		static const int INIT_ASYNACCEPTING = 2;
+		static const int INIT_ASYNACCEPTING = 8;
 		static const int INIT_ACCEPTADDRBUF = 256;
 #endif // IOCP_ENABLE
 
-		typedef std::function<void(Listener* pListener, /*Connecter* pConnecter*/socket_t fd, void* userdata)>	ListenerCb;
+		typedef std::function<void(Listener* listener, Connecter* newconn, void* userdata)>	ListenerCb;
 
 		Listener(socket_t fd);
 
@@ -221,7 +201,7 @@ namespace chaos
 
 		void SetListenerCb(const ListenerCb& cb, void* pCbData) { m_cb = cb; m_userdata = pCbData; }
 
-		void CallListenerCb(socket_t fd) { if (m_cb) m_cb(this, /*pConner*/fd, m_userdata); }
+		void CallListenerCb(Connecter* newconn) { if (m_cb) m_cb(this, newconn, m_userdata); }
 
 	protected:
 #ifdef IOCP_ENABLE
@@ -233,7 +213,7 @@ namespace chaos
 		int AsynAccept(LPACCEPT_OVERLAPPED lo);
 
 		//GetQueuedCompletionStatus后的回调
-		void IocpListenCallback(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool ok);
+		void AcceptComplete(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool ok);
 #endif // IOCP_ENABLE
 
 		void RegisterCallback(int ret);
@@ -248,6 +228,8 @@ namespace chaos
 #ifdef IOCP_ENABLE
 		LPACCEPT_OVERLAPPED m_acceptOls;
 
+		int* m_overlappedsRefCnt;
+
 		Buffer* m_acceptBuffers;
 
 		std::queue<LPACCEPT_OVERLAPPED> m_acceptedq;
@@ -255,7 +237,7 @@ namespace chaos
 	};
 
 
-	class Connecter : public Event//NetEvent
+	class Connecter : public Event
 	{
 	public:
 		typedef std::function<void(Connecter* pConnect, int nTransBytes, void* userdata)> NetCallback;
@@ -299,9 +281,9 @@ namespace chaos
 
 		int AsynWrite();
 
-		void IocpReadCallback(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool ok);
+		void ReadComplete(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool ok);
 
-		void IocpWriteCallback(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool ok);
+		void WriteComplete(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool ok);
 #endif // IOCP_ENABLE
 
 	private:
@@ -314,7 +296,11 @@ namespace chaos
 #ifdef IOCP_ENABLE
 		LPCOMPLETION_OVERLAPPED m_pROverlapped;
 
+		bool m_isPostRecv;
+
 		LPCOMPLETION_OVERLAPPED m_pWOverlapped;
+
+		bool m_isPostWrite;
 #endif // IOCP_ENABLE
 
 		NetCallback m_readcb;

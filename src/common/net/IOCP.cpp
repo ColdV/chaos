@@ -34,6 +34,7 @@ namespace chaos
 		m_isInit(false),
 		m_workThreads(0),
 		m_threadHandles(0),
+		m_liveThreads(0),
 		m_tids(0),
 		m_pThreadParam(0)
 	{
@@ -59,6 +60,9 @@ namespace chaos
 		{
 			PostQueuedCompletionStatus(m_completionPort, 0, NOTIFY_SHUTDOWN_KEY, NULL);
 		}
+
+		if (0 != m_liveThreads)
+			m_sem.SemWait();
 
 		if (m_threadHandles)
 		{
@@ -189,11 +193,19 @@ namespace chaos
 
 	unsigned int IOCP::Loop(void* arg)
 	{
+		_CrtSetBreakAlloc(151);
+		_CrtSetBreakAlloc(152);
 		if (!arg)
 			return -1;
 
 		LPTHREAD_PARAM pThreadParam = (LPTHREAD_PARAM)arg;
-		EventCentre& centre = pThreadParam->pIOCP->GetCentre();
+		IOCP* iocp = pThreadParam->pIOCP;
+		if (!iocp)
+			return -1;
+
+		EventCentre& centre = iocp->GetCentre();
+
+		iocp->AddLiveThread();
 
 		while (1)
 		{
@@ -209,8 +221,6 @@ namespace chaos
 			if (overlapped)
 			{
 				LPCOMPLETION_OVERLAPPED lo = (LPCOMPLETION_OVERLAPPED)overlapped;
-				//lo->asynRet = bOk;
-				//lo->bytes = bytes;
 
 				if (bOk)
 				{
@@ -245,6 +255,12 @@ namespace chaos
 					printf("GetQueuedCompletionStatus failed:%d\n", WSAGetLastError());
 				}
 			}
+		}
+
+		if (iocp->DecLiveThread() == 0)
+		{
+			MutexGuard lock(iocp->m_mutex);
+			iocp->m_sem.SemPost();
 		}
 
 		return 0;

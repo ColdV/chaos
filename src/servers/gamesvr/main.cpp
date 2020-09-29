@@ -5,11 +5,33 @@
 #include <functional>
 #include "../../common/common.h"
 #include "../../common/net/Timer.h"
+#include <Psapi.h>
+#include<crtdbg.h>
+
+#pragma comment(lib,"psapi.lib")
+
+#define _CRTDBG_MAP_ALLOC
+
+#ifdef _DEBUG
+#ifndef DBG_NEW
+#define DBG_NEW new ( _NORMAL_BLOCK , __FILE__ , __LINE__ )
+#define new DBG_NEW
+#endif
+#endif  // _DEBUG
+
+
+void ShowMemUse()
+{
+	HANDLE handle = GetCurrentProcess();
+	PROCESS_MEMORY_COUNTERS pmc;
+	GetProcessMemoryInfo(handle, &pmc, sizeof(pmc));
+	LOG_DEBUG("内存使用:%d", pmc.WorkingSetSize);
+}
 
 class Test
 {
 public:
-	void ListenCb(chaos::Listener* ev, /*chaos::Connecter**/socket_t fd, void* userdata);
+	void ListenCb(chaos::Listener* ev, chaos::Connecter* ,/*socket_t fd,*/ void* userdata);
 
 	void ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata);
 
@@ -19,30 +41,37 @@ public:
 };
 
 
-void Test::ListenCb(chaos::Listener* ev, /*chaos::Connecter* pConner*/socket_t fd, void* userdata)
+void Test::ListenCb(chaos::Listener* ev, chaos::Connecter* pConner, void* userdata)
 {
-	chaos::Connecter* pConner = new(std::nothrow) chaos::Connecter(/*ev->GetCentre(),*/ fd);
+	//ShowMemUse();
+	//chaos::Connecter* pConner = new chaos::Connecter(fd);
+	//ShowMemUse();
 
-	if (pConner)
+	if (!pConner)
 	{
-		//问题1:closesocket和closehandle重复调用会异常
-		//问题2:delete掉Event后在EvQueue仍可能存在当前已发生的Event
-		//问题4:在Event.cpp 410行 socket函数抛出异常
-		//问题5:上面的那个new会抛异常
-		//考虑1:在Centre的CancelEvent中设置回调通知用户释放Event
-		pConner->SetCallback(std::bind(&Test::ReadCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), NULL,
-			std::bind(&Test::WriteCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), NULL);
-
-		ev->GetCentre()->RegisterEvent(pConner);
+		printf("erro new conn!\n");
+		return;
 	}
+
+	pConner->SetCallback(std::bind(&Test::ReadCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), NULL,
+		std::bind(&Test::WriteCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), NULL);
 
 	LOG_DEBUG("socket:%d, newsocket:%d", ev->GetSocket().GetFd(), pConner->GetSocket().GetFd());
 }
 
 
+int cnt = 0;
+
 void Test::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 {
 	LOG_DEBUG("read socket:%d trans bytes:%d", ev->GetSocket().GetFd(), nTransBytes);
+
+	if (0 == nTransBytes)
+	{
+		ev->GetCentre()->CancelEvent(ev);
+		return;
+	}
+
 	int readable = ev->GetReadableSize();
 	char* buf = new char[readable];
 	if (!buf)
@@ -51,12 +80,13 @@ void Test::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 	ev->ReadBuffer(buf, readable);
 	ev->Write(buf, readable);
 	
-	if (0 == nTransBytes)
-		//delete ev;
-		ev->GetCentre()->CancelEvent(ev);
+	
 
 	LOG_DEBUG("read socket recv data:%s", buf);
 	delete[] buf;
+
+	//if(++cnt == 10000)
+	//	ev->GetCentre()->Exit();
 }
 
 
@@ -102,19 +132,24 @@ int main()
 
 
 	//---------net test begin-----------//
-
+	_CrtSetDbgFlag(_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG) | _CRTDBG_LEAK_CHECK_DF | _CRTDBG_ALLOC_MEM_DF);
+	//_CrtSetBreakAlloc(151);		//270 152 151
 	Logger& log = Logger::Instance();
 	log.Init("./log", 0);
 
 	chaos::EventCentre* p = new chaos::EventCentre;
 
-	p->Init();
+	if (0 != p->Init())
+	{
+		printf("init event centre failed!\n");
+		return 0;
+	}
 
-	chaos::Socket* s = new chaos::Socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	socket_t listenfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
-	chaos::Listener* ev = new chaos::Listener(/*p, */s->GetFd());
+	chaos::Listener* ev = new chaos::Listener(listenfd);
 
-	printf("listen socket:%d\n", s->GetFd());
+	printf("listen socket:%d\n", listenfd);
 
 	sockaddr_in sa;
 	memset(&sa, 0, sizeof(sa));
@@ -138,14 +173,10 @@ int main()
 	//chaos::TimerEvent* timerEv = new chaos::TimerEvent(p, timerId, 3, true);
 	//timerEv->SetEventCallback(std::bind(&Test::TimerCb, &t, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), NULL);
 	//p->RegisterEvent(timerEv);
+
 	p->EventLoop();
 
-	//socket_t fd = 1001;
-	//CloseHandle((HANDLE)fd);
-
 	delete p;
-	delete s;
-	delete ev;
 	//delete timerEv;
 
 	//---------net test end-----------//

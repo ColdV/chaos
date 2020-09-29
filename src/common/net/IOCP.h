@@ -16,6 +16,9 @@
 
 #include "Poller.h"
 #include <functional>
+#include "../thread/Sem.h"
+#include "../thread/Mutex.h"
+
 
 namespace chaos
 {
@@ -32,6 +35,7 @@ namespace chaos
 		WSABUF databufs[MAX_WSABUFS];
 		socket_t fd;
 		IOCP_CALLBACK	cb;
+		uint16 eventDestroy : 1;
 	}COMPLETION_OVERLAPPED, *LPCOMPLETION_OVERLAPPED;
 
 
@@ -39,6 +43,8 @@ namespace chaos
 	{
 		COMPLETION_OVERLAPPED overlapped;
 		socket_t acceptfd;
+		short inListenerPos;			//在listener的ACCEPT_OVERLAPPED数组中的位置
+		int* refcnt;					//在listener中投递AcceptEx引用的该结构的个数(listener中的每个ACCEPT_OVERLAPPED此字段都指向同一个数值)
 	}ACCEPT_OVERLAPPED, *LPACCEPT_OVERLAPPED;
 
 	class IOCP;
@@ -82,6 +88,11 @@ namespace chaos
 		static unsigned int __stdcall Loop(void* arg);
 
 	private:
+		int AddLiveThread() { MutexGuard lock(m_mutex); return ++m_liveThreads; }
+
+		int DecLiveThread() { MutexGuard lock(m_mutex); return --m_liveThreads; }
+
+	private:
 		HANDLE m_completionPort;
 
 		bool m_isInit;
@@ -90,9 +101,15 @@ namespace chaos
 
 		HANDLE* m_threadHandles;			//所有线程
 
+		int m_liveThreads;				//活动线程数量
+
 		thread_t* m_tids;					//所有线程ID
 
 		LPTHREAD_PARAM m_pThreadParam;		//线程参数
+
+		Sem m_sem;
+
+		Mutex m_mutex;
 
 		static AcceptExPtr	s_acceptEx;
 
