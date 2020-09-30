@@ -420,6 +420,41 @@ namespace chaos
 	}
 
 
+	Listener* Listener::CreateListener(int af, int socktype, int protocol, unsigned short port, const char* ip /*= 0*/)
+	{
+		socket_t fd = socket(af, socktype, protocol);
+		if (-1 == fd)
+		{
+			printf("create socket failed!\n");
+			return NULL;
+		}
+
+		Listener* listener = new Listener(fd);
+		if (!listener)
+		{
+			printf("allocate listener failed!\n");
+			return NULL;
+		}
+
+		printf("listen socket:%lld\n", fd);
+
+		sockaddr_in sa;
+		memset(&sa, 0, sizeof(sa));
+		sa.sin_family = af;
+		sa.sin_port = htons(port);
+		if(ip)
+			inet_pton(af, ip, &sa.sin_addr);
+
+		if (0 != listener->Listen((sockaddr*)&sa, sizeof(sa)))
+		{
+			printf("listen failed! err:%d\n", WSAGetLastError());
+			return NULL;
+		}
+
+		return listener;
+	}
+
+
 	int Listener::Listen(const sockaddr* sa, int salen)
 	{
 		Socket& s = GetSocket();
@@ -639,7 +674,6 @@ namespace chaos
 
 	}
 #endif // IOCP_ENABLE
-
 }
 
 

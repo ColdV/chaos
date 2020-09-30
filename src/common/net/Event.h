@@ -193,6 +193,8 @@ namespace chaos
 
 		~Listener();
 
+		static Listener* CreateListener(int af, int socktype, int protocol, unsigned short port, const char* ip = 0);
+
 		int Listen(const sockaddr* sa, int salen);
 
 		virtual void Handle() override;

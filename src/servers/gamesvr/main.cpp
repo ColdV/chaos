@@ -145,26 +145,34 @@ int main()
 		return 0;
 	}
 
-	socket_t listenfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+#if 0  //±»CreateListenerÈ¡´ú
+	//socket_t listenfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
-	chaos::Listener* ev = new chaos::Listener(listenfd);
+	//chaos::Listener* ev = new chaos::Listener(listenfd);
 
-	printf("listen socket:%d\n", listenfd);
+	//printf("listen socket:%d\n", listenfd);
 
-	sockaddr_in sa;
-	memset(&sa, 0, sizeof(sa));
-	sa.sin_family = AF_INET;
-	sa.sin_port = htons(PORT);
-	//inet_pton(AF_INET, IP, &sa.sin_addr);
+	//sockaddr_in sa;
+	//memset(&sa, 0, sizeof(sa));
+	//sa.sin_family = AF_INET;
+	//sa.sin_port = htons(PORT);
+	////inet_pton(AF_INET, IP, &sa.sin_addr);
 
-	if (0 != ev->Listen((sockaddr*)&sa, sizeof(sa)))
+	//if (0 != ev->Listen((sockaddr*)&sa, sizeof(sa)))
+	//{
+	//	printf("listen failed! err:%d\n", WSAGetLastError());
+	//	return -1;
+	//}
+#endif
+
+	chaos::Listener* ev = chaos::Listener::CreateListener(AF_INET, SOCK_STREAM, IPPROTO_TCP, PORT);
+	if (!ev)
 	{
-		printf("listen failed! err:%d\n", WSAGetLastError());
-		return -1;
+		printf("create listener failed!\n");
+		return 0;
 	}
 
 	Test t;
-
 	auto cb = std::bind(&Test::ListenCb, &t, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 	ev->SetListenerCb(cb, NULL);
 	p->RegisterEvent(ev);
