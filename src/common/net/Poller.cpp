@@ -118,7 +118,5 @@ namespace chaos
 		/*return &Epoll:Instance();*/
 		return new Epoll(pCentre);
 #endif
-
-		return 0;
 	}
 }

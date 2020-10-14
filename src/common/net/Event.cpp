@@ -485,7 +485,6 @@ namespace chaos
 
 	void Listener::Handle()
 	{
-		Socket& s = GetSocket();
 		uint32 ev = GetCurEv();
 
 		if (ev & EV_IOREAD)
@@ -506,6 +505,7 @@ namespace chaos
 			//投递新的accept事件
 			AsynAccept(lo);
 #else
+			Socket& s = GetSocket();
 			while (1)
 			{
 				socket_t connfd = s.Accept();
@@ -591,11 +591,11 @@ namespace chaos
 
 		socket_t acceptfd = socket(addr.sin_family, type, 0);
 		
-		if (!IOCP::AcceptEx)
-		{
-			printf("AcceptEx is null!\n");
-			return -1;
-		}
+		//if (!IOCP::AcceptEx)
+		//{
+		//	printf("AcceptEx is null!\n");
+		//	return -1;
+		//}
 
 		lo->acceptfd = acceptfd;
 		lo->overlapped.fd = listenfd;
@@ -649,7 +649,7 @@ namespace chaos
 			return;
 		}
 
-		Socket& s = GetSocket();
+		//Socket& s = GetSocket();
 
 		socket_t acceptedfd = lo->acceptfd;		//已经连接成功的fd
 		socket_t listenfd = GetSocket().GetFd();
@@ -993,9 +993,8 @@ namespace chaos
 	{
 		if (!m_pWOverlapped || !m_pWBuffer)
 		{
-			return -1;
-			//CancelEvent();
 			CallErr(-1);
+			return -1;
 		}
 
 	

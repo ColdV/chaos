@@ -43,7 +43,7 @@ namespace chaos
 	{
 		COMPLETION_OVERLAPPED overlapped;
 		socket_t acceptfd;
-		short inListenerPos;			//在listener的ACCEPT_OVERLAPPED数组中的位置
+		int inListenerPos;			//在listener的ACCEPT_OVERLAPPED数组中的位置
 		int* refcnt;					//在listener中投递AcceptEx引用的该结构的个数(listener中的每个ACCEPT_OVERLAPPED此字段都指向同一个数值)
 	}ACCEPT_OVERLAPPED, *LPACCEPT_OVERLAPPED;
 

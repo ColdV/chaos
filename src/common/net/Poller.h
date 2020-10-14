@@ -53,11 +53,11 @@ namespace chaos
 
 
 	protected:
-		virtual int RegistFd(socket_t fd, short ev) { return 0; }
+		virtual int RegistFd(socket_t, short) { return 0; }
 
-		virtual int RegistFd(const Event* pEvent) { return 0; }
+		virtual int RegistFd(const Event*) { return 0; }
 
-		virtual int CancelFd(socket_t fd) { return 0; }
+		virtual int CancelFd(socket_t) { return 0; }
 
 		int PushActiveEvent(socket_t fd, short ev);
 
