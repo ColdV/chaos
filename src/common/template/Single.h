@@ -21,7 +21,7 @@ protected:
 };
 
 template<typename T>
-T* Single<typename T>::s_instance = new T;
+T* Single<T>::s_instance = new T;
 
 
 template <typename T>

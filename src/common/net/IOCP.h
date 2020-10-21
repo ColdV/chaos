@@ -16,8 +16,8 @@
 
 #include "Poller.h"
 #include <functional>
-#include "../thread/Sem.h"
-#include "../thread/Mutex.h"
+#include "thread/Sem.h"
+#include "thread/Mutex.h"
 
 
 namespace chaos

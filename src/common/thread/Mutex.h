@@ -5,13 +5,26 @@
 class Mutex : public NonCopyable
 {
 public:	
-	Mutex()
+	Mutex(int type = -1)
 	{
 #ifdef _WIN32
 		m_mutex = CreateMutex(NULL, FALSE, NULL);
 
 #else
-		m_mutex = PTHREAD_MUTEX_INITIALIZER;
+		//m_mutex = PTHREAD_MUTEX_INITIALIZER;
+		pthread_mutexattr_t* mutexattr = NULL;
+
+		if (0 <= type)
+		{
+			pthread_mutexattr_t attr;
+			pthread_mutexattr_init(&attr);
+			mutexattr = &attr;
+
+			if (pthread_mutexattr_settype(mutexattr, type))
+				return;
+		}
+
+		pthread_mutex_init(&m_mutex, mutexattr);
 
 #endif // _WIN32
 	}
@@ -51,6 +64,7 @@ public:
 
 private:
 	mutex_t m_mutex;
+
 };
 
 

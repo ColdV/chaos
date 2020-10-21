@@ -1,5 +1,5 @@
 #include "Thread.h"
-#include "../../common/stdafx.h"
+#include "stdafx.h"
 
 Thread::Thread(PThreadFunc func, void* param) :
 	m_tid(0),

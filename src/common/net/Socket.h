@@ -10,8 +10,8 @@
 
 #pragma once
 
-#include "../../common/stdafx.h"
-#include "../../common/common.h"
+#include "stdafx.h"
+#include "common.h"
 
 #define FD_INVALID 0
 

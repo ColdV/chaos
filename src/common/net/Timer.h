@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include "../../common/template/MinHeap.h"
+#include "template/MinHeap.h"
 #include <set>
 #include <unordered_map>
 #include "Event.h"

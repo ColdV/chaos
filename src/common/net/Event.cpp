@@ -2,7 +2,21 @@
 #include "Timer.h"
 #include <stdio.h>
 #include <stdexcept>
-#include "../log/Logger.h"
+#include "log/Logger.h"
+
+namespace chaos
+{
+	int GetLastErrorno()
+	{
+#ifdef _WIN32
+		return WSAGetLastError();
+#else
+		return errno;
+#endif // _WIN32
+
+	}
+}
+
 
 namespace chaos
 {
@@ -54,6 +68,9 @@ namespace chaos
 		m_running(false),
 		m_evcount(0),
 		m_isInit(false)
+#ifndef _WIN32
+		,m_mutex(PTHREAD_MUTEX_RECURSIVE)
+#endif // !_WIN32
 	{
 	}
 
@@ -81,6 +98,11 @@ namespace chaos
 		m_pTimer = new Timer();
 		if (!m_pTimer)
 			return -1;
+
+//#ifndef _WIN32
+//		if (0 != m_mutex.SetMutexAttr(PTHREAD_MUTEX_RECURSIVE))
+//			return -1;
+//#endif // !_WIN32
 
 		m_isInit = true;
 
@@ -447,7 +469,7 @@ namespace chaos
 
 		if (0 != listener->Listen((sockaddr*)&sa, sizeof(sa)))
 		{
-			printf("listen failed! err:%d\n", WSAGetLastError());
+			printf("listen failed! err:%d\n", GetLastErrorno());
 			return NULL;
 		}
 
@@ -508,22 +530,26 @@ namespace chaos
 			Socket& s = GetSocket();
 			while (1)
 			{
-				socket_t connfd = s.Accept();
-				if (0 > connfd || errno == EAGAIN || connfd == INVALID_SOCKET)
+				socket_t acceptedfd = s.Accept();
+				if (0 > acceptedfd)
+				{
+					if(errno != EAGAIN)
+						printf("accept failed. errno:%d\n", errno);
 					break;
+				}
 
-				//Connecter* pConner = new Connecter(pCentre, connfd);
-				//if (!pConner)
-				//{
-				//	printf("accept assign new connecter failed!\n");
+				printf("accept:%d\n", acceptedfd);
+
+				//Connecter* newconn = new Connecter(pCentre, acceptedfd);
+				//if (!newconn)
 				//	return;
-				//}
 
-				//int ret = pCentre->RegisterEvent(pConner);
+				//int ret = pCentre->RegisterEvent(newconn);
 				//if (0 != ret)
 				//	return;
 
-				CallListenerCb(connfd);
+				//CallListenerCb(newconn);
+				DoneAccept(acceptedfd);
 			} 
 #endif // IOCP_ENABLE
 		}
@@ -541,6 +567,28 @@ namespace chaos
 #endif // IOCP_ENABLE
 	}
 
+
+
+	void Listener::DoneAccept(socket_t acceptedfd)
+	{
+		Connecter* newconn = new Connecter(acceptedfd);
+		if (!newconn)
+			return;
+
+		EventCentre* pCentre = GetCentre();
+		if (!pCentre)
+			return;
+
+		int ret = pCentre->RegisterEvent(newconn);
+
+		if (0 != ret)
+		{
+			delete newconn;
+			return;
+		}
+
+		CallListenerCb(newconn);
+	}
 
 
 #ifdef IOCP_ENABLE
@@ -577,16 +625,16 @@ namespace chaos
 		memset(&addr, 0, addrlen);
 		if (getsockname(listenfd, (sockaddr*)&addr, &addrlen))
 		{
-			printf("getsocketname failed:%d\n", WSAGetLastError());
-			return WSAGetLastError();
+			printf("getsocketname failed:%d\n", GetLastErrorno());
+			return GetLastErrorno();
 		}
 
 		int type = 0;
 		int typelen = sizeof(type);
 		if (getsockopt(listenfd, SOL_SOCKET, SO_TYPE, (char*)&type, &typelen))
 		{
-			printf("getsockopt failed:%d\n", WSAGetLastError());
-			return WSAGetLastError();
+			printf("getsockopt failed:%d\n", GetLastErrorno());
+			return GetLastErrorno();
 		}
 
 		socket_t acceptfd = socket(addr.sin_family, type, 0);
@@ -609,7 +657,7 @@ namespace chaos
 		}
 		else
 		{
-			int err = WSAGetLastError();
+			int err = GetLastErrorno();
 			if (ERROR_IO_PENDING != err)
 				return err;
 			else
@@ -642,6 +690,9 @@ namespace chaos
 			return;
 		}
 
+		if (!ok)
+			return;
+
 		EventCentre* pCentre = GetCentre();
 		if (!pCentre)
 		{
@@ -657,7 +708,7 @@ namespace chaos
 		if (0 != setsockopt(lo->acceptfd, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT,
 			(char*)&listenfd, sizeof(listenfd)))
 		{
-			printf("setsockopt failed:%d\n", WSAGetLastError());
+			printf("setsockopt failed:%d\n", GetLastErrorno());
 			return;
 		}
 
@@ -665,12 +716,13 @@ namespace chaos
 		m_acceptedq.push(lo);
 		pCentre->PushActiveEv(this, EV_IOREAD);
 
-		Connecter* newconn = new Connecter(acceptedfd);
+		//Connecter* newconn = new Connecter(acceptedfd);
 
-		int ret = pCentre->RegisterEvent(newconn);
+		//int ret = pCentre->RegisterEvent(newconn);
 
-		if(ok && 0 == ret)
-			CallListenerCb(newconn);
+		//if(0 == ret)
+		//	CallListenerCb(newconn);
+		DoneAccept(acceptedfd);
 
 	}
 #endif // IOCP_ENABLE
@@ -838,11 +890,13 @@ namespace chaos
 	void Connecter::SetCallback(const NetCallback& readcb, void* readCbArg, const NetCallback& writecb, void* writeCbArg)
 	{
 		//只在第一次有效的设置回调时投递异步事件
+#ifdef IOCP_ENABLE
 		if (!m_readcb && readcb)
 			AsynRead();
 
 		if (!m_writecb && writecb)
 			AsynWrite();
+#endif // IOCP_ENABLE
 
 		m_readcb = readcb;
 		m_readCbArg = readCbArg;
@@ -968,9 +1022,9 @@ namespace chaos
 		int ret = WSARecv(m_pROverlapped->fd, &m_pROverlapped->databufs[0], 1, &bytesRead, &flags, &m_pROverlapped->overlapped, NULL);
 		if (ret)
 		{
-			if (WSAGetLastError() != WSA_IO_PENDING)
+			if (GetLastErrorno() != WSA_IO_PENDING)
 			{
-				printf("WSARecv failed:%d\n", WSAGetLastError());
+				printf("WSARecv failed:%d\n", GetLastErrorno());
 				//CancelEvent();
 				CallErr(ret);
 				ReadComplete(&m_pROverlapped->overlapped, ret, 0, true);
@@ -1018,12 +1072,12 @@ namespace chaos
 			int ret = WSASend(GetSocket().GetFd(), &m_pWOverlapped->databufs[0], 1, &sendBytes, flags, &m_pWOverlapped->overlapped, NULL);
 			if (ret)
 			{
-				if (WSAGetLastError() != WSA_IO_PENDING)
+				if (GetLastErrorno() != WSA_IO_PENDING)
 				{
-					printf("WSASend failed:%d\n", WSAGetLastError());
+					printf("WSASend failed:%d\n", GetLastErrorno());
 					//CancelEvent();
 					WriteComplete(&m_pWOverlapped->overlapped, ret, 0, true);
-					return  WSAGetLastError();
+					return  GetLastErrorno();
 				}
 				else
 				{

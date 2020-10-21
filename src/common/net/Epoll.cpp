@@ -52,13 +52,13 @@ namespace chaos
 
 
 	//void Epoll::WaitEvent()
-	int Epoll::Launch(timeoutMs)
+	int Epoll::Launch(int timeoutMs)
 	{
 		if (0 >= timeoutMs)
 			timeoutMs = NET_TICK;
 
 		int cnt = epoll_wait(m_epfd, m_evs, MAX_FD, timeoutMs);
-		if (0 > cnt)
+		if (0 > cnt && errno != EINTR)
 			return -1;
 
 		for (int i = 0; i < cnt; ++i)

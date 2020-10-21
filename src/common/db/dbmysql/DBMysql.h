@@ -5,10 +5,10 @@
 #include "mysql.h"
 #include "DBResult.h"
 
-#ifdef _WIN32
-#pragma comment(lib, "libmysql.lib")
-#pragma comment(lib, "mysqlclient.lib")
-#endif // _WIN32
+//#ifdef _WIN32
+//#pragma comment(lib, "libmysql.lib")
+//#pragma comment(lib, "mysqlclient.lib")
+//#endif // _WIN32
 
 
 #define MAX_DBINFO_BUF	128

@@ -1,10 +1,13 @@
 #include <stdio.h>
-#include "../../common/log/Logger.h"
-#include "../../common/stdafx.h"
-#include "../../common/net/Event.h"
+#include "log/Logger.h"
+#include "stdafx.h"
+#include "net/Event.h"
 #include <functional>
-#include "../../common/common.h"
-#include "../../common/net/Timer.h"
+#include "common.h"
+#include "net/Timer.h"
+
+#ifdef _WIN32
+
 #include <Psapi.h>
 #include<crtdbg.h>
 
@@ -27,6 +30,9 @@ void ShowMemUse()
 	GetProcessMemoryInfo(handle, &pmc, sizeof(pmc));
 	LOG_DEBUG("ÄÚ´æÊ¹ÓÃ:%d", pmc.WorkingSetSize);
 }
+
+#endif // _WIN32
+
 
 class Test
 {
@@ -132,8 +138,13 @@ int main()
 
 
 	//---------net test begin-----------//
+
+#ifdef _WIN32
 	_CrtSetDbgFlag(_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG) | _CRTDBG_LEAK_CHECK_DF | _CRTDBG_ALLOC_MEM_DF);
 	//_CrtSetBreakAlloc(151);		//270 152 151
+#endif // _WIN32
+
+	
 	Logger& log = Logger::Instance();
 	log.Init("./log", 0);
 

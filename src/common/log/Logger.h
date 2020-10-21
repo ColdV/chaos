@@ -49,6 +49,8 @@ private:
 
 	void FormatTime(time_t t);
 
+
+
 private:
 	FILE* m_fp;
 
@@ -57,6 +59,8 @@ private:
 	int m_level;				//日志等级
 
 	std::string m_fileName;		//文件名
+
+	std::string m_curFilePath;	//当前文件全名
 
 	int m_fillFileNum;			//已写满文件数
 

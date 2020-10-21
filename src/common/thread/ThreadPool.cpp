@@ -120,8 +120,6 @@ THREAD_FUNCTION_PRE ThreadPool::PoolWorkFunc(void* arg)
 			pThreadPool->m_cond.CondWait(THREAD_WAIT_TIMEOUT);
 		}
 
-		printf("thread[%u] lock!\n", GetCurrentThreadId());
-
 		//在cond_wait中可能因为time_out或者pool调用stop而返回 
 		//所以这里还是需要判断下m_tq是否为空
 		if (pThreadPool->m_tq.empty())
@@ -144,11 +142,7 @@ THREAD_FUNCTION_PRE ThreadPool::PoolWorkFunc(void* arg)
 
 		pTask->Run();
 
-		printf("thread[%u] got!\n", GetCurrentThreadId());
-
 	}
-
-	printf("thread[%u] out!\n", GetCurrentThreadId());
 
 #ifdef _WIN32
 	return 0;

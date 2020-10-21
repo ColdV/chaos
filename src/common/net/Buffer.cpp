@@ -64,7 +64,12 @@ namespace chaos
 
 			//当前节点数据读完
 			if (0 >= pCurNode->useSize)
+			{
+				//当前阶段数据读完后readCursor复位
+				pCurNode->readCursor = pCurNode->buffer;
+
 				pCurNode = *GetNextRNodeIt();
+			}
 
 			leftSize -= cpSize;
 		}

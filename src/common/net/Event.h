@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include "../../common/stdafx.h"
+#include "stdafx.h"
 #include <map>
 #include <set>
 #include <unordered_set>
@@ -9,7 +9,7 @@
 #include "Poller.h"
 #include "Buffer.h"
 #include "IOCP.h"
-#include "../thread/Mutex.h"
+#include "thread/Mutex.h"
 
 enum
 {
@@ -219,6 +219,8 @@ namespace chaos
 #endif // IOCP_ENABLE
 
 		void RegisterCallback(int ret);
+
+		void DoneAccept(socket_t acceptedfd);
 
 	private:
 		Socket* m_socket;

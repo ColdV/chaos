@@ -63,9 +63,9 @@ namespace chaos
 
 		const NetEventMap& GetAllEvents() const { return m_events; }
 
-	private:
 		NetEventMap& GetAllEvents() { return m_events; }
 
+	private:
 		Poller(const Poller&);
 
 	protected:

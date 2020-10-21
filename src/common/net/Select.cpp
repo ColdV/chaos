@@ -20,7 +20,7 @@ namespace chaos
 	//	static Select s_inst;
 	//	return s_inst;
 	//}
-
+	extern int GetLastErrorno();
 
 	Select::Select(EventCentre* pCentre):
 		Poller(pCentre)
@@ -68,8 +68,13 @@ namespace chaos
 
 		if (0 > cnt)
 		{
-			printf("call select failed! code:%d\n", WSAGetLastError());
+			printf("call select failed! code:%d\n", GetLastErrorno());
+#ifndef _WIN32
+			if (GetLastErrorno() != EINTR)
+				return cnt;
+#else
 			return cnt;
+#endif // !_WIN32
 		}
 
 
@@ -107,8 +112,8 @@ namespace chaos
 		}
 
 #else
-		auto fds = GetAllEvents();
-		for (auto it = fds.begin(); it != fds.end(); ++it)
+		auto& evs = GetAllEvents();
+		for (auto it = evs.begin(); it != evs.end(); ++it)
 		{
 			socket_t fd = it->first;
 			short ev = 0;
