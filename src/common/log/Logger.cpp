@@ -45,10 +45,47 @@ Logger::~Logger()
 }
 
 
-bool Logger::Init(const std::string& name, int logLevel)
+bool Logger::Init(const std::string& path, const std::string& name, int logLevel)
 {
+	if (name.length() == 0)
+	{
+		printf("init log file name is empty!\n");
+		return false;
+	}
 	m_fileName = name;
+
 	m_level = logLevel;
+
+	size_t pos = path.find_last_of("/\\");
+	if (path.length() == 0)
+		m_filePath = "./";
+	else if (pos == path.length() - 1)
+		m_filePath = path;
+	else if (pos == std::string::npos)
+	{
+		printf("init log path failed!\n");
+		return false;
+	}
+	else
+		m_filePath = path + "/";
+
+	if (0 != access(m_filePath.c_str(), 0))			//0 == F_OK
+	{
+#ifdef _WIN32
+		std::string command = "mkdir \"" + m_filePath + "\"";
+		system(command.c_str());
+#else
+		std::string command = "mkdir -p " + path;
+		system(command.c_str());
+#endif // _WIN32
+
+		if (0 != access(m_filePath.c_str(), 0))
+		{
+			printf("create log path failed!\n");
+			return false;
+		}
+	}
+	
 	m_isInit = true;
 
 	return true;
@@ -135,7 +172,7 @@ FILE* Logger::OpenLogFile()
 		nowTm.tm_year + 1900, nowTm.tm_mon + 1, nowTm.tm_mday, m_fillFileNum);
 
 	//std::string fileName = m_fileName + suffix;
-	m_curFilePath = m_fileName + suffix;
+	m_curFilePath = m_filePath + m_fileName + suffix;
 #ifdef _WIN32
 	m_fp = _fsopen(m_curFilePath.c_str(), "ab+", _SH_DENYNO);
 #else

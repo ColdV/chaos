@@ -50,19 +50,34 @@ namespace chaos
 		if (!pEvent)
 			return -1;
 
- 		const EventKey& key = pEvent->GetEvKey();
+		CancelFd(pEvent->GetEvKey().fd, pEvent->GetEv());
 
-		return DelEvent(key.fd);
+		m_events.erase(pEvent->GetEvKey().fd);
+
+		return 0;
 	}
 
 
-	int Poller::DelEvent(socket_t fd)
+	/*int Poller::DelEvent(socket_t fd)
 	{
 		CancelFd(fd);
 
 		m_events.erase(fd);
 
 		return 0;
+	}*/
+
+
+	void Poller::UpdateFd(socket_t fd, short op, short ev)
+	{
+		Event* pEvent = GetEvent(fd);
+		if (!pEvent)
+			return;
+
+		if (EV_CTL_ADD == op)
+			RegistFd(fd, ev);
+		else if (EV_CTL_DEL == op)
+			CancelFd(fd, ev);
 	}
 
 
@@ -111,12 +126,18 @@ namespace chaos
 	Poller* Poller::AdapterNetDrive(EventCentre* pCentre)
 	{
 #ifdef _WIN32
-		//return &Select::Instance();
-		//return new Select(pCentre);
+
+#ifdef IOCP_ENABLE
 		return new IOCP(pCentre);
+#endif // IOCP_ENABLE
+
 #else
-		/*return &Epoll:Instance();*/
+
+#ifdef EPOLL_ENABLE
 		return new Epoll(pCentre);
-#endif
+#endif // EPOLL_ENABLE
+
+#endif	//_WIN32
+		return new Select(pCentre);
 	}
 }

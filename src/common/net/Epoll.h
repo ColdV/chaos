@@ -16,6 +16,8 @@
 #include "Event.h"
 #include <sys/epoll.h>
 
+const int DEFAULT_EPOLL_EVENTS = EPOLLET;
+
 namespace chaos
 {
 

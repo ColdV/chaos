@@ -8,11 +8,13 @@
 #	Last Modified: 2018-08-11 17:40:47
 *******************************************/
 
-#ifdef _WIN32
+
 
 #include "IOCP.h"
 #include "Event.h"
 #include "log/Logger.h"
+
+#if defined _WIN32 && defined IOCP_ENABLE
 
 namespace chaos
 {
@@ -168,16 +170,16 @@ namespace chaos
 	}
 
 
-	int IOCP::CancelFd(socket_t fd)
-	{
-		//if (!CloseHandle((HANDLE)fd))
-		//{
-		//	LOG_DEBUG("closehandle:%d\n", fd);
-		//	return GetLastError();
-		//}
+	//int IOCP::CancelFd(socket_t fd)
+	//{
+	//	//if (!CloseHandle((HANDLE)fd))
+	//	//{
+	//	//	LOG_DEBUG("closehandle:%d\n", fd);
+	//	//	return GetLastError();
+	//	//}
 
-		return 0;
-	}
+	//	return 0;
+	//}
 
 
 	int IOCP::Launch(int timeoutMs)
@@ -224,7 +226,7 @@ namespace chaos
 
 				if (bOk)
 				{
-					printf("GetQueuedCompletionStatus sucess!\n");
+					//printf("GetQueuedCompletionStatus sucess!\n");
 
 					//if (0 != bytes)
 					//	printf("recv[%d]:%s\n", lo->fd, lo->databufs[0].buf);

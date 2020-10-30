@@ -51,7 +51,6 @@ namespace chaos
 	}
 
 
-	//void Epoll::WaitEvent()
 	int Epoll::Launch(int timeoutMs)
 	{
 		if (0 >= timeoutMs)
@@ -88,16 +87,49 @@ namespace chaos
 
 	int Epoll::RegistFd(socket_t fd, short ev)
 	{
-		epoll_event epEv;
-		epEv.data.fd = fd;
-		epEv.events = EPOLLIN | EPOLLET;
+		epoll_event epev;
+		memset(&epev, 0, sizeof(epoll_event));
+
+		epev.data.fd = fd;
+
+		Event* pEvent = GetEvent(fd);
+		if (!pEvent)
+			return -1;
+
+		epev.events = pEvent->GetEv();
+
+		if (ev & EV_IOREAD)
+			epev.events |= EPOLLIN;
+		if (ev & EV_IOWRITE)
+			epev.events |= EPOLLOUT;
+
+		epev.events |= DEFAULT_EPOLL_EVENTS;		// | EPOLLHUP;
 		
-		return epoll_ctl(m_epfd, EPOLL_CTL_ADD, fd, &epEv);
+		if (epoll_ctl(m_epfd, EPOLL_CTL_ADD, fd, &epev) == 0)
+			return 0;
+
+		if (errno == ENOENT && epoll_ctl(m_epfd, EPOLL_CTL_MOD, fd, &epev) == -1)
+			return -1;
+
+		return -1;
 	}
 
 
 	int Epoll::CancelFd(socket_t fd, short ev)
 	{
+		//epoll_event epev;
+		//memset(&epev, 0, sizeof(epoll_event));
+
+		//epev.data.fd = fd;
+
+		//if (ev & EV_IOREAD)
+		//	epev.events |= EPOLLIN;
+		//if (ev & EV_IOWRITE)
+		//	epev.events |= EPOLLOUT;
+
+		//if (epev.events & EPOLLIN && epev.events & EPOLLOUT)
+		//	epev.events |= DEFAULT_EPOLL_EVENTS;
+
 		return epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, NULL);
 	}
 

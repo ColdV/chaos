@@ -35,9 +35,9 @@ namespace chaos
 		virtual int Launch(int timeoutMs) override;
 
 	protected:
-		virtual int RegistFd(const Event* pEvent) override;
+		virtual int RegistFd(socket_t fd, short ev) override;
 		
-		virtual int CancelFd(socket_t fd) override;
+		virtual int CancelFd(socket_t fd, short ev) override;
 
 	private:
 		void CollectEvent(const fd_set& rfds, const fd_set& wfds, const fd_set& efds);
@@ -46,5 +46,15 @@ namespace chaos
 		fd_set m_rfds;
 		fd_set m_wfds;
 		fd_set m_efds;
+
+		fd_set m_rfdsout;
+		fd_set m_wfdsout;
+		fd_set m_efdsout;
+
+#ifndef _WIN32
+		int m_maxfd;
+#endif // !_WIN32
+
+
 	};
 }

@@ -33,7 +33,7 @@ namespace chaos
 	public:
 		int Bind(const sockaddr* sa, int salen);
 
-		int Listen();
+		int Listen(int backlog);
 
 		socket_t Accept();
 

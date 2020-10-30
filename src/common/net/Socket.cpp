@@ -44,9 +44,9 @@ namespace chaos
 	}
 
 
-	int Socket::Listen()
+	int Socket::Listen(int backlog)
 	{
-		int ret = listen(m_fd, 1024);
+		int ret = listen(m_fd, backlog);
 		if (0 != ret)
 			return ret;
 
@@ -131,12 +131,26 @@ namespace chaos
 	{
 		socket_unread_t n = 0;
 #ifdef _WIN32
-		if (0 == ioctlsocket(m_fd, FIONREAD, &n))
+		if (ioctlsocket(m_fd, FIONREAD, &n) < 0)
+		{
+			printf("call ioctlsocket failed! err:%d\n", WSAGetLastError());
+			return 0;
+		}
+		/*else
+		{
 			printf("socket[%llu] ready recv msg len:%lu\n", m_fd, n);
+		}*/
 
 #else
-		if (ioctl(m_fd, FIONREAD, &n) >= 0)
-			printf("socket[%d] ready recv msg len:%llu\n", m_fd, n);
+		if (ioctl(m_fd, FIONREAD, &n) < 0)
+		{
+			printf("call ioctlsocket failed!\n");
+			return 0;
+		}
+		/*else
+		{
+			printf("socket[%d] ready recv msg len:%llu\n", m_fd, n);	
+		}*/
 
 #endif // _WIN32
 

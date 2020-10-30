@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../common/stdafx.h"
+#include "stdafx.h"
 #include "Thread.h"
 #include "ThreadTask.h"
 #include "Mutex.h"

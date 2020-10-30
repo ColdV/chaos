@@ -47,12 +47,8 @@ public:
 };
 
 
-void Test::ListenCb(chaos::Listener* ev, chaos::Connecter* pConner, void* userdata)
+void Test::ListenCb(chaos::Listener* pListener, chaos::Connecter* pConner, void* userdata)
 {
-	//ShowMemUse();
-	//chaos::Connecter* pConner = new chaos::Connecter(fd);
-	//ShowMemUse();
-
 	if (!pConner)
 	{
 		printf("erro new conn!\n");
@@ -62,11 +58,9 @@ void Test::ListenCb(chaos::Listener* ev, chaos::Connecter* pConner, void* userda
 	pConner->SetCallback(std::bind(&Test::ReadCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), NULL,
 		std::bind(&Test::WriteCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), NULL);
 
-	LOG_DEBUG("socket:%d, newsocket:%d", ev->GetSocket().GetFd(), pConner->GetSocket().GetFd());
+	LOG_DEBUG("socket:%d, newsocket:%d", pListener->GetSocket().GetFd(), pConner->GetSocket().GetFd());
 }
 
-
-int cnt = 0;
 
 void Test::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 {
@@ -78,19 +72,20 @@ void Test::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 		return;
 	}
 
-	int readable = ev->GetReadableSize();
+	int readable = ev->GetReadableSize() + 1;
 	char* buf = new char[readable];
 	if (!buf)
 		return;
 
-	ev->ReadBuffer(buf, readable);
-	ev->Write(buf, readable);
-	
-	
+	memset(buf, 0, readable);
 
-	LOG_DEBUG("read socket recv data:%s", buf);
+	ev->ReadBuffer(buf, readable);
+	int sendSize = ev->Send(buf, readable);
+	
+	LOG_DEBUG("read socket recv data:%s, send size:%d\n", buf, sendSize);
 	delete[] buf;
 
+	//static int cnt = 0;
 	//if(++cnt == 10000)
 	//	ev->GetCentre()->Exit();
 }
@@ -146,7 +141,7 @@ int main()
 
 	
 	Logger& log = Logger::Instance();
-	log.Init("./log", 0);
+	log.Init("../log", "log", 0);
 
 	chaos::EventCentre* p = new chaos::EventCentre;
 

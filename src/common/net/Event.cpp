@@ -29,15 +29,6 @@ namespace chaos
 	}
 
 
-	Event::Event() :
-		m_pCenter(NULL),
-		m_ev(0),
-		m_userdata(NULL)
-	{
-		memset(&m_evKey, 0, sizeof(m_evKey));
-	}
-
-
 	void Event::CancelEvent()
 	{
 		if (m_pCenter)
@@ -56,10 +47,25 @@ namespace chaos
 			CancelEvent();
 	}
 
+
+	void Event::UpdateEvent(short op, short ev)
+	{
+		if (!m_pCenter)
+			return;
+
+		if (EV_CTL_ADD == op)
+			m_ev |= ev;
+		else if (EV_CTL_DEL == op)
+			m_ev &= ~ev;
+
+		m_pCenter->UpdateEvent(this, op, ev);
+	}
+
 }	//namespace chaos
 
 
 
+//EventCentre Implement
 namespace chaos
 {
 	EventCentre::EventCentre() :
@@ -69,7 +75,7 @@ namespace chaos
 		m_evcount(0),
 		m_isInit(false)
 #ifndef _WIN32
-		,m_mutex(PTHREAD_MUTEX_RECURSIVE)
+		, m_mutex(PTHREAD_MUTEX_RECURSIVE)
 #endif // !_WIN32
 	{
 	}
@@ -98,11 +104,6 @@ namespace chaos
 		m_pTimer = new Timer();
 		if (!m_pTimer)
 			return -1;
-
-//#ifndef _WIN32
-//		if (0 != m_mutex.SetMutexAttr(PTHREAD_MUTEX_RECURSIVE))
-//			return -1;
-//#endif // !_WIN32
 
 		m_isInit = true;
 
@@ -141,8 +142,8 @@ namespace chaos
 				break;
 			}
 
-			if (0 != SignalDispatch())
-				break;
+			/*if (0 != SignalDispatch())
+				break;*/
 
 			m_pTimer->DispatchTimer();
 
@@ -202,16 +203,8 @@ namespace chaos
 
 	void EventCentre::ClearAllEvent()
 	{
-		//if (m_pPoller)
-		//	m_pPoller->Clear();
-
-		//if (m_pTimer)
-		//	m_pTimer->Clear();
-
-		//while (!m_activeEvs.empty())
-		//	m_activeEvs.pop();
-
 		MutexGuard lock(m_mutex);
+
 		if (m_pPoller)
 		{
 			Poller::NetEventMap& allNetEvent = m_pPoller->GetAllEvents();
@@ -260,13 +253,13 @@ namespace chaos
 		{
 			ret = m_pTimer->AddTimer(pEvent);
 		}
-		else if (ev & EV_SIGNAL && !(ev & ~EV_SIGNAL))
-			m_signalEvs.insert(std::make_pair(evKey.signal, pEvent));
+		/*else if (ev & EV_SIGNAL && !(ev & ~EV_SIGNAL))
+			m_signalEvs.insert(std::make_pair(evKey.signal, pEvent));*/
 		else
 		{
 			return -1;
 		}
-		
+
 		if (0 != ret)
 		{
 			return ret;
@@ -274,7 +267,7 @@ namespace chaos
 
 		pEvent->SetCenter(this);
 		pEvent->CallbackRegister(ret);
-	
+
 		++m_evcount;
 
 		return ret;
@@ -300,8 +293,8 @@ namespace chaos
 		{
 			m_pTimer->DelTimer((TimerEvent*)pEvent);
 		}
-		else if (ev & EV_SIGNAL)
-			m_signalEvs.erase(evKey.signal);
+		/*else if (ev & EV_SIGNAL)
+			m_signalEvs.erase(evKey.signal);*/
 		else
 		{
 			return -1;
@@ -317,13 +310,14 @@ namespace chaos
 	}
 
 
-	void EventCentre::PushActiveEv(Event* pEvent) 
-	{ 
-		MutexGuard lock(m_mutex); 
+	void EventCentre::PushActiveEv(Event* pEvent)
+	{
+		MutexGuard lock(m_mutex);
+
 		if (!pEvent->GetCentre() || pEvent->GetCentre() != this)
 			return;
 
-		m_activeEvs.push(pEvent); 
+		m_activeEvs.push(pEvent);
 	}
 
 
@@ -341,27 +335,36 @@ namespace chaos
 	}
 
 
-	int EventCentre::SignalDispatch()
+	void EventCentre::UpdateEvent(Event* pEvent, short op, short ev)
 	{
-		return 0;
-	}
+		if (!pEvent)
+			return;
 
+		const EventKey& key = pEvent->GetEvKey();
+
+		if (m_pPoller->GetEvent(key.fd))
+			m_pPoller->UpdateFd(key.fd, op, ev);
+	}
 
 }
 
 
 
+//Listener Implement
 namespace chaos
 {
 	Listener::Listener(socket_t fd) :
-		//NetEvent(EV_IOREAD, fd),
 		Event(EV_IOREAD, (EventKey&)fd),
-		m_socket(NULL),
+		m_socket(new Socket(fd)),
 		m_cb(0),
 		m_userdata(0)
-	{
-		m_socket = new Socket(fd);
+#ifdef IOCP_ENABLE
+		, m_acceptOls(0)
+		, m_overlappedsRefCnt(0)
+		, m_acceptBuffers(0)
+#endif // IOCP_ENABLE
 
+	{
 #ifdef IOCP_ENABLE
 		m_acceptOls = new ACCEPT_OVERLAPPED[INIT_ASYNACCEPTING];
 		if (!m_acceptOls)
@@ -370,7 +373,7 @@ namespace chaos
 		m_overlappedsRefCnt = new int;
 		*m_overlappedsRefCnt = 0;
 
-		m_acceptBuffers = new Buffer[INIT_ASYNACCEPTING];
+		m_acceptBuffers = new char* [INIT_ASYNACCEPTING];
 		if (!m_acceptBuffers)
 			return;
 
@@ -381,13 +384,15 @@ namespace chaos
 			m_acceptOls[i].inListenerPos = i;
 			m_acceptOls[i].refcnt = m_overlappedsRefCnt;
 
-			m_acceptBuffers[i].Reserver(INIT_ACCEPTADDRBUF);
+			//m_acceptBuffers[i].Reserver(INIT_ACCEPTADDRBUF_SIZE);
+			if(!(m_acceptBuffers[i] = new char[INIT_ACCEPTADDRBUF_SIZE]))
+				return;
 
 			//acceptex只使用一个数据块 用于存放连接后的地址信息
 			//之后可通过GetAcceptExSockaddrs获得本地或远程的地址
-			uint32 n = 0;
-			m_acceptOls[i].overlapped.databufs[0].buf = m_acceptBuffers[i].GetWriteBuffer(&n);
-			m_acceptOls[i].overlapped.databufs[0].len = n;
+			//uint32 n = 0;
+			m_acceptOls[i].overlapped.databufs[0].buf = m_acceptBuffers[i];// .GetWriteBuffer(&n);
+			m_acceptOls[i].overlapped.databufs[0].len = INIT_ACCEPTADDRBUF_SIZE;
 
 			m_acceptOls[i].acceptfd = INVALID_SOCKET;
 			m_acceptOls[i].overlapped.fd = INVALID_SOCKET;
@@ -490,7 +495,7 @@ namespace chaos
 		if (0 != (ret = s.Bind(sa, salen)))
 			return ret;
 
-		if (0 != (ret = s.Listen()))
+		if (0 != (ret = s.Listen(128)))
 			return ret;
 
 		//int flag = 1;
@@ -531,24 +536,18 @@ namespace chaos
 			while (1)
 			{
 				socket_t acceptedfd = s.Accept();
+#ifdef _WIN32
+				//win的select调用
+				if (INVALID_SOCKET == acceptedfd)
+					break;
+#else
 				if (0 > acceptedfd)
 				{
-					if(errno != EAGAIN)
+					if (errno != EAGAIN)
 						printf("accept failed. errno:%d\n", errno);
 					break;
 				}
-
-				printf("accept:%d\n", acceptedfd);
-
-				//Connecter* newconn = new Connecter(pCentre, acceptedfd);
-				//if (!newconn)
-				//	return;
-
-				//int ret = pCentre->RegisterEvent(newconn);
-				//if (0 != ret)
-				//	return;
-
-				//CallListenerCb(newconn);
+#endif // _WIN32
 				DoneAccept(acceptedfd);
 			} 
 #endif // IOCP_ENABLE
@@ -638,12 +637,6 @@ namespace chaos
 		}
 
 		socket_t acceptfd = socket(addr.sin_family, type, 0);
-		
-		//if (!IOCP::AcceptEx)
-		//{
-		//	printf("AcceptEx is null!\n");
-		//	return -1;
-		//}
 
 		lo->acceptfd = acceptfd;
 		lo->overlapped.fd = listenfd;
@@ -659,7 +652,10 @@ namespace chaos
 		{
 			int err = GetLastErrorno();
 			if (ERROR_IO_PENDING != err)
+			{
+				printf("AcceptEx failed err:%d\n", err);
 				return err;
+			}
 			else
 				++(*lo->refcnt);
 		}
@@ -716,12 +712,6 @@ namespace chaos
 		m_acceptedq.push(lo);
 		pCentre->PushActiveEv(this, EV_IOREAD);
 
-		//Connecter* newconn = new Connecter(acceptedfd);
-
-		//int ret = pCentre->RegisterEvent(newconn);
-
-		//if(0 == ret)
-		//	CallListenerCb(newconn);
 		DoneAccept(acceptedfd);
 
 	}
@@ -730,22 +720,20 @@ namespace chaos
 
 
 
+//Connecter Implement
 namespace chaos
 {
 
 	Connecter::Connecter(socket_t fd) :
 		Event(EV_IOREAD | EV_IOWRITE, (EventKey&)fd),
-		m_socket(NULL),
+		m_socket(new Socket(fd)),
+		m_pRBuffer(new Buffer),
+		m_pWBuffer(new Buffer),
 		m_readcb(NULL),
 		m_readCbArg(NULL),
 		m_writecb(NULL),
 		m_writeCbArg(NULL)
 	{
-		m_socket = new Socket(fd);
-
-		m_pRBuffer = new Buffer;
-		m_pWBuffer = new Buffer;
-
 #ifdef IOCP_ENABLE
 		m_pROverlapped = new COMPLETION_OVERLAPPED;
 		if (m_pROverlapped)
@@ -858,7 +846,7 @@ namespace chaos
 	}
 
 
-	int Connecter::Write(const char* buf, int size)
+	int Connecter::Send(const char* buf, int size)
 	{
 		Socket& s = GetSocket();
 
@@ -905,6 +893,36 @@ namespace chaos
 	}
 
 
+	void Connecter::EnableEvent(short ev)
+	{
+		short valid = 0;
+
+		if (ev & EV_IOREAD)
+			valid |= EV_IOREAD;
+		if (ev & EV_IOWRITE)
+			valid |= EV_IOWRITE;
+		if (ev & EV_IOEXCEPT)
+			valid |= EV_IOEXCEPT;
+
+		UpdateEvent(EV_CTL_ADD, valid);
+	}
+
+
+	void Connecter::DisableEvent(short ev)
+	{
+		short valid = 0;
+
+		if (ev & EV_IOREAD)
+			valid |= EV_IOREAD;
+		if (ev & EV_IOWRITE)
+			valid |= EV_IOWRITE;
+		if (ev & EV_IOEXCEPT)
+			valid |= EV_IOEXCEPT;
+
+		UpdateEvent(EV_CTL_DEL, valid);
+	}
+
+
 	int Connecter::HandleRead()
 	{
 		if (!m_pRBuffer)
@@ -930,9 +948,6 @@ namespace chaos
 
 			if (0 >= read && (errno != EINTR || errno != EWOULDBLOCK || errno != EAGAIN))
 			{
-				//CancelEvent();
-				//CallErr(read);
-				//GetSocket().Close();
 				transferBytes = 0;
 				break;
 			}
@@ -961,23 +976,28 @@ namespace chaos
 
 		while (0 > size)
 		{
-			uint32 readSize = 0;
-			char* buf = m_pWBuffer->GetWriteBuffer(&readSize);
+			uint32 hasbytes = 0;
+			char* buf = m_pWBuffer->GetWriteBuffer(&hasbytes);
 			if (!buf)
+				break;
+			
+			if (0 == hasbytes)
 				break;
 
 			int sendSize = 0;
 			do
 			{
-				sendSize = s.Send(buf, readSize);
+				sendSize = s.Send(buf, hasbytes);
 				size -= sendSize;
 				tranferBytes += sendSize;
 
 				if (0 >= sendSize && (errno != EINTR || errno != EWOULDBLOCK || errno != EAGAIN))
 					break;
 				
-			} while (readSize > 0);
+			} while (hasbytes > 0);
 		}
+
+		DisableEvent(EV_IOWRITE);
 
 		CallbackWrite(tranferBytes);
 
