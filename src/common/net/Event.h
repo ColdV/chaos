@@ -23,6 +23,13 @@ enum
 };
 
 
+enum
+{
+	EV_CTL_ADD = 1,
+	EV_CTL_DEL,
+};
+
+
 namespace chaos
 {
 	class Event;
@@ -36,7 +43,7 @@ namespace chaos
 	{
 		socket_t	fd;
 		timer_id	timerId;
-		int			signal;
+		//int			signal;
 	};
 
 
@@ -53,16 +60,12 @@ namespace chaos
 
 		typedef std::function<void(int ret)> EventRegisterCallback;
 
-		virtual ~Event()
-		{
-			//CancelEvent();
-		}
+		virtual ~Event() {}
 
+		//响应事件处理
 		virtual void Handle() = 0;
 
 		short GetEv() const { return m_ev; }
-
-		void SetEv(short ev) { m_ev = ev; }
 
 		short GetCurEv() { if (m_curEv.empty()) return 0; return m_curEv.front(); }
 
@@ -74,11 +77,12 @@ namespace chaos
 
 		void SetEventCallback(const EventCallback& cb, void* userdata) { m_callback = cb; m_userdata = userdata; }
 
-		//void SetErrCallback(const EventErrCallback& cb, void* userdata) { m_errCallback = cb, m_errUserdata = userdata; }
-
 	protected:
 		Event(short ev, const EventKey& evKey);
-		Event();
+
+		void SetEv(short ev) { m_ev = ev; }
+
+		void UpdateEvent(short op, short ev);
 
 		void CallErr(int errcode);
 
@@ -114,7 +118,7 @@ namespace chaos
 	};
 
 
-	//事件的注册、销毁、分发
+	//事件中心(事件响应,分发)
 	class EventCentre : public NonCopyable
 	{
 	public:
@@ -147,12 +151,16 @@ namespace chaos
 
 		void PushActiveEv(Event* pEvent, short ev);
 
+		//更新事件
+		//@ev:需要更新的事件
+		void UpdateEvent(Event* pEvent, short op, short ev);
+
 		Mutex& GetMutex() { return m_mutex; }
 
 	private:
 		void PushActiveEv(Event* pEvent);
 
-		int SignalDispatch();
+		//int SignalDispatch();
 
 		int ProcessActiveEvent();
 
@@ -183,8 +191,8 @@ namespace chaos
 	{
 	public:
 #ifdef IOCP_ENABLE
-		static const int INIT_ASYNACCEPTING = 8;
-		static const int INIT_ACCEPTADDRBUF = 256;
+		static const int INIT_ASYNACCEPTING			= 8;
+		static const int INIT_ACCEPTADDRBUF_SIZE	= 128; //AcceptEx传入的buffer大小(传输协议的最大地址大小 + 16) * 2
 #endif // IOCP_ENABLE
 
 		typedef std::function<void(Listener* listener, Connecter* newconn, void* userdata)>	ListenerCb;
@@ -234,10 +242,10 @@ namespace chaos
 
 		int* m_overlappedsRefCnt;
 
-		Buffer* m_acceptBuffers;
+		char** m_acceptBuffers;
 
 		std::queue<LPACCEPT_OVERLAPPED> m_acceptedq;
-#endif // _WIN32
+#endif // IOCP_ENABLE
 	};
 
 
@@ -258,7 +266,7 @@ namespace chaos
 		int WriteBuffer(const char* buf, int len);
 
 		//写入socket
-		int Write(const char* buf, int size);
+		int Send(const char* buf, int size);
 
 		//从RBuffer中读取len个字节到buf中
 		//return:返回实际读取的字节数
@@ -268,6 +276,12 @@ namespace chaos
 		int GetReadableSize() { if (!m_pRBuffer) return 0; return m_pRBuffer->GetReadSize(); }
 
 		void SetCallback(const NetCallback& readcb, void* readCbArg, const NetCallback& writecb, void* writeCbArg);
+
+		//启用一个新事件
+		void EnableEvent(short ev);
+
+		//关闭关注的事件
+		void DisableEvent(short ev);
 
 	private:
 		void RegisterCallback(int ret);
@@ -300,11 +314,11 @@ namespace chaos
 #ifdef IOCP_ENABLE
 		LPCOMPLETION_OVERLAPPED m_pROverlapped;
 
-		bool m_isPostRecv;
+		bool m_isPostRecv;			//是否已投递WSARecv事件
 
 		LPCOMPLETION_OVERLAPPED m_pWOverlapped;
 
-		bool m_isPostWrite;
+		bool m_isPostWrite;			//是否已投递WSASend事件
 #endif // IOCP_ENABLE
 
 		NetCallback m_readcb;

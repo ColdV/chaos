@@ -24,11 +24,17 @@ namespace chaos
 
 	Select::Select(EventCentre* pCentre):
 		Poller(pCentre)
+#ifndef _WIN32
+		,m_maxfd(0)
+#endif // !_WIN32
 	{
 		FD_ZERO(&m_rfds);
 		FD_ZERO(&m_wfds);
 		FD_ZERO(&m_efds);
 
+		FD_ZERO(&m_rfdsout);
+		FD_ZERO(&m_wfdsout);
+		FD_ZERO(&m_efdsout);
 	}
 
 
@@ -49,22 +55,30 @@ namespace chaos
 		if (0 >= timeoutMs)
 			timeoutMs = NET_TICK;
 
-		fd_set rfds = m_rfds;
-		fd_set wfds = m_wfds;
-		fd_set efds = m_efds;
+		int nfds = 0;
 
 #ifdef _WIN32
 		//windows中的select调用不允许传入空的fd_set
-		if (0 >= (rfds.fd_count + wfds.fd_count + efds.fd_count))
+		if (0 >= (m_rfds.fd_count + m_wfds.fd_count + m_efds.fd_count))
 		{
 			Sleep(timeoutMs);
 			return 0;
 		}
+
+		nfds = m_rfds.fd_count > m_wfds.fd_count ? m_rfds.fd_count : m_wfds.fd_count;
+		nfds = nfds > (int)m_efds.fd_count ? nfds : (int)m_efds.fd_count;
+#else
+
 #endif // _WIN32
+
+		m_rfdsout = m_rfds;
+		m_wfdsout = m_wfds;
+		m_efdsout = m_efds;
 
 		timeval val{0, timeoutMs * 1000};
 
-		int cnt = select(MAX_FD, &rfds, &wfds, &efds, &val);
+		int cnt = select(MAX_FD, &m_rfdsout, &m_wfdsout, &m_efdsout, &val);
+		
 
 		if (0 > cnt)
 		{
@@ -77,16 +91,10 @@ namespace chaos
 #endif // !_WIN32
 		}
 
-
-		else if(0 < cnt)
-		{
-			printf("select cnt:%d\n", cnt);
-		}
-
-		if (0 == cnt)
+		else if (0 == cnt)
 			return 0;//continue;
 
-		CollectEvent(rfds, wfds, efds);
+		CollectEvent(m_rfdsout, m_wfdsout, m_efdsout);
 
 		return 0;
 	}
@@ -127,26 +135,21 @@ namespace chaos
 			if (FD_ISSET(fd, &efds))
 				ev |= EV_IOEXCEPT;
 
-			else
-				continue;
-
-			PushActiveEvent(fd, ev);
+			if (0 != ev)
+				PushActiveEvent(fd, ev);
 		}
-
 
 #endif // _WIN32
 
 	}
 
 
-	int Select::RegistFd(const Event* pEvent)
+	int Select::RegistFd(socket_t fd, short ev)
 	{
-		if (!pEvent)
-			return -1;
-
-		const EventKey& key = pEvent->GetEvKey();
-		socket_t fd = key.fd;
-		short ev = pEvent->GetEv();
+#ifndef _WIN32
+		if (m_maxfd < fd)
+			m_maxfd = fd;
+#endif // !_WIN32
 
 		if (ev & EV_IOREAD)
 			FD_SET(fd, &m_rfds);
@@ -159,11 +162,22 @@ namespace chaos
 	}
 
 
-	int Select::CancelFd(socket_t fd)
+	int Select::CancelFd(socket_t fd, short ev)
 	{
-		FD_CLR(fd, &m_rfds);
-		FD_CLR(fd, &m_wfds);
-		FD_CLR(fd, &m_efds);
+#ifndef _WIN32
+		if (m_maxfd < fd)
+			return 0;
+
+		if (m_maxfd == fd)
+			m_maxfd -= 1;
+#endif // !_WIN32
+
+		if(ev & EV_IOREAD)
+			FD_CLR(fd, &m_rfds);
+		if (ev & EV_IOWRITE)
+			FD_CLR(fd, &m_wfds);
+		if (ev & EV_IOEXCEPT)
+			FD_CLR(fd, &m_efds);
 
 		return 0;
 	}

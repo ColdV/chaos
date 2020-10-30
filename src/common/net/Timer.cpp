@@ -175,10 +175,11 @@ namespace chaos
 
 		uint32 size = 0xFFFFFFFF / 2 > s_maxIDSize ? 0xFFFFFFFF : s_maxIDSize * 2;
 
-		char* pNewIDs = new char[size] {0};
+		char* pNewIDs = new char[size];
 		if (!pNewIDs)
 			return -1;
 		
+		memset(pNewIDs, 0, size);
 		memcpy(pNewIDs, s_ids, s_maxIDSize);
 		delete[] s_ids;
 		s_ids = pNewIDs;

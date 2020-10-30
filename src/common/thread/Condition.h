@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include "../../common/stdafx.h"
+#include "stdafx.h"
 #include "Mutex.h"
 
 class Condition :public NonCopyable

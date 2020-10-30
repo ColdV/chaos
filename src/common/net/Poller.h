@@ -12,6 +12,8 @@
 #include "Socket.h"
 #include <list>
 #include <set>
+#include <unordered_map>
+#include "event_config.h"
 
 namespace chaos
 {
@@ -26,7 +28,7 @@ namespace chaos
 	public:
 		friend EventCentre;
 
-		typedef std::map<socket_t, Event*> NetEventMap;
+		typedef std::unordered_map<socket_t, Event*> NetEventMap;
 
 		Poller(EventCentre* pCentre);
 
@@ -41,9 +43,13 @@ namespace chaos
 
 		int DelEvent(Event* pEvent);
 
-		int DelEvent(socket_t fd);
+		//int DelEvent(socket_t fd);
 
-		Event* GetEvent(socket_t);
+		//更新fd监听的事件
+		//@ev:需要更新的事件
+		void UpdateFd(socket_t fd, short op, short ev);
+
+		Event* GetEvent(socket_t fd);
 
 		EventCentre& GetCentre() const { return *m_pCentre; }
 
@@ -53,11 +59,11 @@ namespace chaos
 
 
 	protected:
-		virtual int RegistFd(socket_t, short) { return 0; }
+		virtual int RegistFd(socket_t fd, short ev) { return 0; }
 
-		virtual int RegistFd(const Event*) { return 0; }
+		//virtual int RegistFd(const Event*) { return 0; }
 
-		virtual int CancelFd(socket_t) { return 0; }
+		virtual int CancelFd(socket_t fd, short ev) { return 0; }
 
 		int PushActiveEvent(socket_t fd, short ev);
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../common/stdafx.h"
+#include "stdafx.h"
 
 
 class Sem :public NonCopyable

@@ -70,7 +70,7 @@ namespace chaos
 
 		BufferNodeIt GetNextRNodeIt() { if (++m_rNodeIt == m_buffList.end()) m_rNodeIt = m_buffList.begin(); return m_rNodeIt; }
 
-		uint32 GetLeftSize() { return m_buffList.size() * BUFFER_INIT_SIZE - m_useSize; }
+		uint32 GetLeftSize() { return (uint32)m_buffList.size() * BUFFER_INIT_SIZE - m_useSize; }
 
 	private:
 		BufferList m_buffList;

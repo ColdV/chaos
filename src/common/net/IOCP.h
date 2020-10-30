@@ -9,16 +9,12 @@
 *******************************************/
 #pragma once
 
-
-#ifdef _WIN32
-
-#define	IOCP_ENABLE
-
 #include "Poller.h"
 #include <functional>
 #include "thread/Sem.h"
 #include "thread/Mutex.h"
 
+#if defined _WIN32 && defined IOCP_ENABLE
 
 namespace chaos
 {
@@ -82,7 +78,7 @@ namespace chaos
 	protected:
 		virtual int RegistFd(socket_t fd, short ev) override;
 
-		virtual int CancelFd(socket_t fd) override;
+		//virtual int CancelFd(socket_t fd) override;
 
 	public:
 		static unsigned int __stdcall Loop(void* arg);

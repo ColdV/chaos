@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../stdafx.h"
-#include "../template/Single.h"
+#include "stdafx.h"
+#include "template/Single.h"
 
 class Package : public Single<Package>
 {

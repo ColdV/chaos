@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../common/stdafx.h"
+#include "stdafx.h"
 
 #ifdef _WIN32
 #define THREAD_FUNCTION_PRE unsigned int __stdcall
@@ -19,7 +19,7 @@ typedef	void* (*PThreadFunc)(void*);
 class Thread : public NonCopyable
 {
 public:
-	Thread(PThreadFunc func, void* arg);
+	Thread(PThreadFunc func, void* arg = NULL);
 	~Thread();
 
 	int Start();

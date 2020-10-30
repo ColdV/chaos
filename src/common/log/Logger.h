@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../stdafx.h"
-#include "../template/Single.h"
+#include "stdafx.h"
+#include "template/Single.h"
 #include <string>
-#include "../thread/Mutex.h"
+#include "thread/Mutex.h"
 
 static const char* s_logLevel2String[] =
 {
@@ -36,7 +36,7 @@ public:
 	Logger();
 	virtual ~Logger();
 
-	bool Init(const std::string& name, int logLevel);
+	bool Init(const std::string& path, const std::string& name, int logLevel);
 
 	void WriteLog(int logLev, const char* fmt, ...);
 
@@ -57,6 +57,8 @@ private:
 	int m_curSize;				//文件已写入大小
 
 	int m_level;				//日志等级
+
+	std::string m_filePath;	//文件路径
 
 	std::string m_fileName;		//文件名
 

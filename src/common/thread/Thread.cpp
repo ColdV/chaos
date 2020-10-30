@@ -1,7 +1,7 @@
 #include "Thread.h"
 #include "stdafx.h"
 
-Thread::Thread(PThreadFunc func, void* param) :
+Thread::Thread(PThreadFunc func, void* param /*= NULL*/) :
 	m_tid(0),
 	m_func(func),
 	m_param(param),
@@ -15,10 +15,7 @@ Thread::Thread(PThreadFunc func, void* param) :
 
 
 Thread::~Thread()
-{
-	if (m_param)
-		delete m_param;
-	
+{	
 	if (m_started && !m_joined)
 	{
 #ifdef _WIN32
