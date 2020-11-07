@@ -43,9 +43,10 @@ namespace chaos
 	{
 		socket_t	fd;
 		timer_id	timerId;
-		//int			signal;
 	};
 
+	const int IO_CARE_EVENT = EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT | EV_CANCEL;
+	const int TIMEOUT_CART_EVENT = EV_TIMEOUT | EV_CANCEL;
 
 	//事件
 	class Event : public NonCopyable
@@ -133,7 +134,7 @@ namespace chaos
 		typedef std::map<int, Event*>	SignalEventMap;
 		typedef std::list<Event*>	ActiveEventList;
 		typedef std::queue<Event*>	EvQueue;
-		typedef std::vector<Event*> ActiveEventAry;
+		typedef std::vector<Event*> EventList;
 		
 	public:
 		EventCentre();
@@ -147,9 +148,7 @@ namespace chaos
 
 		int RegisterEvent(Event* pEvent);
 
-		int CancelEvent(Event* pEvent);
-
-		void PushActiveEv(Event* pEvent, short ev);
+		void PushEvent(Event* pEvent, short ev);
 
 		//更新事件
 		//@ev:需要更新的事件
@@ -158,14 +157,15 @@ namespace chaos
 		Mutex& GetMutex() { return m_mutex; }
 
 	private:
-		void PushActiveEv(Event* pEvent);
-
-		//int SignalDispatch();
+		int CancelEvent(Event* pEvent);
 
 		int ProcessActiveEvent();
 
 		//清除所有注册事件和活动事件
 		void ClearAllEvent();
+	
+		//计算当前等待IO的timeout
+		int CalculateTimeout();
 
 	private:
 		Poller* m_pPoller;				//网络事件调度器
@@ -174,7 +174,9 @@ namespace chaos
 
 		SignalEventMap m_signalEvs;
 
-		EvQueue m_activeEvs;
+		EventList m_activeEvs;			//活动事件
+
+		EventList m_waittingEvs;			//已等待中的事件
 
 		bool m_running;
 

@@ -50,7 +50,6 @@ int ThreadPool::Run()
 	for (uint32 i = 0; i < m_threadNum; ++i)
 	{
 		Thread* pThread = new Thread(&ThreadPool::PoolWorkFunc, (void*)this);
-		//Thread* pThread = new Thread(std::move(std::bind(&PoolWorkFunc, (void*)this)));
 		if (!pThread)
 			return -1;
 
@@ -103,9 +102,9 @@ THREAD_FUNCTION_PRE ThreadPool::PoolWorkFunc(void* arg)
 	if (!arg)
 	{
 #ifdef _WIN32
-		return 1;
+		return -1;
 #else
-		return NULL;
+		return 0;
 #endif // _WIN32
 	}
 
@@ -144,9 +143,7 @@ THREAD_FUNCTION_PRE ThreadPool::PoolWorkFunc(void* arg)
 
 	}
 
-#ifdef _WIN32
 	return 0;
-#endif // _WIN32
 }
 
 

@@ -102,19 +102,13 @@ namespace chaos
 
 	int Socket::Recv(char* buf, const int size)
 	{
-		//printf("开始接受数据！\n");
-
-		int len = recv(m_fd, buf, size, 0); //MSG_PEEK
-		printf("socket[%llu] already recv msg len:%d\n", m_fd, len);
+		int len = recv(m_fd, buf, size, 0);
 
 		if (0 >= len)
 		{
 			printf("recv client socket[%llu] close msg!\n", m_fd);
-			//Close();
 			return -1;
 		}
-
-		//printf("recv data[%s],from ip:%s,port:%d, fd:%llu\n", buf, m_ip, m_port, m_fd);
 
 		return len;
 	}

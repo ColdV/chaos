@@ -30,12 +30,13 @@ namespace chaos
 		friend EventCentre;
 
 		typedef std::unordered_map<int, TimerEvent*> TimerMap;
+		typedef std::vector<Event*> EventList;
 
 		//Timer& Instance();
 		Timer();
 		~Timer();
 
-		void DispatchTimer();
+		void DispatchTimer(EventList& activeEvents);
 
 		//添加定时器,返回定时器ID
 		uint32 AddTimer(Event* pTimerEv) { return AddTimer((TimerEvent*)pTimerEv); }

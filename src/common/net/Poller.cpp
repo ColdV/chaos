@@ -35,11 +35,17 @@ namespace chaos
 			return -1;
 
 		const EventKey& key = pEvent->GetEvKey();
-
-		if (0 != RegistFd(key.fd, pEvent->GetEv()))
+		
+		if (m_events.find(key.fd) != m_events.end())
 			return -1;
 
 		m_events.insert(std::make_pair(key.fd, pEvent));
+
+		if (0 != RegistFd(key.fd, pEvent->GetEv()))
+		{
+			m_events.erase(key.fd);
+			return -1;
+		}
 
 		return 0;
 	}
@@ -92,7 +98,7 @@ namespace chaos
 	}
 
 
-	int Poller::PushActiveEvent(socket_t fd, short ev)
+	int Poller::PushActiveEvent(socket_t fd, short ev, EventCentre::EventList& activeEvents)
 	{
 		auto it = m_events.find(fd);
 
@@ -102,7 +108,14 @@ namespace chaos
 		if (!m_pCentre)
 			return -1;
 		
-		m_pCentre->PushActiveEv(it->second, ev);
+		Event* pEvent = it->second;
+
+		if (!pEvent || pEvent->GetCentre() != m_pCentre || !(pEvent->GetEv() & ev))
+			return -1;
+
+		pEvent->PushCurEv(ev);
+
+		activeEvents.push_back(pEvent);
 
 		return 0;
 	}

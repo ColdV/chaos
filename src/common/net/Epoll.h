@@ -34,18 +34,21 @@ namespace chaos
 
 		virtual ~Epoll();
 
-		virtual int Init();
+		virtual int Init() override;
 
-		virtual int Launch(int timeoutMs) override;
+		virtual int Launch(int timeoutMs, Poller::EventList& activeEvents) override;
 
 	protected:
-		virtual int RegistFd(socket_t fd, short ev);
+		virtual int RegistFd(socket_t fd, short ev) override;
 
-		virtual int CancelFd(socket_t fd, short ev);
+		virtual int CancelFd(socket_t fd, short ev) override;
+
+	private:
+		void SetEpollEvent(epoll_event& epev, socket_t fd, short ev);
 
 	private:
 		int m_epfd;
-		epoll_event* m_evs;
+		epoll_event* m_epevs;
 	};
 
 }

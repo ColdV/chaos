@@ -50,10 +50,10 @@ namespace chaos
 	}
 
 
-	int Select::Launch(int timeoutMs)
+	int Select::Launch(int timeoutMs, Poller::EventList& activeEvents)
 	{
-		if (0 >= timeoutMs)
-			timeoutMs = NET_TICK;
+		if (0 > timeoutMs)
+			timeoutMs = -1;
 
 		int nfds = 0;
 
@@ -94,29 +94,29 @@ namespace chaos
 		else if (0 == cnt)
 			return 0;//continue;
 
-		CollectEvent(m_rfdsout, m_wfdsout, m_efdsout);
+		CollectEvent(m_rfdsout, m_wfdsout, m_efdsout, activeEvents);
 
 		return 0;
 	}
 
 
-	void Select::CollectEvent(const fd_set& rfds, const fd_set& wfds, const fd_set& efds)
+	void Select::CollectEvent(const fd_set& rfds, const fd_set& wfds, const fd_set& efds, EventCentre::EventList& activeEvents)
 	{
 #ifdef _WIN32
 
 		for (uint32 i = 0; i < rfds.fd_count; ++i)
 		{
-			PushActiveEvent(rfds.fd_array[i], EV_IOREAD);
+			PushActiveEvent(rfds.fd_array[i], EV_IOREAD, activeEvents);
 		}
 
 		for (uint32 i = 0; i < wfds.fd_count; ++i)
 		{
-			PushActiveEvent(wfds.fd_array[i], EV_IOWRITE);
+			PushActiveEvent(wfds.fd_array[i], EV_IOWRITE, activeEvents);
 		}
 
 		for (uint32 i = 0; i < efds.fd_count; ++i)
 		{
-			PushActiveEvent(efds.fd_array[i], EV_IOEXCEPT);
+			PushActiveEvent(efds.fd_array[i], EV_IOEXCEPT, activeEvents);
 		}
 
 #else
@@ -136,7 +136,7 @@ namespace chaos
 				ev |= EV_IOEXCEPT;
 
 			if (0 != ev)
-				PushActiveEvent(fd, ev);
+				PushActiveEvent(fd, ev, activeEvents);
 		}
 
 #endif // _WIN32
