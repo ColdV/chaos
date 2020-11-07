@@ -32,52 +32,53 @@ namespace chaos
 	}
 
 
-	void Timer::DispatchTimer()
+	void Timer::DispatchTimer(EventList& activeEvents)
 	{
 		while (!m_timers.Empty())
 		{
-			TimerEvent* ev = m_timers.Front();
-			if (!ev)
+			TimerEvent* pEvent = m_timers.Front();
+			if (!pEvent)
 				continue;
 
-			if (ev->IsCancel())
+			if (pEvent->IsCancel())
 			{
 				m_timers.Pop();
-				DelTimer(ev);
+				DelTimer(pEvent);
 				continue;
 			}
 
-			if (ev->IsSuspend())
+			if (pEvent->IsSuspend())
 			{
 				//暂停的定时器如果不是循环的就直接删除
-				if (ev->IsLoop())
+				if (pEvent->IsLoop())
 				{
-					ev->SetNextTime();
-					AddTimer(ev);
+					pEvent->SetNextTime();
+					AddTimer(pEvent);
 				}
 				else
 				{
 					m_timers.Pop();
-					DelTimer(ev);
+					DelTimer(pEvent);
 				}
 
 				continue;
 			}
 
-			if (m_lastRunTime < ev->GetNextTime())
+			if (m_lastRunTime < pEvent->GetNextTime())
 				break;
 
-			EventCentre* pCentre = ev->GetCentre();
+			EventCentre* pCentre = pEvent->GetCentre();
 			if (!pCentre)
 				continue;
 
-			pCentre->PushActiveEv(ev, EV_TIMEOUT);
+			//pCentre->PushActiveEv(pEvent, EV_TIMEOUT);
+			activeEvents.push_back(pEvent);
 
 			//循环定时任务
-			if (ev->IsLoop())
+			if (pEvent->IsLoop())
 			{
-				ev->SetNextTime();
-				AddTimer(ev);
+				pEvent->SetNextTime();
+				AddTimer(pEvent);
 			}
 
 			m_timers.Pop();
@@ -132,13 +133,13 @@ namespace chaos
 	{
 		while (!m_timers.Empty())
 		{
-			TimerEvent* ev = m_timers.Front();
+			TimerEvent* pEvent = m_timers.Front();
 			m_timers.Pop();
 
-			if (!ev)
+			if (!pEvent)
 				continue;
 
-			ev->Cancel();
+			pEvent->Cancel();
 		}
 	}
 

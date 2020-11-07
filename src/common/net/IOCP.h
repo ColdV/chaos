@@ -65,7 +65,7 @@ namespace chaos
 
 		virtual int Init();
 
-		virtual int Launch(int timeoutMs) override;
+		virtual int Launch(int timeoutMs, Poller::EventList& activeEvents) override;
 
 		static BOOL AcceptEx(SOCKET sListenSocket, SOCKET sAcceptSocket, PVOID lpOutputBuffer, DWORD dwReceiveDataLength, 
 			DWORD dwLocalAddressLength, DWORD dwRemoteAddressLength, LPDWORD lpdwBytesReceived, LPOVERLAPPED lpOverlapped);

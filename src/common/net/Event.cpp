@@ -22,7 +22,7 @@ namespace chaos
 {
 	Event::Event(short ev, const EventKey& evKey) :
 		m_pCenter(NULL),
-		m_ev(ev),
+		m_ev(ev | EV_CANCEL),
 		m_userdata(NULL)
 	{
 		memcpy(&m_evKey, &evKey, sizeof(EventKey));
@@ -33,7 +33,7 @@ namespace chaos
 	{
 		if (m_pCenter)
 		{
-			m_pCenter->CancelEvent(this);
+			m_pCenter->PushEvent(this, EV_CANCEL);
 			SetCenter(NULL);
 		}
 	}
@@ -130,13 +130,22 @@ namespace chaos
 
 		m_running = true;
 
+
 		while (m_running)
 		{
 			//没有任何事件的时候不做后续处理(直接退出还是continue?)
 			/*if (0 >= m_evcount)
 				continue;*/
 
-			if (0 != m_pPoller->Launch(loopTickTimeMs))
+			if (!m_waittingEvs.empty())
+			{
+				m_activeEvs.insert(m_activeEvs.begin(), m_waittingEvs.begin(), m_waittingEvs.end());
+				m_waittingEvs.clear();
+			}
+
+			int timeout = CalculateTimeout();
+
+			if (0 != m_pPoller->Launch(timeout, m_activeEvs))
 			{
 				printf("called poller failed!\n");
 				break;
@@ -145,7 +154,7 @@ namespace chaos
 			/*if (0 != SignalDispatch())
 				break;*/
 
-			m_pTimer->DispatchTimer();
+			m_pTimer->DispatchTimer(m_activeEvs);
 
 			if (0 != ProcessActiveEvent())
 			{
@@ -166,13 +175,15 @@ namespace chaos
 
 	int EventCentre::ProcessActiveEvent()
 	{
-		while (!m_activeEvs.empty())
+		if (m_activeEvs.empty())
+			return 0;
+
+		MutexGuard lock(m_mutex);
+
+		for(auto pev : m_activeEvs)
 		{
-			Event* pev = m_activeEvs.front();
-
-			MutexGuard lock(m_mutex);
-
-			m_activeEvs.pop();
+			//Event* pev = m_activeEvs.front();
+			//m_activeEvs.pop();
 
 			if (!pev)
 				continue;
@@ -182,7 +193,7 @@ namespace chaos
 			if (pev->GetCurEv() & EV_CANCEL)
 			{
 				pev->Callback();
-				delete pev;
+				CancelEvent(pev);
 				continue;
 			}
 
@@ -196,6 +207,8 @@ namespace chaos
 			//清除此次已处理的事件
 			pev->PopCurEv();
 		}
+
+		m_activeEvs.clear();
 
 		return 0;
 	}
@@ -227,6 +240,15 @@ namespace chaos
 	}
 
 
+	int EventCentre::CalculateTimeout()
+	{
+		if(!m_activeEvs.empty())
+			return 0;
+
+		return -1;
+	}
+
+
 	int EventCentre::RegisterEvent(Event* pEvent)
 	{
 
@@ -243,18 +265,14 @@ namespace chaos
 
 		MutexGuard lock(m_mutex);
 
-		if (ev & (EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT)
-			&& !(ev & ~(EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT))
-			&& m_pPoller)
+		if (ev & IO_CARE_EVENT && !(ev & ~IO_CARE_EVENT) && m_pPoller)
 		{
 			ret = m_pPoller->AddEvent(pEvent);
 		}
-		else if (ev & EV_TIMEOUT && !(ev & ~EV_TIMEOUT) && m_pTimer)
+		else if (ev & TIMEOUT_CART_EVENT && !(ev & ~TIMEOUT_CART_EVENT) && m_pTimer)
 		{
 			ret = m_pTimer->AddTimer(pEvent);
 		}
-		/*else if (ev & EV_SIGNAL && !(ev & ~EV_SIGNAL))
-			m_signalEvs.insert(std::make_pair(evKey.signal, pEvent));*/
 		else
 		{
 			return -1;
@@ -285,16 +303,14 @@ namespace chaos
 
 		MutexGuard lock(m_mutex);
 
-		if (ev & (EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT) && m_pPoller)
+		if (ev & IO_CARE_EVENT && m_pPoller)
 		{
 			m_pPoller->DelEvent(pEvent);
 		}
-		else if (ev & EV_TIMEOUT && m_pTimer)
+		else if (ev & TIMEOUT_CART_EVENT && m_pTimer)
 		{
 			m_pTimer->DelTimer((TimerEvent*)pEvent);
 		}
-		/*else if (ev & EV_SIGNAL)
-			m_signalEvs.erase(evKey.signal);*/
 		else
 		{
 			return -1;
@@ -302,36 +318,22 @@ namespace chaos
 
 		--m_evcount;
 
-		PushActiveEv(pEvent, EV_CANCEL);
-
-		pEvent->SetCenter(NULL);
+		delete pEvent;
 
 		return 0;
 	}
 
 
-	void EventCentre::PushActiveEv(Event* pEvent)
+	void EventCentre::PushEvent(Event* pEvent, short ev)
 	{
 		MutexGuard lock(m_mutex);
 
-		if (!pEvent->GetCentre() || pEvent->GetCentre() != this)
-			return;
-
-		m_activeEvs.push(pEvent);
-	}
-
-
-	void EventCentre::PushActiveEv(Event* pEvent, short ev)
-	{
-		if (!pEvent)
-			return;
-
-		if (!(pEvent->GetEv() & ev) && ev != EV_CANCEL)
+		if (!pEvent || pEvent->GetCentre() != this || !(pEvent->GetEv() & ev))
 			return;
 
 		pEvent->PushCurEv(ev);
 
-		PushActiveEv(pEvent);
+		m_waittingEvs.push_back(pEvent);
 	}
 
 
@@ -710,7 +712,8 @@ namespace chaos
 
 		//准备投递下一次AcceptEx
 		m_acceptedq.push(lo);
-		pCentre->PushActiveEv(this, EV_IOREAD);
+		//pCentre->PushActiveEv(this, EV_IOREAD);
+		pCentre->PushEvent(this, EV_IOREAD);
 
 		DoneAccept(acceptedfd);
 
@@ -840,7 +843,7 @@ namespace chaos
 		if (!pCentre)
 			return -1;
 
-		pCentre->PushActiveEv(this, EV_IOWRITE);
+		pCentre->PushEvent(this, EV_IOWRITE);
 
 		return written;
 	}
@@ -933,9 +936,6 @@ namespace chaos
 		socket_unread_t unread = s.GetUnreadByte();
 		int transferBytes = 0;
 
-		if (0 >= unread)
-			return unread;
-
 		while (0 < unread)
 		{
 			uint32 size = 0;
@@ -958,6 +958,9 @@ namespace chaos
 			transferBytes += read;
 		}
 
+		if (0 == transferBytes)
+			CancelEvent();
+
 		CallbackRead(transferBytes);
 
 		return 0;
@@ -977,7 +980,7 @@ namespace chaos
 		while (0 > size)
 		{
 			uint32 hasbytes = 0;
-			char* buf = m_pWBuffer->GetWriteBuffer(&hasbytes);
+			char* buf = m_pWBuffer->ReadBuffer(&hasbytes);
 			if (!buf)
 				break;
 			
@@ -1045,9 +1048,7 @@ namespace chaos
 			if (GetLastErrorno() != WSA_IO_PENDING)
 			{
 				printf("WSARecv failed:%d\n", GetLastErrorno());
-				//CancelEvent();
-				CallErr(ret);
-				ReadComplete(&m_pROverlapped->overlapped, ret, 0, true);
+				ReadComplete(&m_pROverlapped->overlapped, ret, 0, false);
 				return ret;
 			}
 			else
@@ -1095,8 +1096,7 @@ namespace chaos
 				if (GetLastErrorno() != WSA_IO_PENDING)
 				{
 					printf("WSASend failed:%d\n", GetLastErrorno());
-					//CancelEvent();
-					WriteComplete(&m_pWOverlapped->overlapped, ret, 0, true);
+					WriteComplete(&m_pWOverlapped->overlapped, ret, 0, false);
 					return  GetLastErrorno();
 				}
 				else
@@ -1104,6 +1104,7 @@ namespace chaos
 					m_isPostWrite = true;
 				}
 			}
+			//立即返回也会触发 GetQueuedCompletionStatus 所以这里不需要手动调用callback;
 			//else
 			//{
 			//	WriteComplete(&m_pWOverlapped->overlapped, sendBytes, 0, true);
@@ -1116,6 +1117,12 @@ namespace chaos
 
 	void Connecter::ReadComplete(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool ok)
 	{
+		if (!ok)
+		{
+			CallErr(-1);
+			return;
+		}
+
 		LPCOMPLETION_OVERLAPPED lo = (LPCOMPLETION_OVERLAPPED)o;
 		if (!lo)
 		{
@@ -1141,7 +1148,7 @@ namespace chaos
 
 		//准备投递下一次WSARecv
 		if(0 < bytes)
-			pCentre->PushActiveEv(this, EV_IOREAD);
+			pCentre->PushEvent(this, EV_IOREAD);
 
 		CallbackRead(bytes);
 	}

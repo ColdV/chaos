@@ -1,4 +1,4 @@
-/************C++ Source File****************
+﻿/************C++ Source File****************
 #
 #	Filename: Epoll.cpp
 #
@@ -25,22 +25,22 @@ namespace chaos
 	Epoll::Epoll(EventCentre* pCentre):
 		Poller(pCentre),
 		m_epfd(0),
-		m_evs(0)
+		m_epevs(0)
 	{
 	}
 
 
 	Epoll::~Epoll()
 	{
-		if (m_evs)
-			delete[] m_evs;
+		if (m_epevs)
+			delete[] m_epevs;
 	}
 
 
 	int Epoll::Init()
 	{
-		m_evs = new epoll_event[MAX_FD];
-		if (!m_evs)
+		m_epevs = new epoll_event[MAX_FD];
+		if (!m_epevs)
 			return -1;
 
 		m_epfd = epoll_create(MAX_FD);
@@ -51,34 +51,28 @@ namespace chaos
 	}
 
 
-	int Epoll::Launch(int timeoutMs)
+	int Epoll::Launch(int timeoutMs, Poller::EventList& activeEvents)
 	{
-		if (0 >= timeoutMs)
-			timeoutMs = NET_TICK;
+		if (0 > timeoutMs)
+			timeoutMs = -1;
 
-		int cnt = epoll_wait(m_epfd, m_evs, MAX_FD, timeoutMs);
+		int cnt = epoll_wait(m_epfd, m_epevs, MAX_FD, timeoutMs);
 		if (0 > cnt && errno != EINTR)
 			return -1;
 
 		for (int i = 0; i < cnt; ++i)
 		{
 			short ev = 0;
-			if (m_evs[i].events & EPOLLIN)
-				ev = EV_IOREAD;
+			if (m_epevs[i].events & EPOLLIN)
+				ev |= EV_IOREAD;
 
-			else if (m_evs[i].events & EPOLLOUT)
-				ev = EV_IOWRITE;
+			if (m_epevs[i].events & EPOLLOUT)
+				ev |= EV_IOWRITE;
 
-			else if (m_evs[i].events & EPOLLERR)
-				ev = EV_IOEXCEPT;
+			if (m_epevs[i].events & EPOLLERR)
+				ev |= EV_IOEXCEPT;
 
-			else
-			{
-				printf("unexpected event:%d\n", m_evs[i].events);
-				continue;
-			}
-
-			PushActiveEvent(m_evs[i].data.fd, ev);
+			PushActiveEvent(m_epevs[i].data.fd, ev, activeEvents);
 		}
 
 		return 0;
@@ -87,27 +81,20 @@ namespace chaos
 
 	int Epoll::RegistFd(socket_t fd, short ev)
 	{
-		epoll_event epev;
-		memset(&epev, 0, sizeof(epoll_event));
-
-		epev.data.fd = fd;
-
 		Event* pEvent = GetEvent(fd);
 		if (!pEvent)
 			return -1;
 
-		epev.events = pEvent->GetEv();
-
-		if (ev & EV_IOREAD)
-			epev.events |= EPOLLIN;
-		if (ev & EV_IOWRITE)
-			epev.events |= EPOLLOUT;
-
-		epev.events |= DEFAULT_EPOLL_EVENTS;		// | EPOLLHUP;
+		int curev = pEvent->GetEv() | ev;
+		epoll_event epev;
 		
+		SetEpollEvent(epev, fd, curev);
+
 		if (epoll_ctl(m_epfd, EPOLL_CTL_ADD, fd, &epev) == 0)
 			return 0;
 
+		//如果fd已经注册到epoll中,上一次的epoll_ctl将返回ENOENT错误
+		//将忽略该错误 并用EPOLL_CTL_MOD再次调用epoll_ctl以修改已注册的fd事件
 		if (errno == ENOENT && epoll_ctl(m_epfd, EPOLL_CTL_MOD, fd, &epev) == -1)
 			return -1;
 
@@ -117,20 +104,36 @@ namespace chaos
 
 	int Epoll::CancelFd(socket_t fd, short ev)
 	{
-		//epoll_event epev;
-		//memset(&epev, 0, sizeof(epoll_event));
+		Event* pEvent = GetEvent(fd);
+		if(!pEvent)
+			return epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, NULL);
 
-		//epev.data.fd = fd;
+		int curev = pEvent->GetEv() & ~ev;
+		if (curev & (EV_IOREAD | EV_IOWRITE))
+		{
+			epoll_event epev;
+			
+			SetEpollEvent(epev, fd, curev);
 
-		//if (ev & EV_IOREAD)
-		//	epev.events |= EPOLLIN;
-		//if (ev & EV_IOWRITE)
-		//	epev.events |= EPOLLOUT;
-
-		//if (epev.events & EPOLLIN && epev.events & EPOLLOUT)
-		//	epev.events |= DEFAULT_EPOLL_EVENTS;
+			return epoll_ctl(m_epfd, EPOLL_CTL_MOD, fd, &epev);
+		}
 
 		return epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, NULL);
+	}
+
+
+	void Epoll::SetEpollEvent(epoll_event& epev, socket_t fd, short ev)
+	{
+		memset(&epev, 0, sizeof(epoll_event));
+
+		epev.data.fd = fd;
+
+		if (ev & EV_IOREAD)
+			epev.events |= EPOLLIN;
+		if (ev & EV_IOWRITE)
+			epev.events |= EPOLLOUT;
+
+		epev.events |= DEFAULT_EPOLL_EVENTS;	// | EPOLLHUP;
 	}
 
 }

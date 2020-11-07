@@ -73,7 +73,6 @@ typedef unsigned long socket_unread_t;
 #else
 typedef int socket_t;
 typedef pthread_t thread_t;
-typedef int sem_t;
 typedef pthread_mutex_t mutex_t;
 typedef pthread_cond_t cond_t;
 typedef int sem_wait_ret;

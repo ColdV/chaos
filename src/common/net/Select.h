@@ -32,7 +32,7 @@ namespace chaos
 
 		virtual int Init() override;
 
-		virtual int Launch(int timeoutMs) override;
+		virtual int Launch(int timeoutMs, Poller::EventList& activeEvents) override;
 
 	protected:
 		virtual int RegistFd(socket_t fd, short ev) override;
@@ -40,7 +40,7 @@ namespace chaos
 		virtual int CancelFd(socket_t fd, short ev) override;
 
 	private:
-		void CollectEvent(const fd_set& rfds, const fd_set& wfds, const fd_set& efds);
+		void CollectEvent(const fd_set& rfds, const fd_set& wfds, const fd_set& efds, Poller::EventList& activeEvents);
 
 	private:
 		fd_set m_rfds;

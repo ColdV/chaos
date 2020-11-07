@@ -68,7 +68,7 @@ void Test::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 
 	if (0 == nTransBytes)
 	{
-		ev->GetCentre()->CancelEvent(ev);
+		ev->CancelEvent();
 		return;
 	}
 
