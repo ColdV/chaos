@@ -6,6 +6,7 @@
 #include <set>
 #include <unordered_set>
 #include <functional>
+#include <memory>
 #include "Poller.h"
 #include "Buffer.h"
 #include "IOCP.h"
@@ -28,6 +29,20 @@ enum
 	EV_CTL_ADD = 1,
 	EV_CTL_DEL,
 };
+
+
+namespace chaos
+{
+	inline int GetLastErrorno()
+	{
+#ifdef _WIN32
+		return WSAGetLastError();
+#else
+		return errno;
+#endif // _WIN32
+
+	}
+}
 
 
 namespace chaos
@@ -199,15 +214,13 @@ namespace chaos
 
 		typedef std::function<void(Listener* listener, Connecter* newconn, void* userdata)>	ListenerCb;
 
-		Listener(socket_t fd);
+		explicit Listener(socket_t fd);
 
 		~Listener();
 
 		static Listener* CreateListener(int af, int socktype, int protocol, unsigned short port, const char* ip = 0);
 
 		int Listen(const sockaddr* sa, int salen);
-
-		virtual void Handle() override;
 
 		Socket& GetSocket() { return *m_socket; }
 
@@ -221,11 +234,13 @@ namespace chaos
 #endif // IOCP_ENABLE
 
 	private:
+		virtual void Handle() override;
+
 #ifdef IOCP_ENABLE
 		int AsynAccept(LPACCEPT_OVERLAPPED lo);
 
 		//GetQueuedCompletionStatus后的回调
-		void AcceptComplete(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool ok);
+		void AcceptComplete(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool bOk);
 #endif // IOCP_ENABLE
 
 		void RegisterCallback(int ret);
@@ -256,13 +271,20 @@ namespace chaos
 	public:
 		typedef std::function<void(Connecter* pConnect, int nTransBytes, void* userdata)> NetCallback;
 
-		Connecter(socket_t fd);
+		union SockAddr
+		{
+			sockaddr sa;
+			sockaddr_in sin;
+			sockaddr_in6 sin6;
+		};
+
+		explicit Connecter(socket_t fd);
 
 		~Connecter();
 
-		virtual void Handle() override;
-
 		Socket& GetSocket() { return *m_socket; }
+
+		int Connect(sockaddr* sa, int salen);
 
 		//讲数据写入到buff中, 并且推送一个EV_IOWRITE事件在下一帧写入socket
 		int WriteBuffer(const char* buf, int len);
@@ -275,9 +297,9 @@ namespace chaos
 		int ReadBuffer(char* buf, int size);
 
 		//获取RBuffer中可读取的字节数
-		int GetReadableSize() { if (!m_pRBuffer) return 0; return m_pRBuffer->GetReadSize(); }
+		int GetReadableSize() { if (!m_pReadBuffer) return 0; return m_pReadBuffer->GetReadSize(); }
 
-		void SetCallback(const NetCallback& readcb, void* readCbArg, const NetCallback& writecb, void* writeCbArg);
+		void SetCallback(const NetCallback& readcb, const NetCallback& writecb, const NetCallback& connectcb, void* userdata);
 
 		//启用一个新事件
 		void EnableEvent(short ev);
@@ -286,11 +308,15 @@ namespace chaos
 		void DisableEvent(short ev);
 
 	private:
+		virtual void Handle() override;
+
 		void RegisterCallback(int ret);
 
-		void CallbackRead(int nTransferBytes) { if (m_readcb) m_readcb(this, nTransferBytes, m_readCbArg); }
+		void CallbackRead(int nTransferBytes) { if (m_readcb) m_readcb(this, nTransferBytes, m_userdata); }
 
-		void CallbackWrite(int nTransferBytes) { if (m_writecb) m_writecb(this, nTransferBytes, m_writeCbArg); }
+		void CallbackWrite(int nTransferBytes) { if (m_writecb) m_writecb(this, nTransferBytes, m_userdata); }
+
+		void CallbackConnect(bool bOk) { if (m_connectcb) m_connectcb(this, bOk, m_userdata); }
 
 		int HandleRead();
 
@@ -301,35 +327,44 @@ namespace chaos
 
 		int AsynWrite();
 
-		void ReadComplete(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool ok);
+		void ReadComplete(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool bOk);
 
-		void WriteComplete(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool ok);
+		void WriteComplete(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool bOk);
+
+		void ConnectComplete(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool bOk);
 #endif // IOCP_ENABLE
 
 	private:
 		Socket* m_socket;
 
-		Buffer* m_pRBuffer;
+		Buffer* m_pReadBuffer;
 
-		Buffer* m_pWBuffer;
+		Buffer* m_pWriteBuffer;
 
 #ifdef IOCP_ENABLE
-		LPCOMPLETION_OVERLAPPED m_pROverlapped;
+		LPCOMPLETION_OVERLAPPED m_pReadOverlapped;
+		bool m_isPostRecv;			//是否已投递WSARecv事件(IOCP在等待事件完成)
 
-		bool m_isPostRecv;			//是否已投递WSARecv事件
+		LPCOMPLETION_OVERLAPPED m_pWriteOverlapped;
+		bool m_isPostWrite;			//是否已投递WSASend事件(IOCP在等待事件完成)
 
-		LPCOMPLETION_OVERLAPPED m_pWOverlapped;
+		LPCOMPLETION_OVERLAPPED m_pConnectOverlapped;
+		bool m_isPostConnect;		//是否已投递ConnectEx事件(IOCP在等待事件完成)
+		//std::shared_ptr<COMPLETION_OVERLAPPED> m_pConnectOverlapped;
 
-		bool m_isPostWrite;			//是否已投递WSASend事件
 #endif // IOCP_ENABLE
 
 		NetCallback m_readcb;
 
-		void* m_readCbArg;
-
 		NetCallback m_writecb;
 
-		void* m_writeCbArg;
+		NetCallback m_connectcb;
+
+		void* m_userdata;
+
+		SockAddr m_peeraddr;
+
+		socklen_t m_peeraddrlen;
 	};
 
 
@@ -361,8 +396,6 @@ namespace chaos
 		bool IsLoop() const { return m_isLoop; }
 		void SetLoop(bool isLoop) { m_isLoop = isLoop; }
 
-		virtual void Handle() override;
-
 		void Cancel() { m_isCancel = true; };
 
 		void Suspend() { m_isSuspend = true; };
@@ -376,6 +409,8 @@ namespace chaos
 		void SetTimerHandle(const TimerHandler& func) { m_handleFunc = func; };
 
 	private:
+		virtual void Handle() override;
+
 		void SetNextTime() { m_nextTime = time(NULL) + m_timeout; }
 
 		void DefaultHandle();

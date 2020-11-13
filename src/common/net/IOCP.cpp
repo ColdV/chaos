@@ -26,7 +26,7 @@ namespace chaos
 	}*/
 
 	IOCP::AcceptExPtr IOCP::s_acceptEx = NULL;
-	//IOCP::ConnectExPtr IOCP::s_connectEx = NULL;
+	IOCP::ConnectExPtr IOCP::s_connectEx = NULL;
 	IOCP::GetAcceptExSockaddrsPtr IOCP::s_getAcceptExSockaddrs = NULL;
 
 
@@ -109,7 +109,7 @@ namespace chaos
 		{
 			//获取Ex系列函数
 			GUID acceptex = WSAID_ACCEPTEX;
-			//GUID connectex = WSAID_CONNECTEX;
+			GUID connectex = WSAID_CONNECTEX;
 			GUID getacceptexsockaddrs = WSAID_GETACCEPTEXSOCKADDRS;
 			Socket s(AF_INET, SOCK_STREAM, 0);
 
@@ -123,9 +123,9 @@ namespace chaos
 				&s_acceptEx, sizeof(s_acceptEx), &bytes, NULL, NULL))
 				return -1;
 
-			/*if (0 != WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &connectex, sizeof(connectex),
+			if (0 != WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &connectex, sizeof(connectex),
 				&s_connectEx, sizeof(s_connectEx), &bytes, NULL, NULL))
-				return -1;*/
+				return -1;
 
 			if (0 != WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &getacceptexsockaddrs, sizeof(getacceptexsockaddrs),
 				&s_getAcceptExSockaddrs, sizeof(s_getAcceptExSockaddrs), &bytes, NULL, NULL))
@@ -146,6 +146,16 @@ namespace chaos
 		
 		return s_acceptEx(sListenSocket, sAcceptSocket, lpOutputBuffer, dwReceiveDataLength,
 			dwLocalAddressLength, dwRemoteAddressLength, lpdwBytesReceived, lpOverlapped);
+	}
+
+
+	BOOL IOCP::ConnectEx(SOCKET s, const struct sockaddr* name, int namelen, PVOID lpSendBuffer, DWORD dwSendDataLength,
+		LPDWORD lpdwBytesSent, LPOVERLAPPED lpOverlapped)
+	{
+		if (!s_connectEx)
+			return false;
+		
+		return s_connectEx(s, name, namelen, lpSendBuffer, dwSendDataLength, lpdwBytesSent, lpOverlapped);
 	}
 
 
@@ -233,9 +243,9 @@ namespace chaos
 				}
 				else
 				{
-					int err = GetLastError();
+					int err = WSAGetLastError();
 					if ((err != WAIT_TIMEOUT) && (err != ERROR_NETNAME_DELETED))
-						printf("GetQueuedCompletionStatus failed:%d\n", WSAGetLastError());
+						printf("GetQueuedCompletionStatus failed:%d\n", err);
 				}
 
 				if (lo->cb)

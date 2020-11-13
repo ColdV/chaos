@@ -45,6 +45,10 @@ namespace chaos
 
 		uint32 DelTimer(TimerEvent* pTimerEv);
 
+		//获取下一次超时时间
+		//-1:当前没有定时器, 0:当前已有就绪的定时器, >0:下个定时器超时时间
+		int GetNextTimeout();
+
 		int Size() { return m_timers.Size(); }
 
 		void Clear();

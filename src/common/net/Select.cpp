@@ -20,7 +20,6 @@ namespace chaos
 	//	static Select s_inst;
 	//	return s_inst;
 	//}
-	extern int GetLastErrorno();
 
 	Select::Select(EventCentre* pCentre):
 		Poller(pCentre)

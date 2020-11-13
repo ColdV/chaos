@@ -71,22 +71,24 @@ namespace chaos
 	}
 
 
-	int Socket::Connect(const char* strIP, const int nPort)
+	int Socket::Connect(int af, const char* strIP, const int nPort)
 	{
 		sockaddr_in sockAddr;
 		memset(&sockAddr, 0, sizeof(sockAddr));
 
-		sockAddr.sin_family = AF_INET;
+		sockAddr.sin_family = af;
 		sockAddr.sin_port = htons(nPort);
-		inet_pton(AF_INET, strIP, &sockAddr.sin_addr);
+		inet_pton(af, strIP, &sockAddr.sin_addr);
 
-		int res = connect(m_fd, (sockaddr*)&sockAddr, sizeof(sockAddr));
-
-		if (0 != res)
-			return -1;
-
-		return 0;
+		return Connect((sockaddr*)&sockAddr, sizeof(sockAddr));
 	}
+
+
+	int Socket::Connect(sockaddr* sa, int salen)
+	{
+		return connect(m_fd, sa, salen);
+	}
+
 
 	int Socket::Close()
 	{

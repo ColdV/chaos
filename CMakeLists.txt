@@ -95,9 +95,11 @@ link_directories(${LIB_DIRS})
 
 
 add_executable(chaos src/servers/gamesvr/main.cpp ${SOURCE_FILES})
+add_executable(client src/client/main.cpp ${SOURCE_FILES})
 
 if(UNIX)
     list(APPEND LIBS pthread rt dl)
 endif()
 
 target_link_libraries(chaos ${LIBS})
+target_link_libraries(client ${LIBS})

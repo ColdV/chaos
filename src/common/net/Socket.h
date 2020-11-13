@@ -37,7 +37,9 @@ namespace chaos
 
 		socket_t Accept();
 
-		int Connect(const char* strIP, const int nPort);
+		int Connect(int af, const char* strIP, const int nPort);
+
+		int Connect(sockaddr* sa, int salen);
 
 		int Close();
 

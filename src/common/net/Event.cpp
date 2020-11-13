@@ -4,19 +4,6 @@
 #include <stdexcept>
 #include "log/Logger.h"
 
-namespace chaos
-{
-	int GetLastErrorno()
-	{
-#ifdef _WIN32
-		return WSAGetLastError();
-#else
-		return errno;
-#endif // _WIN32
-
-	}
-}
-
 
 namespace chaos
 {
@@ -129,7 +116,6 @@ namespace chaos
 			loopTickTimeMs = 0;
 
 		m_running = true;
-
 
 		while (m_running)
 		{
@@ -245,7 +231,9 @@ namespace chaos
 		if(!m_activeEvs.empty())
 			return 0;
 
-		return -1;
+		int timeout = m_pTimer->GetNextTimeout();
+
+		return timeout;
 	}
 
 
@@ -666,7 +654,7 @@ namespace chaos
 	}
 
 
-	void Listener::AcceptComplete(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool ok)
+	void Listener::AcceptComplete(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool bOk)
 	{
 		if (!o)
 		{
@@ -688,7 +676,7 @@ namespace chaos
 			return;
 		}
 
-		if (!ok)
+		if (!bOk)
 			return;
 
 		EventCentre* pCentre = GetCentre();
@@ -730,72 +718,91 @@ namespace chaos
 	Connecter::Connecter(socket_t fd) :
 		Event(EV_IOREAD | EV_IOWRITE, (EventKey&)fd),
 		m_socket(new Socket(fd)),
-		m_pRBuffer(new Buffer),
-		m_pWBuffer(new Buffer),
+		m_pReadBuffer(new Buffer),
+		m_pWriteBuffer(new Buffer),
+#ifdef IOCP_ENABLE
+		m_pReadOverlapped(new COMPLETION_OVERLAPPED),
+		m_isPostRecv(false),
+		m_pWriteOverlapped(new COMPLETION_OVERLAPPED),
+		m_isPostWrite(false),
+		m_pConnectOverlapped(new COMPLETION_OVERLAPPED),
+		m_isPostConnect(false),
+#endif // IOCP_ENABLE
 		m_readcb(NULL),
-		m_readCbArg(NULL),
 		m_writecb(NULL),
-		m_writeCbArg(NULL)
+		m_connectcb(NULL),
+		m_userdata(NULL),
+		m_peeraddrlen(sizeof(SockAddr))
 	{
 #ifdef IOCP_ENABLE
-		m_pROverlapped = new COMPLETION_OVERLAPPED;
-		if (m_pROverlapped)
+		if (m_pReadOverlapped)
 		{
-			memset(m_pROverlapped, 0, sizeof(COMPLETION_OVERLAPPED));
+			memset(m_pReadOverlapped, 0, sizeof(COMPLETION_OVERLAPPED));
 
-			m_pROverlapped->cb = std::bind(&Connecter::ReadComplete, this, std::placeholders::_1, std::placeholders::_2,
+			m_pReadOverlapped->cb = std::bind(&Connecter::ReadComplete, this, std::placeholders::_1, std::placeholders::_2,
 				std::placeholders::_3, std::placeholders::_4);
 		}
 
-		m_isPostRecv = false;
-
-		m_pWOverlapped = new COMPLETION_OVERLAPPED;
-		if (m_pWOverlapped)
+		if (m_pWriteOverlapped)
 		{
-			memset(m_pWOverlapped, 0, sizeof(COMPLETION_OVERLAPPED));
+			memset(m_pWriteOverlapped, 0, sizeof(COMPLETION_OVERLAPPED));
 
-			m_pWOverlapped->cb = std::bind(&Connecter::WriteComplete, this, std::placeholders::_1, std::placeholders::_2,
+			m_pWriteOverlapped->cb = std::bind(&Connecter::WriteComplete, this, std::placeholders::_1, std::placeholders::_2,
 				std::placeholders::_3, std::placeholders::_4);
 		}
 
-		m_isPostWrite = false;
+		if (m_pConnectOverlapped)
+		{
+			memset(m_pConnectOverlapped, 0, sizeof(COMPLETION_OVERLAPPED));
+
+			m_pConnectOverlapped->cb = std::bind(&Connecter::ConnectComplete, this, std::placeholders::_1, std::placeholders::_2,
+				std::placeholders::_3, std::placeholders::_4);
+		}
 
 #endif // IOCP_ENABLE
 
 		SetRegisterCallback(std::bind(&Connecter::RegisterCallback, this, std::placeholders::_1));
 
+		memset(&m_peeraddr, 0, sizeof(m_peeraddr));
+
+		getpeername(fd, &m_peeraddr.sa, &m_peeraddrlen);
 	}
 
 
 	Connecter::~Connecter()
 	{
-		if (m_pRBuffer)
-			delete m_pRBuffer;
+		if (m_pReadBuffer)
+			delete m_pReadBuffer;
 
-		if (m_pWBuffer)
-			delete m_pWBuffer;
+		if (m_pWriteBuffer)
+			delete m_pWriteBuffer;
 
 #ifdef IOCP_ENABLE
-		if (m_pROverlapped)
+		if (m_pReadOverlapped)
 		{
-			m_pROverlapped->eventDestroy = 1;
+			m_pReadOverlapped->eventDestroy = 1;
 
 			//在iocp的回调中通过eventDestroy的判定来释放;
 			if (!m_isPostRecv)
-			{
-				delete m_pROverlapped;
-			}
+				delete m_pReadOverlapped;
 		}
 
-		if (m_pWOverlapped)
+		if (m_pWriteOverlapped)
 		{
-			m_pWOverlapped->eventDestroy = 1;
+			m_pWriteOverlapped->eventDestroy = 1;
 
 			//在iocp的回调中通过eventDestroy的判定来释放;
 			if (!m_isPostWrite)
-			{
-				delete m_pWOverlapped;
-			}
+				delete m_pWriteOverlapped;
+		}
+
+		if (m_pConnectOverlapped)
+		{
+			m_pConnectOverlapped->eventDestroy = 1;
+
+			//在iocp的回调中通过eventDestroy的判定来释放;
+			if (!m_isPostConnect)
+				delete m_pConnectOverlapped;
 		}
 #endif // IOCP_ENABLE
 
@@ -828,12 +835,59 @@ namespace chaos
 	}
 
 
-	int Connecter::WriteBuffer(const char* buf, int size)
+	int Connecter::Connect(sockaddr* sa, int salen)
 	{
-		if (!m_pWBuffer)
+		if (!sa || !m_socket)
 			return -1;
 
-		uint32 written = m_pWBuffer->WriteBuffer(buf, size);
+#ifdef IOCP_ENABLE
+		sockaddr_in ss;
+		memset(&ss, 0, sizeof(ss));
+
+		ss.sin_family = sa->sa_family;
+
+		if (bind(m_socket->GetFd(), (struct sockaddr*) & ss, sizeof(ss)) < 0 &&
+			WSAGetLastError() != WSAEINVAL)
+		{
+			printf("bind failed! err:%d\n", GetLastErrorno());
+			return -1;
+		}
+
+		m_pConnectOverlapped->fd = m_socket->GetFd();
+
+		int ret = IOCP::ConnectEx(m_socket->GetFd(), sa, salen, NULL, 0, NULL, &m_pConnectOverlapped->overlapped);
+		if (ret)
+		{
+			if (GetLastErrorno() != WSA_IO_PENDING)
+			{
+				printf("ConnectEx failed:%d\n", GetLastErrorno());
+				ConnectComplete(&m_pReadOverlapped->overlapped, ret, 0, false);
+				return ret;
+			}
+			else
+				m_isPostConnect = true;
+		}
+
+		return 0;
+#else
+		int ret = m_socket->Connect(sa, salen);
+
+		getpeername(m_socket->GetFd(), &m_peeraddr.sa, &m_peeraddrlen);
+
+		CallbackConnect(ret == 0 ? true : false);
+
+		return ret;
+#endif // !IOCP_ENABLE
+
+	}
+
+
+	int Connecter::WriteBuffer(const char* buf, int size)
+	{
+		if (!m_pWriteBuffer)
+			return -1;
+
+		uint32 written = m_pWriteBuffer->WriteBuffer(buf, size);
 
 		if (0 >= written)
 			return -1;
@@ -869,30 +923,32 @@ namespace chaos
 
 	int Connecter::ReadBuffer(char* buf, int size)
 	{
-		if (!m_pRBuffer)
+		if (!m_pReadBuffer)
 			return 0;
 
-		int readed = m_pRBuffer->ReadBuffer(buf, size);
+		int readed = m_pReadBuffer->ReadBuffer(buf, size);
 
 		return readed;
 	}
 
 
-	void Connecter::SetCallback(const NetCallback& readcb, void* readCbArg, const NetCallback& writecb, void* writeCbArg)
+	void Connecter::SetCallback(const NetCallback& readcb, const NetCallback& writecb, const NetCallback& connectcb, void* userdata)
 	{
 		//只在第一次有效的设置回调时投递异步事件
 #ifdef IOCP_ENABLE
-		if (!m_readcb && readcb)
+		//这里判断peeraddr是因为:在Connecter未连接时(调用Connect成功之前)调用该函数,
+		//会导致投递异步事件发生错误而删除该事件
+		if (!m_readcb && readcb && !m_isPostRecv && m_peeraddr.sa.sa_family != AF_UNSPEC)
 			AsynRead();
 
-		if (!m_writecb && writecb)
+		if (!m_writecb && writecb && !m_isPostWrite && m_peeraddr.sa.sa_family != AF_UNSPEC)
 			AsynWrite();
 #endif // IOCP_ENABLE
 
 		m_readcb = readcb;
-		m_readCbArg = readCbArg;
 		m_writecb = writecb;
-		m_writeCbArg = writeCbArg;
+		m_connectcb = connectcb;
+		m_userdata = userdata;
 	}
 
 
@@ -908,8 +964,15 @@ namespace chaos
 			valid |= EV_IOEXCEPT;
 
 		UpdateEvent(EV_CTL_ADD, valid);
-	}
 
+#ifdef IOCP_ENABLE
+		if (GetEv() & EV_IOREAD && !m_isPostRecv && m_peeraddr.sa.sa_family != AF_UNSPEC)
+			AsynRead();
+
+		if (GetEv() & EV_IOWRITE && !m_isPostWrite && m_peeraddr.sa.sa_family != AF_UNSPEC)
+			AsynWrite();
+#endif // IOCP_ENABLE
+	}
 
 	void Connecter::DisableEvent(short ev)
 	{
@@ -928,7 +991,7 @@ namespace chaos
 
 	int Connecter::HandleRead()
 	{
-		if (!m_pRBuffer)
+		if (!m_pReadBuffer)
 			return -1;
 
 		Socket& s = GetSocket();
@@ -940,7 +1003,7 @@ namespace chaos
 		{
 			uint32 size = 0;
 
-			char* buf = m_pRBuffer->GetWriteBuffer(&size);
+			char* buf = m_pReadBuffer->GetWriteBuffer(&size);
 			if (!buf)
 				break;
 
@@ -952,7 +1015,7 @@ namespace chaos
 				break;
 			}
 
-			m_pRBuffer->MoveWriteBufferPos(read);
+			m_pReadBuffer->MoveWriteBufferPos(read);
 
 			unread -= read;
 			transferBytes += read;
@@ -969,18 +1032,18 @@ namespace chaos
 
 	int Connecter::HandleWrite()
 	{
-		if (!m_pWBuffer)
+		if (!m_pWriteBuffer)
 			return -1;
 
 		Socket& s = GetSocket();
 
-		uint32 size = m_pWBuffer->GetReadSize();
+		uint32 size = m_pWriteBuffer->GetReadSize();
 		int tranferBytes = 0;
 
 		while (0 > size)
 		{
 			uint32 hasbytes = 0;
-			char* buf = m_pWBuffer->ReadBuffer(&hasbytes);
+			char* buf = m_pWriteBuffer->ReadBuffer(&hasbytes);
 			if (!buf)
 				break;
 			
@@ -1025,7 +1088,7 @@ namespace chaos
 
 	int Connecter::AsynRead()
 	{
-		if (!m_pROverlapped || !m_pRBuffer)
+		if (!m_pReadOverlapped || !m_pReadBuffer)
 		{
 			CallErr(-1);
 			return -1;
@@ -1034,21 +1097,24 @@ namespace chaos
 		Socket& s = GetSocket();
 
 		uint32 size = 0;
-		m_pROverlapped->databufs[0].buf = m_pRBuffer->GetWriteBuffer(&size);
-		m_pROverlapped->databufs[0].len = size;
+		m_pReadOverlapped->databufs[0].buf = m_pReadBuffer->GetWriteBuffer(&size);
+		m_pReadOverlapped->databufs[0].len = size;
 
-		m_pROverlapped->fd = s.GetFd();
+		m_pReadOverlapped->fd = s.GetFd();
 
 		DWORD bytesRead = 0;
 		DWORD flags = 0;
 
-		int ret = WSARecv(m_pROverlapped->fd, &m_pROverlapped->databufs[0], 1, &bytesRead, &flags, &m_pROverlapped->overlapped, NULL);
+		if (!(GetEv() & EV_IOREAD))
+			return -1;
+
+		int ret = WSARecv(m_pReadOverlapped->fd, &m_pReadOverlapped->databufs[0], 1, &bytesRead, &flags, &m_pReadOverlapped->overlapped, NULL);
 		if (ret)
 		{
 			if (GetLastErrorno() != WSA_IO_PENDING)
 			{
 				printf("WSARecv failed:%d\n", GetLastErrorno());
-				ReadComplete(&m_pROverlapped->overlapped, ret, 0, false);
+				ReadComplete(&m_pReadOverlapped->overlapped, ret, 0, false);
 				return ret;
 			}
 			else
@@ -1057,7 +1123,7 @@ namespace chaos
 		//立即返回也会触发 GetQueuedCompletionStatus 所以这里不需要手动调用callback;
 		//else
 		//{
-		//	ReadComplete(&m_pROverlapped->overlapped, bytesRead, 0, true);
+		//	ReadComplete(&m_pReadOverlapped->overlapped, bytesRead, 0, true);
 		//}
 
 		return 0;
@@ -1066,22 +1132,22 @@ namespace chaos
 
 	int Connecter::AsynWrite()
 	{
-		if (!m_pWOverlapped || !m_pWBuffer)
+		if (!m_pWriteOverlapped || !m_pWriteBuffer)
 		{
 			CallErr(-1);
 			return -1;
 		}
 
 	
-		uint32 readySize = m_pWBuffer->GetReadSize();
+		uint32 readySize = m_pWriteBuffer->GetReadSize();
 
 		while (0 < readySize)
 		{
 			uint32 readSize = readySize;
-			m_pWOverlapped->databufs[0].buf = m_pWBuffer->ReadBuffer(&readSize);
-			m_pWOverlapped->databufs[0].len = readSize;
+			m_pWriteOverlapped->databufs[0].buf = m_pWriteBuffer->ReadBuffer(&readSize);
+			m_pWriteOverlapped->databufs[0].len = readSize;
 
-			if (!m_pWOverlapped->databufs[0].buf || 0 == readSize)
+			if (!m_pWriteOverlapped->databufs[0].buf || 0 == readSize)
 			{	
 				printf("error read buffer!\n");
 				break;
@@ -1090,13 +1156,16 @@ namespace chaos
 			DWORD sendBytes = 0;
 			DWORD flags = 0;
 
-			int ret = WSASend(GetSocket().GetFd(), &m_pWOverlapped->databufs[0], 1, &sendBytes, flags, &m_pWOverlapped->overlapped, NULL);
+			if (!(GetEv() & EV_IOWRITE))
+				return -1;
+
+			int ret = WSASend(GetSocket().GetFd(), &m_pWriteOverlapped->databufs[0], 1, &sendBytes, flags, &m_pWriteOverlapped->overlapped, NULL);
 			if (ret)
 			{
 				if (GetLastErrorno() != WSA_IO_PENDING)
 				{
 					printf("WSASend failed:%d\n", GetLastErrorno());
-					WriteComplete(&m_pWOverlapped->overlapped, ret, 0, false);
+					WriteComplete(&m_pWriteOverlapped->overlapped, ret, 0, false);
 					return  GetLastErrorno();
 				}
 				else
@@ -1107,7 +1176,7 @@ namespace chaos
 			//立即返回也会触发 GetQueuedCompletionStatus 所以这里不需要手动调用callback;
 			//else
 			//{
-			//	WriteComplete(&m_pWOverlapped->overlapped, sendBytes, 0, true);
+			//	WriteComplete(&m_pWriteOverlapped->overlapped, sendBytes, 0, true);
 			//}
 		}
 
@@ -1115,9 +1184,9 @@ namespace chaos
 	}
 
 
-	void Connecter::ReadComplete(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool ok)
+	void Connecter::ReadComplete(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool bOk)
 	{
-		if (!ok)
+		if (!bOk)
 		{
 			CallErr(-1);
 			return;
@@ -1140,7 +1209,7 @@ namespace chaos
 		m_isPostRecv = false;
 
 		//收完数据后调整buffer下次写入的位置
-		m_pRBuffer->MoveWriteBufferPos(bytes);
+		m_pReadBuffer->MoveWriteBufferPos(bytes);
 
 		EventCentre* pCentre = GetCentre();
 		if (!pCentre)
@@ -1154,7 +1223,7 @@ namespace chaos
 	}
 
 
-	void Connecter::WriteComplete(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool ok)
+	void Connecter::WriteComplete(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool bOk)
 	{
 		LPCOMPLETION_OVERLAPPED lo = (LPCOMPLETION_OVERLAPPED)o;
 		if (!lo)
@@ -1173,6 +1242,39 @@ namespace chaos
 		m_isPostWrite = false;
 
 		CallbackWrite(bytes);
+	}
+
+
+	void Connecter::ConnectComplete(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool bOk)
+	{
+		LPCOMPLETION_OVERLAPPED lo = (LPCOMPLETION_OVERLAPPED)o;
+		if (!lo)
+		{
+			printf("connect overlapped is null\n");
+			CallErr(-1);
+			return;
+		}
+
+		if (lo->eventDestroy)
+		{
+			delete lo;
+			return;
+		}
+
+		m_isPostConnect = false;
+
+		setsockopt(lo->fd, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0);
+		getpeername(lo->fd, &m_peeraddr.sa, &m_peeraddrlen);
+
+		//在调用Connect之前设置了回调 将在此生效
+		if (m_readcb && !m_isPostRecv && GetEv() & EV_IOREAD && m_peeraddr.sa.sa_family != AF_UNSPEC)
+			AsynRead();
+
+		if (m_writecb && !m_isPostWrite && GetEv() & EV_IOWRITE && m_peeraddr.sa.sa_family != AF_UNSPEC)
+			AsynWrite();
+
+		CallbackConnect(bOk);
+
 	}
 
 #endif // IOCP_ENABLE

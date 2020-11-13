@@ -11,14 +11,8 @@
 
 #pragma once
 
-//#ifdef _WIN32
-//#include <time.h>
-//#include <Windows.h>
-//#else
-//#include <sys/time.h>
-//#endif // _WIN32
-
 #include <string>
+#include <string.h>
 
 
 inline void strncpy_safe(char* des, const unsigned int desSize, const char* src, const unsigned int srcSize)

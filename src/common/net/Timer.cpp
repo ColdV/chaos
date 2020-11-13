@@ -71,7 +71,6 @@ namespace chaos
 			if (!pCentre)
 				continue;
 
-			//pCentre->PushActiveEv(pEvent, EV_TIMEOUT);
 			activeEvents.push_back(pEvent);
 
 			//循环定时任务
@@ -126,6 +125,23 @@ namespace chaos
 		--s_curTimers;
 
 		return 0;
+	}
+
+
+	int Timer::GetNextTimeout()
+	{
+		while (!m_timers.Empty())
+		{
+			TimerEvent* pEvent = m_timers.Front();
+			if (!pEvent)
+				continue;
+
+			int timeout = pEvent->GetNextTime() - time(NULL);
+
+			return timeout > 0 ? timeout : 0;
+		}
+
+		return -1;
 	}
 
 

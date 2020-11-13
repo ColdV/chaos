@@ -21,7 +21,7 @@ namespace chaos
 
 	const int NOTIFY_SHUTDOWN_KEY = -1;
 
-	typedef std::function<void(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool ok)> IOCP_CALLBACK;
+	typedef std::function<void(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool bOk)> IOCP_CALLBACK;
 
 #define MAX_WSABUFS 8
 
@@ -70,7 +70,8 @@ namespace chaos
 		static BOOL AcceptEx(SOCKET sListenSocket, SOCKET sAcceptSocket, PVOID lpOutputBuffer, DWORD dwReceiveDataLength, 
 			DWORD dwLocalAddressLength, DWORD dwRemoteAddressLength, LPDWORD lpdwBytesReceived, LPOVERLAPPED lpOverlapped);
 
-		//static BOOL ConnectEx(const LPCOMPLETION_OVERLAPPED pOverlapped);
+		static BOOL ConnectEx(SOCKET s, const struct sockaddr* name, int namelen, PVOID lpSendBuffer, DWORD dwSendDataLength, 
+			LPDWORD lpdwBytesSent, LPOVERLAPPED lpOverlapped);
 
 		static void GetAcceptExSockeaddrs(PVOID lpOutputBuffer, DWORD dwReceiveDataLength, DWORD dwLocalAddressLength, 
 			DWORD dwRemoteAddressLength, LPSOCKADDR* LocalSockaddr, LPINT LocalSockaddrLength, LPSOCKADDR * RemoteSockaddr, LPINT RemoteSockaddrLength);
@@ -109,7 +110,7 @@ namespace chaos
 
 		static AcceptExPtr	s_acceptEx;
 
-		//static ConnectExPtr s_connectEx;
+		static ConnectExPtr s_connectEx;
 
 		static GetAcceptExSockaddrsPtr s_getAcceptExSockaddrs;
 	};
