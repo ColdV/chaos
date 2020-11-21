@@ -119,7 +119,7 @@ namespace chaos
 
 		while (m_running)
 		{
-			//Ã»ÓĞÈÎºÎÊÂ¼şµÄÊ±ºò²»×öºóĞø´¦Àí(Ö±½ÓÍË³ö»¹ÊÇcontinue?)
+			//æ²¡æœ‰ä»»ä½•äº‹ä»¶çš„æ—¶å€™ä¸åšåç»­å¤„ç†(ç›´æ¥é€€å‡ºè¿˜æ˜¯continue?)
 			/*if (0 >= m_evcount)
 				continue;*/
 
@@ -174,8 +174,8 @@ namespace chaos
 			if (!pev)
 				continue;
 
-			//EV_CANCELÊ±GetCentreÒÑÎªNULL
-			//ÓÅÏÈ´¦ÀíCentre,Õâ¸öÅĞ¶Ï±ØĞëÔÚGetCentreÖ®Ç°
+			//EV_CANCELæ—¶GetCentreå·²ä¸ºNULL
+			//ä¼˜å…ˆå¤„ç†Centre,è¿™ä¸ªåˆ¤æ–­å¿…é¡»åœ¨GetCentreä¹‹å‰
 			if (pev->GetCurEv() & EV_CANCEL)
 			{
 				pev->Callback();
@@ -190,7 +190,7 @@ namespace chaos
 
 			pev->Callback();
 
-			//Çå³ı´Ë´ÎÒÑ´¦ÀíµÄÊÂ¼ş
+			//æ¸…é™¤æ­¤æ¬¡å·²å¤„ç†çš„äº‹ä»¶
 			pev->PopCurEv();
 		}
 
@@ -378,8 +378,8 @@ namespace chaos
 			if(!(m_acceptBuffers[i] = new char[INIT_ACCEPTADDRBUF_SIZE]))
 				return;
 
-			//acceptexÖ»Ê¹ÓÃÒ»¸öÊı¾İ¿é ÓÃÓÚ´æ·ÅÁ¬½ÓºóµÄµØÖ·ĞÅÏ¢
-			//Ö®ºó¿ÉÍ¨¹ıGetAcceptExSockaddrs»ñµÃ±¾µØ»òÔ¶³ÌµÄµØÖ·
+			//acceptexåªä½¿ç”¨ä¸€ä¸ªæ•°æ®å— ç”¨äºå­˜æ”¾è¿æ¥åçš„åœ°å€ä¿¡æ¯
+			//ä¹‹åå¯é€šè¿‡GetAcceptExSockaddrsè·å¾—æœ¬åœ°æˆ–è¿œç¨‹çš„åœ°å€
 			//uint32 n = 0;
 			m_acceptOls[i].overlapped.databufs[0].buf = m_acceptBuffers[i];// .GetWriteBuffer(&n);
 			m_acceptOls[i].overlapped.databufs[0].len = INIT_ACCEPTADDRBUF_SIZE;
@@ -400,7 +400,7 @@ namespace chaos
 	Listener::~Listener()
 	{
 #ifdef IOCP_ENABLE
-		//¹Ø±Õ»¹Î´Á¬½ÓµÄsocket
+		//å…³é—­è¿˜æœªè¿æ¥çš„socket
 		std::unordered_set<LPACCEPT_OVERLAPPED> oset;
 		while (!m_acceptedq.empty())
 		{
@@ -417,9 +417,9 @@ namespace chaos
 			}
 		}
 
-		//Ã¿Ò»¸öaccept OVERLAPPED¶¼ºÍÒ»¸öÒÑ´´½¨´ıÁ¬½ÓµÄsocket°ó¶¨
-		//ÔÚlinsten socket»òÕßÒÑ´´½¨´ıÁ¬½ÓµÄsocket±»closeÊ±,¶¼»á´¥·¢iocp²¢·µ»Ø995(WSA_OPERATION_ABORTED)´íÎó
-		//ËùÒÔ¶ÔÓ¦µÄaccept overlappedÔÚiocpµÄ»Øµ÷ÖĞÏú»Ù,·ñÔòÔÚiocpµÄ»Øµ÷ÖĞ»á·ÃÎÊÒÑÉ¾³ıµÄoverlapped
+		//æ¯ä¸€ä¸ªaccept OVERLAPPEDéƒ½å’Œä¸€ä¸ªå·²åˆ›å»ºå¾…è¿æ¥çš„socketç»‘å®š
+		//åœ¨linsten socketæˆ–è€…å·²åˆ›å»ºå¾…è¿æ¥çš„socketè¢«closeæ—¶,éƒ½ä¼šè§¦å‘iocpå¹¶è¿”å›995(WSA_OPERATION_ABORTED)é”™è¯¯
+		//æ‰€ä»¥å¯¹åº”çš„accept overlappedåœ¨iocpçš„å›è°ƒä¸­é”€æ¯,å¦åˆ™åœ¨iocpçš„å›è°ƒä¸­ä¼šè®¿é—®å·²åˆ é™¤çš„overlapped
 		if (m_acceptOls && 0 == m_overlappedsRefCnt)
 		{
 			delete[] m_acceptOls;
@@ -430,8 +430,8 @@ namespace chaos
 			delete[] m_acceptBuffers;
 #endif // IOCP_ENABLE
 
-		//delete socket±ØĞë·ÅÔÚ×îºó.
-		//close socketµ¼ÖÂ´¥·¢iocpÊ±,ĞëÏÈÈÃÉÏÃæµÄIOCP_ENABLE´úÂëÖĞÉèÖÃeventDestroy
+		//delete socketå¿…é¡»æ”¾åœ¨æœ€å.
+		//close socketå¯¼è‡´è§¦å‘iocpæ—¶,é¡»å…ˆè®©ä¸Šé¢çš„IOCP_ENABLEä»£ç ä¸­è®¾ç½®eventDestroy
 		if (m_socket)
 			delete m_socket;
 	}
@@ -478,7 +478,7 @@ namespace chaos
 
 		int ret = 0;
 
-		//ÉèÖÃsocketÎª·Ç×èÈû
+		//è®¾ç½®socketä¸ºéé˜»å¡
 		if (0 > (ret = s.SetNonBlock()))
 			return ret;
 
@@ -519,7 +519,7 @@ namespace chaos
 			if (!lo)
 				return;
 
-			//Í¶µİĞÂµÄacceptÊÂ¼ş
+			//æŠ•é€’æ–°çš„acceptäº‹ä»¶
 			AsynAccept(lo);
 #else
 			Socket& s = GetSocket();
@@ -527,7 +527,7 @@ namespace chaos
 			{
 				socket_t acceptedfd = s.Accept();
 #ifdef _WIN32
-				//winµÄselectµ÷ÓÃ
+				//winçš„selectè°ƒç”¨
 				if (INVALID_SOCKET == acceptedfd)
 					break;
 #else
@@ -670,7 +670,7 @@ namespace chaos
 			if (0 == (*lo->refcnt))
 			{
 				delete lo->refcnt;
-				delete[](lo - lo->inListenerPos);		//deleteÖ»ÄÜ´ÓÉêÇëÄÚ´æµÄÆğÊ¼Î»ÖÃ¿ªÊ¼
+				delete[](lo - lo->inListenerPos);		//deleteåªèƒ½ä»ç”³è¯·å†…å­˜çš„èµ·å§‹ä½ç½®å¼€å§‹
 			}
 
 			return;
@@ -688,7 +688,7 @@ namespace chaos
 
 		//Socket& s = GetSocket();
 
-		socket_t acceptedfd = lo->acceptfd;		//ÒÑ¾­Á¬½Ó³É¹¦µÄfd
+		socket_t acceptedfd = lo->acceptfd;		//å·²ç»è¿æ¥æˆåŠŸçš„fd
 		socket_t listenfd = GetSocket().GetFd();
 
 		if (0 != setsockopt(lo->acceptfd, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT,
@@ -698,7 +698,7 @@ namespace chaos
 			return;
 		}
 
-		//×¼±¸Í¶µİÏÂÒ»´ÎAcceptEx
+		//å‡†å¤‡æŠ•é€’ä¸‹ä¸€æ¬¡AcceptEx
 		m_acceptedq.push(lo);
 		//pCentre->PushActiveEv(this, EV_IOREAD);
 		pCentre->PushEvent(this, EV_IOREAD);
@@ -782,7 +782,7 @@ namespace chaos
 		{
 			m_pReadOverlapped->eventDestroy = 1;
 
-			//ÔÚiocpµÄ»Øµ÷ÖĞÍ¨¹ıeventDestroyµÄÅĞ¶¨À´ÊÍ·Å;
+			//åœ¨iocpçš„å›è°ƒä¸­é€šè¿‡eventDestroyçš„åˆ¤å®šæ¥é‡Šæ”¾;
 			if (!m_isPostRecv)
 				delete m_pReadOverlapped;
 		}
@@ -791,7 +791,7 @@ namespace chaos
 		{
 			m_pWriteOverlapped->eventDestroy = 1;
 
-			//ÔÚiocpµÄ»Øµ÷ÖĞÍ¨¹ıeventDestroyµÄÅĞ¶¨À´ÊÍ·Å;
+			//åœ¨iocpçš„å›è°ƒä¸­é€šè¿‡eventDestroyçš„åˆ¤å®šæ¥é‡Šæ”¾;
 			if (!m_isPostWrite)
 				delete m_pWriteOverlapped;
 		}
@@ -800,7 +800,7 @@ namespace chaos
 		{
 			m_pConnectOverlapped->eventDestroy = 1;
 
-			//ÔÚiocpµÄ»Øµ÷ÖĞÍ¨¹ıeventDestroyµÄÅĞ¶¨À´ÊÍ·Å;
+			//åœ¨iocpçš„å›è°ƒä¸­é€šè¿‡eventDestroyçš„åˆ¤å®šæ¥é‡Šæ”¾;
 			if (!m_isPostConnect)
 				delete m_pConnectOverlapped;
 		}
@@ -934,10 +934,10 @@ namespace chaos
 
 	void Connecter::SetCallback(const NetCallback& readcb, const NetCallback& writecb, const NetCallback& connectcb, void* userdata)
 	{
-		//Ö»ÔÚµÚÒ»´ÎÓĞĞ§µÄÉèÖÃ»Øµ÷Ê±Í¶µİÒì²½ÊÂ¼ş
+		//åªåœ¨ç¬¬ä¸€æ¬¡æœ‰æ•ˆçš„è®¾ç½®å›è°ƒæ—¶æŠ•é€’å¼‚æ­¥äº‹ä»¶
 #ifdef IOCP_ENABLE
-		//ÕâÀïÅĞ¶ÏpeeraddrÊÇÒòÎª:ÔÚConnecterÎ´Á¬½ÓÊ±(µ÷ÓÃConnect³É¹¦Ö®Ç°)µ÷ÓÃ¸Ãº¯Êı,
-		//»áµ¼ÖÂÍ¶µİÒì²½ÊÂ¼ş·¢Éú´íÎó¶øÉ¾³ı¸ÃÊÂ¼ş
+		//è¿™é‡Œåˆ¤æ–­peeraddræ˜¯å› ä¸º:åœ¨Connecteræœªè¿æ¥æ—¶(è°ƒç”¨ConnectæˆåŠŸä¹‹å‰)è°ƒç”¨è¯¥å‡½æ•°,
+		//ä¼šå¯¼è‡´æŠ•é€’å¼‚æ­¥äº‹ä»¶å‘ç”Ÿé”™è¯¯è€Œåˆ é™¤è¯¥äº‹ä»¶
 		if (!m_readcb && readcb && !m_isPostRecv && m_peeraddr.sa.sa_family != AF_UNSPEC)
 			AsynRead();
 
@@ -1120,7 +1120,7 @@ namespace chaos
 			else
 				m_isPostRecv = true;
 		}
-		//Á¢¼´·µ»ØÒ²»á´¥·¢ GetQueuedCompletionStatus ËùÒÔÕâÀï²»ĞèÒªÊÖ¶¯µ÷ÓÃcallback;
+		//ç«‹å³è¿”å›ä¹Ÿä¼šè§¦å‘ GetQueuedCompletionStatus æ‰€ä»¥è¿™é‡Œä¸éœ€è¦æ‰‹åŠ¨è°ƒç”¨callback;
 		//else
 		//{
 		//	ReadComplete(&m_pReadOverlapped->overlapped, bytesRead, 0, true);
@@ -1173,7 +1173,7 @@ namespace chaos
 					m_isPostWrite = true;
 				}
 			}
-			//Á¢¼´·µ»ØÒ²»á´¥·¢ GetQueuedCompletionStatus ËùÒÔÕâÀï²»ĞèÒªÊÖ¶¯µ÷ÓÃcallback;
+			//ç«‹å³è¿”å›ä¹Ÿä¼šè§¦å‘ GetQueuedCompletionStatus æ‰€ä»¥è¿™é‡Œä¸éœ€è¦æ‰‹åŠ¨è°ƒç”¨callback;
 			//else
 			//{
 			//	WriteComplete(&m_pWriteOverlapped->overlapped, sendBytes, 0, true);
@@ -1186,12 +1186,6 @@ namespace chaos
 
 	void Connecter::ReadComplete(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool bOk)
 	{
-		if (!bOk)
-		{
-			CallErr(-1);
-			return;
-		}
-
 		LPCOMPLETION_OVERLAPPED lo = (LPCOMPLETION_OVERLAPPED)o;
 		if (!lo)
 		{
@@ -1206,16 +1200,22 @@ namespace chaos
 			return;
 		}
 
+		if (!bOk)
+		{
+			CallErr(-1);
+			return;
+		}
+
 		m_isPostRecv = false;
 
-		//ÊÕÍêÊı¾İºóµ÷ÕûbufferÏÂ´ÎĞ´ÈëµÄÎ»ÖÃ
+		//æ”¶å®Œæ•°æ®åè°ƒæ•´bufferä¸‹æ¬¡å†™å…¥çš„ä½ç½®
 		m_pReadBuffer->MoveWriteBufferPos(bytes);
 
 		EventCentre* pCentre = GetCentre();
 		if (!pCentre)
 			return;
 
-		//×¼±¸Í¶µİÏÂÒ»´ÎWSARecv
+		//å‡†å¤‡æŠ•é€’ä¸‹ä¸€æ¬¡WSARecv
 		if(0 < bytes)
 			pCentre->PushEvent(this, EV_IOREAD);
 
@@ -1266,7 +1266,7 @@ namespace chaos
 		setsockopt(lo->fd, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0);
 		getpeername(lo->fd, &m_peeraddr.sa, &m_peeraddrlen);
 
-		//ÔÚµ÷ÓÃConnectÖ®Ç°ÉèÖÃÁË»Øµ÷ ½«ÔÚ´ËÉúĞ§
+		//åœ¨è°ƒç”¨Connectä¹‹å‰è®¾ç½®äº†å›è°ƒ å°†åœ¨æ­¤ç”Ÿæ•ˆ
 		if (m_readcb && !m_isPostRecv && GetEv() & EV_IOREAD && m_peeraddr.sa.sa_family != AF_UNSPEC)
 			AsynRead();
 

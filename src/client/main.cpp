@@ -16,10 +16,13 @@
 #include "log/Logger.h"
 #include <memory>
 
-#define MAX_CLIENT	10000
-#define IP	"192.168.0.101"
-#define PORT	3307
+#define MAX_CLIENT	1000
+#define IP	"127.0.0.1"
+#define PORT	3308
 
+int maxClient = 10000;
+
+static const char MESSAGE[] = "Hello, World!";
 
 class Client
 {
@@ -69,10 +72,13 @@ void Client::ConnectCb(chaos::Connecter* pConnecter, int bOk, void* userdata)
 
 	printf("connect sucess::%d, cnt:%d\n", pConnecter->GetSocket().GetFd(), cnt);
 
-	if (MAX_CLIENT == cnt)
+	if (maxClient == cnt)
 	{
 		printf("accept cost time:%d\n", time(NULL) - timenow);
 	}
+
+	int sendSize = pConnecter->Send(MESSAGE, strlen(MESSAGE));
+	LOG_DEBUG("send size:%d\n", sendSize);
 }
 
 
@@ -94,9 +100,18 @@ void Client::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 	memset(buf, 0, readable);
 
 	ev->ReadBuffer(buf, readable);
-	int sendSize = ev->Send(buf, readable);
 
-	LOG_DEBUG("read socket recv data:%s, send size:%d\n", buf, sendSize);
+	static int cnt = 0;
+	static int timenow = 0;
+	if (0 == cnt)
+		timenow = time(NULL);
+	++cnt;
+	if (maxClient == cnt)
+	{
+		printf("read cost time:%d\n", time(NULL) - timenow);
+	}
+
+	printf("read socket recv data:%s\n", buf);
 	delete[] buf;
 }
 
@@ -108,8 +123,21 @@ void Client::WriteCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 
 
 
-int main()
+int main(int argc, char** argv)
 {
+	char ip[16] = { 0 };
+	strcpy(ip, IP);
+	int port = PORT;
+
+	if (argc > 1 && argv[1])
+		strcpy(ip, argv[1]);
+
+	if (argc > 2 && argv[2])
+		port = atoi(argv[2]);
+
+	if (argc > 3 && argv[3])
+		maxClient = atoi(argv[3]);
+
 	Logger& log = Logger::Instance();
 	log.Init("../log", "client", 0);
 
@@ -121,11 +149,11 @@ int main()
 		return 0;
 	}
 
-	Client* clients = new Client[MAX_CLIENT];
+	Client* clients = new Client[maxClient];
 	if (!clients)
 		return 0;
 
-	for (int i = 0; i < MAX_CLIENT; ++i)
+	for (int i = 0; i < maxClient; ++i)
 	{
 		auto pConnect = clients[i].GetConnecter();
 		if (!pConnect)
@@ -143,8 +171,8 @@ int main()
 		memset(&sa, 0, sizeof(sa));
 
 		sa.sin_family = AF_INET;
-		sa.sin_port = htons(PORT);
-		inet_pton(AF_INET, IP, (void*)&sa.sin_addr);
+		sa.sin_port = htons(port);
+		inet_pton(AF_INET, ip, (void*)&sa.sin_addr);
 
 		int ret = pConnect->Connect((sockaddr*)&sa, sizeof(sa));
 		if (0 != ret)
@@ -155,6 +183,9 @@ int main()
 	}
 
 	p->EventLoop();
+
+	delete p;
+	delete[] clients;
 
 	return 0;
 }
