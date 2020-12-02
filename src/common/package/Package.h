@@ -9,17 +9,17 @@ public:
 	Package() {}
 	virtual ~Package() {}
 
-	//打包(头两个自己表示包大小)
-	//@param return 返回装包后的大小 
-	//如果返回值大于pkgSize，说明传入的pkg空间不足
-	//0表示装包失败
+	//鎵撳寘(澶翠袱涓嚜宸辫〃绀哄寘澶у皬)
+	//@param return 杩斿洖瑁呭寘鍚庣殑澶у皬 
+	//濡傛灉杩斿洖鍊煎ぇ浜巔kgSize锛岃鏄庝紶鍏ョ殑pkg绌洪棿涓嶈冻
+	//0琛ㄧず瑁呭寘澶辫触
 	uint32 Pack(const char* msg, uint32 msgSize, char* pkg, uint32 pkgSize);
 
-	//解包
-	//@param return 返回已解包的大小 
-	//如果返回值大于pkgSize，说明传入的pkg空间不足
-	//如果返回值小于msgSize，装包成功并且剩下的数据是下一个包
-	//0表示解包失败
+	//瑙ｅ寘
+	//@param return 杩斿洖宸茶В鍖呯殑澶у皬 
+	//濡傛灉杩斿洖鍊煎ぇ浜巔kgSize锛岃鏄庝紶鍏ョ殑pkg绌洪棿涓嶈冻
+	//濡傛灉杩斿洖鍊煎皬浜巑sgSize锛岃鍖呮垚鍔熷苟涓斿墿涓嬬殑鏁版嵁鏄笅涓�涓寘
+	//0琛ㄧず瑙ｅ寘澶辫触
 	uint32 Unpack(const char* msg, uint32 msgSize, char* pkg, uint32 pkgSize);
 };
 

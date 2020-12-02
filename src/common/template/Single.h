@@ -49,4 +49,4 @@ T* Single<T>::s_instance = new T;
 //};
 //
 //#define KBE_SINGLETON_INIT( TYPE )							\
-//template <typename TYPE>	 TYPE * Singleton< TYPE >::singleton_ = 0;	\
+//template <typename TYPE>	 TYPE * Singleton< TYPE >::singleton_ = 0; 

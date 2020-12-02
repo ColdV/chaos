@@ -2,7 +2,6 @@
 #include "Timer.h"
 #include <stdio.h>
 #include <stdexcept>
-#include "log/Logger.h"
 
 
 namespace chaos
@@ -346,7 +345,7 @@ namespace chaos
 	Listener::Listener(socket_t fd) :
 		Event(EV_IOREAD, (EventKey&)fd),
 		m_socket(new Socket(fd)),
-		m_cb(0),
+		m_cb(NULL),
 		m_userdata(0)
 #ifdef IOCP_ENABLE
 		, m_acceptOls(0)
@@ -437,7 +436,8 @@ namespace chaos
 	}
 
 
-	Listener* Listener::CreateListener(int af, int socktype, int protocol, unsigned short port, const char* ip /*= 0*/)
+	Listener* Listener::CreateListener(int af, int socktype, int protocol, unsigned short port, 
+		const char* ip /*= NULL*/, ListenerCb cb/* = NULL*/, void* userdata/* = NULL*/)
 	{
 		socket_t fd = socket(af, socktype, protocol);
 		if (-1 == fd)
@@ -453,7 +453,7 @@ namespace chaos
 			return NULL;
 		}
 
-		printf("listen socket:%lld\n", fd);
+		listener->SetListenerCb(cb, userdata);
 
 		sockaddr_in sa;
 		memset(&sa, 0, sizeof(sa));
@@ -465,8 +465,11 @@ namespace chaos
 		if (0 != listener->Listen((sockaddr*)&sa, sizeof(sa)))
 		{
 			printf("listen failed! err:%d\n", GetLastErrorno());
+			delete listener;
 			return NULL;
 		}
+
+		printf("listen socket:%lld\n", fd);
 
 		return listener;
 	}
@@ -477,6 +480,10 @@ namespace chaos
 		Socket& s = GetSocket();
 
 		int ret = 0;
+
+		int on = 1;
+		if (0 > (ret = setsockopt(s.GetFd(), SOL_SOCKET, SO_KEEPALIVE, (char*)&on, sizeof(on))))
+			return ret;
 
 		//设置socket为非阻塞
 		if (0 > (ret = s.SetNonBlock()))
@@ -897,7 +904,7 @@ namespace chaos
 		if (!pCentre)
 			return -1;
 
-		pCentre->PushEvent(this, EV_IOWRITE);
+		EnableEvent(EV_IOWRITE);
 
 		return written;
 	}
@@ -912,7 +919,12 @@ namespace chaos
 		{
 			int writelen = s.Send(buf + written, size - written);
 			if (0 >= writelen)
-				break;
+			{
+				if (SOCKET_ERR_NOT_TRY_AGAIN(errno))
+					return -1;
+				else
+					break;
+			}
 
 			written += writelen;
 		}
@@ -1009,7 +1021,7 @@ namespace chaos
 
 			int read = s.Recv(buf, size);
 
-			if (0 >= read && (errno != EINTR || errno != EWOULDBLOCK || errno != EAGAIN))
+			if (0 >= read && SOCKET_ERR_NOT_TRY_AGAIN(errno))
 			{
 				transferBytes = 0;
 				break;
@@ -1040,7 +1052,7 @@ namespace chaos
 		uint32 size = m_pWriteBuffer->GetReadSize();
 		int tranferBytes = 0;
 
-		while (0 > size)
+		while (0 < size)
 		{
 			uint32 hasbytes = 0;
 			char* buf = m_pWriteBuffer->ReadBuffer(&hasbytes);
@@ -1054,16 +1066,24 @@ namespace chaos
 			do
 			{
 				sendSize = s.Send(buf, hasbytes);
+				if (0 >= sendSize)	// && UTIL_ERR_NOT_TRY_AGAIN(errno))
+					break;
+
 				size -= sendSize;
 				tranferBytes += sendSize;
+				hasbytes -= sendSize;
+				m_pWriteBuffer->MoveReadBufferPos(sendSize);
 
-				if (0 >= sendSize && (errno != EINTR || errno != EWOULDBLOCK || errno != EAGAIN))
-					break;
-				
 			} while (hasbytes > 0);
+
+			if (0 >= sendSize)
+				break;
 		}
 
-		DisableEvent(EV_IOWRITE);
+		if (m_pWriteBuffer->GetReadSize() <= 0)
+			DisableEvent(EV_IOWRITE);
+		else
+			EnableEvent(EV_IOWRITE);
 
 		CallbackWrite(tranferBytes);
 
@@ -1285,6 +1305,23 @@ namespace chaos
 
 namespace chaos
 {
+	TimerEvent::TimerEvent(uint32 timeout, bool isLoop/* = false*/) :
+		Event(EV_TIMEOUT, EventKey(Timer::CreateTimerID())),	//EventKey{ Timer::CreateTimerID() }
+		m_timeout(timeout),
+		m_isLoop(isLoop),
+		m_isCancel(false),
+		m_isSuspend(false),
+		m_handleFunc(NULL)
+	{
+		m_nextTime = time(NULL) + m_timeout;
+	}
+
+
+	TimerEvent::~TimerEvent()
+	{
+	}
+
+
 	void TimerEvent::Handle()
 	{
 		if (m_handleFunc)

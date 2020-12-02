@@ -31,7 +31,7 @@ enum
 class Logger : public Single<Logger>
 {
 public:
-	static const int MAX_SIZE = 1024 * 1024 * 500;	//ÈÕÖ¾ÎÄ¼ş×î´ó´óĞ¡(500M)
+	static const int MAX_SIZE = 1024 * 1024 * 500;	//æ—¥å¿—æ–‡ä»¶æœ€å¤§å¤§å°(500M)
 
 	Logger();
 	virtual ~Logger();
@@ -54,19 +54,19 @@ private:
 private:
 	FILE* m_fp;
 
-	int m_curSize;				//ÎÄ¼şÒÑĞ´Èë´óĞ¡
+	int m_curSize;				//æ–‡ä»¶å·²å†™å…¥å¤§å°
 
-	int m_level;				//ÈÕÖ¾µÈ¼¶
+	int m_level;				//æ—¥å¿—ç­‰çº§
 
-	std::string m_filePath;	//ÎÄ¼şÂ·¾¶
+	std::string m_filePath;	//æ–‡ä»¶è·¯å¾„
 
-	std::string m_fileName;		//ÎÄ¼şÃû
+	std::string m_fileName;		//æ–‡ä»¶å
 
-	std::string m_curFilePath;	//µ±Ç°ÎÄ¼şÈ«Ãû
+	std::string m_curFilePath;	//å½“å‰æ–‡ä»¶å…¨å
 
-	int m_fillFileNum;			//ÒÑĞ´ÂúÎÄ¼şÊı
+	int m_fillFileNum;			//å·²å†™æ»¡æ–‡ä»¶æ•°
 
-	char m_fmtTime[64];			//´æ´¢¸ñÊ½»¯ºóµÄµ±Ç°Ê±¼ä
+	char m_fmtTime[64];			//å­˜å‚¨æ ¼å¼åŒ–åçš„å½“å‰æ—¶é—´
 
 	time_t m_lastSecond;
 

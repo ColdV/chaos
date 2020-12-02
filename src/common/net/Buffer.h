@@ -7,21 +7,21 @@
 
 namespace chaos
 {
-	const uint32 BUFFER_INIT_SIZE = 1024;
+	const uint32 BUFFER_INIT_SIZE = 1024 * 4;
 
-	//¸ÃBufferÊÇÒ»¸ö»·×´½á¹¹,Ğ´ÈëÊı¾İÊ±,µ±Ç°¿Õ¼ä²»¹»»á×Ô¶¯À©ÕÅ»·
-	//À©ÕÅµã´Óµ±Ç°µÄĞ´ÈëÓÎ±êÖ¸ÏòµÄ½Úµã¿ªÊ¼,ÔÚ´Ë½Úµãºó²åÈëĞÂ½Úµã
-	//µ«ÊÇ´ÓBufferÖĞ¶Á³öÊı¾İÊ±²¢²»»áËõĞ¡»·,¶øÊÇÒÆ¶¯¶Á³öÓÎ±ê,Ê¹ÓÎ±ê
-	//Ö¸ÏòÏÂÒ»´Î¶ÁÊ±µÄÆğÊ¼Î»ÖÃ
+	//è¯¥Bufferæ˜¯ä¸€ä¸ªç¯çŠ¶ç»“æ„,å†™å…¥æ•°æ®æ—¶,å½“å‰ç©ºé—´ä¸å¤Ÿä¼šè‡ªåŠ¨æ‰©å¼ ç¯
+	//æ‰©å¼ ç‚¹ä»å½“å‰çš„å†™å…¥æ¸¸æ ‡æŒ‡å‘çš„èŠ‚ç‚¹å¼€å§‹,åœ¨æ­¤èŠ‚ç‚¹åæ’å…¥æ–°èŠ‚ç‚¹
+	//ä½†æ˜¯ä»Bufferä¸­è¯»å‡ºæ•°æ®æ—¶å¹¶ä¸ä¼šç¼©å°ç¯,è€Œæ˜¯ç§»åŠ¨è¯»å‡ºæ¸¸æ ‡,ä½¿æ¸¸æ ‡
+	//æŒ‡å‘ä¸‹ä¸€æ¬¡è¯»æ—¶çš„èµ·å§‹ä½ç½®
 	class Buffer
 	{
 	public:
 		struct BufferNode
 		{
-			char* buffer;			//bufferÆğµã
-			char* readCursor;		//µ±Ç°¶Á³öµã
+			char* buffer;			//bufferèµ·ç‚¹
+			char* readCursor;		//å½“å‰è¯»å‡ºç‚¹
 			uint32 totalSize;		
-			uint32 useSize;			//ÒÑĞ´Èë´óĞ¡
+			uint32 useSize;			//å·²å†™å…¥å¤§å°
 		};
 
 		typedef std::list<BufferNode*>	BufferList;
@@ -31,54 +31,73 @@ namespace chaos
 		Buffer();
 		virtual ~Buffer();
 
-		//Ô¤·ÖÅäsize¸ö×Ö½Ú¿Õ¼ä
+		//é¢„åˆ†é…sizeä¸ªå­—èŠ‚ç©ºé—´
 		bool Reserver(uint32 size);
 
-		//¶Á³öm_bufferListÖĞµÄÊı¾İ Ğ´Èëµ½²ÎÊıbufferÖĞ
-		//@param size:´ı¶ÁÈ¡µÄ×Ö½ÚÊı
-		//@return:ÒÑ¶ÁÈ¡µÄ×Ö½ÚÊı
+		//è¯»å‡ºm_bufferListä¸­çš„æ•°æ® å†™å…¥åˆ°å‚æ•°bufferä¸­
+		//@param size:å¾…è¯»å–çš„å­—èŠ‚æ•°
+		//@return:å·²è¯»å–çš„å­—èŠ‚æ•°
 		uint32 ReadBuffer(char* buffer, uint32 size);
 
-		//¶Á³öµ±Ç°buffer½ÚµãµÄÊı¾İ
-		//@param in/out size:´ı¶ÁÈ¡/ÒÑ¶ÁÈ¡ ×Ö½ÚÊı
-		//@return µ±Ç°½ÚµãÊı¾İµØÖ·
+		//è¯»å‡ºå½“å‰bufferèŠ‚ç‚¹çš„æ•°æ®
+		//@param in/out size:å¾…è¯»å–/å·²è¯»å– å­—èŠ‚æ•°
+		//@return å½“å‰èŠ‚ç‚¹æ•°æ®åœ°å€
 		char* ReadBuffer(uint32* size);
 
-		//»ñÈ¡µ±Ç°¿É¶ÁÊı¾İ´óĞ¡
+		//ç§»åŠ¨å¯è¯»ç¼“å†²åŒº
+		//å°†å¯è¯»ç¼“å†²åŒºæµ®æ ‡ä»å½“å‰ä½ç½®ç§»åŠ¨sizeä¸ªä½ç½®(åªé’ˆå¯¹å•ä¸ªbufferèŠ‚ç‚¹)
+		void MoveReadBufferPos(uint32 size);
+
+		//è·å–å½“å‰å¯è¯»æ•°æ®å¤§å°
 		uint32 GetReadSize();
 
-		//½«bufferÊı¾İĞ´Èëµ½m_bufferListÖĞ
-		//@param size:´ıĞ´ÈëµÄ×Ö½ÚÊı
-		//return:ÒÑĞ´ÈëµÄ×Ö½ÚÊı
+		//å°†bufferæ•°æ®å†™å…¥åˆ°m_bufferListä¸­
+		//@param size:å¾…å†™å…¥çš„å­—èŠ‚æ•°
+		//return:å·²å†™å…¥çš„å­—èŠ‚æ•°
 		uint32 WriteBuffer(const char* buffer, uint32 size);
 
-		//¿ÉĞ´»º³åÇø
-		//@param size:´«³ö¿ÉĞ´»º³åÇø´óĞ¡
+		//å¯å†™ç¼“å†²åŒº
+		//@param size:ä¼ å‡ºå¯å†™ç¼“å†²åŒºå¤§å°
 		char* GetWriteBuffer(uint32* size);
 
-		//ÒÆ¶¯¿ÉĞ´»º³åÇø
-		//½«¿ÉĞ´»º³åÇø¸¡±ê´Óµ±Ç°Î»ÖÃÒÆ¶¯size¸öÎ»ÖÃ
+		//ç§»åŠ¨å¯å†™ç¼“å†²åŒº
+		//å°†å¯å†™ç¼“å†²åŒºæµ®æ ‡ä»å½“å‰ä½ç½®ç§»åŠ¨sizeä¸ªä½ç½®
 		void MoveWriteBufferPos(uint32 size);
 
 	private:
-		//À©ÕÅBuffer,Ã¿´ÎĞÂÔöÒ»¸öBUFFER_INIT_SIZE´óĞ¡µÄ½Úµã
-		//´Ó×îºóÒ»´ÎĞ´ÈëµÄ½ÚµãÖ®ºó²åÈë
+		//æ‰©å¼ Buffer,æ¯æ¬¡æ–°å¢ä¸€ä¸ªBUFFER_INIT_SIZEå¤§å°çš„èŠ‚ç‚¹
+		//ä»æœ€åä¸€æ¬¡å†™å…¥çš„èŠ‚ç‚¹ä¹‹åæ’å…¥
 		int Expand();
 
-		//Ê¹listÔÚÊ¹ÓÃÊ±³ÉÎª»·×´
+		//ä½¿liståœ¨ä½¿ç”¨æ—¶æˆä¸ºç¯çŠ¶
 		BufferNodeIt GetNextWNodeIt() { if (++m_wNodeIt == m_buffList.end()) m_wNodeIt = m_buffList.begin(); return m_wNodeIt; }
 
-		BufferNodeIt GetNextRNodeIt() { if (++m_rNodeIt == m_buffList.end()) m_rNodeIt = m_buffList.begin(); return m_rNodeIt; }
+		BufferNodeIt GetNextRNodeIt()
+		{
+			if (++m_rNodeIt == m_buffList.end())
+			{
+				if (m_useSize > 0)
+					m_rNodeIt = m_buffList.begin();
+				else
+					m_rNodeIt = m_wNodeIt;
+			} 
+			else
+			{
+				if (m_useSize <= 0)
+					m_rNodeIt = m_wNodeIt;
+			}
+			return m_rNodeIt;
+		}
 
 		uint32 GetLeftSize() { return (uint32)m_buffList.size() * BUFFER_INIT_SIZE - m_useSize; }
 
 	private:
 		BufferList m_buffList;
 
-		BufferNodeIt m_wNodeIt;				//µ±Ç°Ğ´Èëµã
+		BufferNodeIt m_wNodeIt;				//å½“å‰å†™å…¥ç‚¹
 
-		BufferNodeIt m_rNodeIt;				//µ±Ç°¶Á³öµã
+		BufferNodeIt m_rNodeIt;				//å½“å‰è¯»å‡ºç‚¹
 
-		uint32 m_useSize;					//ÒÑÊ¹ÓÃµÄ×Ü´óĞ¡
+		uint32 m_useSize;					//å·²ä½¿ç”¨çš„æ€»å¤§å°
 	};
 }

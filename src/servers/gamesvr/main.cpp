@@ -34,7 +34,7 @@ void ShowMemUse()
 #endif // _WIN32
 
 
-class Test
+class Server
 {
 public:
 	void ListenCb(chaos::Listener* ev, chaos::Connecter* ,/*socket_t fd,*/ void* userdata);
@@ -47,7 +47,7 @@ public:
 };
 
 
-void Test::ListenCb(chaos::Listener* pListener, chaos::Connecter* pConner, void* userdata)
+void Server::ListenCb(chaos::Listener* pListener, chaos::Connecter* pConner, void* userdata)
 {
 	if (!pConner)
 	{
@@ -55,14 +55,14 @@ void Test::ListenCb(chaos::Listener* pListener, chaos::Connecter* pConner, void*
 		return;
 	}
 
-	pConner->SetCallback(std::bind(&Test::ReadCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
-		std::bind(&Test::WriteCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), NULL, NULL);
+	pConner->SetCallback(std::bind(&Server::ReadCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
+		std::bind(&Server::WriteCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), NULL, NULL);
 
 	LOG_DEBUG("socket:%d, newsocket:%d", pListener->GetSocket().GetFd(), pConner->GetSocket().GetFd());
 }
 
 
-void Test::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
+void Server::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 {
 	LOG_DEBUG("read socket:%d trans bytes:%d", ev->GetSocket().GetFd(), nTransBytes);
 
@@ -72,66 +72,55 @@ void Test::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 		return;
 	}
 
-	int readable = ev->GetReadableSize() + 1;
-	char* buf = new char[readable];
+	int readable = ev->GetReadableSize();
+	char* buf = new char[readable + 1];
 	if (!buf)
 		return;
 
 	memset(buf, 0, readable);
 
 	ev->ReadBuffer(buf, readable);
-	int sendSize = ev->Send(buf, readable);
-	
-	LOG_DEBUG("read socket recv data:%s, send size:%d\n", buf, sendSize);
-	delete[] buf;
 
-	//static int cnt = 0;
-	//if(++cnt == 10000)
-	//	ev->GetCentre()->Exit();
+	//int sendSize = 0;
+	//while (sendSize < readable)
+	//{
+	//	int sended = ev->Send(buf + sendSize, readable - sendSize);
+	//	if (0 > sended)
+	//		break;
+
+	//	sendSize += sended;
+	//}
+
+	if (0 >= ev->WriteBuffer(buf, readable))
+	{
+		LOG_DEBUG("wirte buffer faled!\n");
+		return;
+	}
+
+	LOG_DEBUG("read socket recv data:%s, ready send size:%d\n", buf, readable);
+
+	delete[] buf;
 }
 
 
-void Test::WriteCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
+void Server::WriteCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 {
 	LOG_DEBUG("write socket:%d trans bytes:%d", ev->GetSocket().GetFd(), nTransBytes);
 }
 
 
-void Test::TimerCb(chaos::Event* pev, short ev, void* userdata)
+void Server::TimerCb(chaos::Event* pev, short ev, void* userdata)
 {
 	LOG_DEBUG("timer:%d call back", pev->GetEvKey().timerId);
 }
 
 
-#define IP "192.168.0.101"
+#define IP "127.0.0.1"
 #define PORT 3307
 
 
 int main()
 {
-	//---------log test begin-----------//
-
-	//Logger& log = Logger::Instance();
-	//log.Init("./log", 0);
-
-	//int loop = 10000;
-
-	//while (loop > 0)
-	//{
-	//	LOG_INFO("hello gameserver:%d", loop);
-	//	--loop;
-	//}
-
-	//printf("log end!\n");
-
-	//while (true)
-	//{
-	//	Sleep(3000);
-	//}
-
-	//---------log test end-----------//
-
-
 	//---------net test begin-----------//
 
 #ifdef _WIN32
@@ -139,9 +128,16 @@ int main()
 	//_CrtSetBreakAlloc(151);		//270 152 151
 #endif // _WIN32
 
-	
+#ifndef _WIN32
+	if (signal(SIGPIPE, SIG_IGN) == SIG_ERR)
+		return 1;
+#endif // !_WIN32
+
+
 	Logger& log = Logger::Instance();
 	log.Init("../log", "log", 0);
+
+	Server t;
 
 	chaos::EventCentre* p = new chaos::EventCentre;
 
@@ -151,41 +147,19 @@ int main()
 		return 0;
 	}
 
-#if 0  //±»CreateListenerÈ¡´ú
-	//socket_t listenfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	auto cb = std::bind(&Server::ListenCb, &t, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 
-	//chaos::Listener* ev = new chaos::Listener(listenfd);
-
-	//printf("listen socket:%d\n", listenfd);
-
-	//sockaddr_in sa;
-	//memset(&sa, 0, sizeof(sa));
-	//sa.sin_family = AF_INET;
-	//sa.sin_port = htons(PORT);
-	////inet_pton(AF_INET, IP, &sa.sin_addr);
-
-	//if (0 != ev->Listen((sockaddr*)&sa, sizeof(sa)))
-	//{
-	//	printf("listen failed! err:%d\n", WSAGetLastError());
-	//	return -1;
-	//}
-#endif
-
-	chaos::Listener* ev = chaos::Listener::CreateListener(AF_INET, SOCK_STREAM, IPPROTO_TCP, PORT);
+	chaos::Listener* ev = chaos::Listener::CreateListener(AF_INET, SOCK_STREAM, IPPROTO_TCP, PORT, 0, cb);
 	if (!ev)
 	{
 		printf("create listener failed!\n");
 		return 0;
 	}
 
-	Test t;
-	auto cb = std::bind(&Test::ListenCb, &t, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
-	ev->SetListenerCb(cb, NULL);
 	p->RegisterEvent(ev);
 
-	//timer_id timerId = chaos::Timer::CreateTimerID();
-	//chaos::TimerEvent* timerEv = new chaos::TimerEvent(p, timerId, 3, true);
-	//timerEv->SetEventCallback(std::bind(&Test::TimerCb, &t, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), NULL);
+	//chaos::TimerEvent* timerEv = new chaos::TimerEvent(3, true);
+	//timerEv->SetEventCallback(std::bind(&Server::TimerCb, &t, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), NULL);
 	//p->RegisterEvent(timerEv);
 
 	p->EventLoop();

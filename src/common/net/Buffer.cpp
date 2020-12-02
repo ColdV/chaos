@@ -60,21 +60,21 @@ namespace chaos
 			memcpy(buffer + (realSize - leftSize), pCurNode->readCursor, cpSize);
 
 			pCurNode->useSize -= cpSize;
-			pCurNode->readCursor += cpSize;
+			m_useSize -= cpSize;
 
-			//µ±«∞Ω⁄µ„ ˝æ›∂¡ÕÍ
+			//ÂΩìÂâçËäÇÁÇπÊï∞ÊçÆËØªÂÆå
 			if (0 >= pCurNode->useSize)
 			{
-				//µ±«∞Ω◊∂Œ ˝æ›∂¡ÕÍ∫ÛreadCursor∏¥Œª
+				//ÂΩìÂâçÈò∂ÊÆµÊï∞ÊçÆËØªÂÆåÂêéreadCursorÂ§ç‰Ωç
 				pCurNode->readCursor = pCurNode->buffer;
-
 				pCurNode = *GetNextRNodeIt();
 			}
+			else
+				pCurNode->readCursor += cpSize;
 
 			leftSize -= cpSize;
 		}
 
-		m_useSize -= realSize;
 		return realSize;
 	}
 
@@ -93,11 +93,37 @@ namespace chaos
 		if (!pCurNode)
 			return NULL;
 
-		pCurNode = *GetNextRNodeIt();
+		char* readPos = pCurNode->readCursor;
 
 		*size = pCurNode->useSize;
+		//m_useSize -= pCurNode->useSize;
+		//pCurNode->useSize = 0;
+		//pCurNode->readCursor = pCurNode->buffer;
 
-		return pCurNode->readCursor;
+		//GetNextRNodeIt();
+
+		return readPos;
+	}
+
+
+	void Buffer::MoveReadBufferPos(uint32 size)
+	{
+		BufferNode* pCurNode = *m_rNodeIt;
+		if (!pCurNode)
+			return;
+
+		if (size > pCurNode->useSize)
+			size = pCurNode->useSize;
+
+		m_useSize -= size;
+		pCurNode->useSize -= size;
+		pCurNode->readCursor += size;
+
+		if (0 == pCurNode->useSize)
+		{
+			pCurNode->readCursor = pCurNode->buffer;
+			GetNextRNodeIt();
+		}
 	}
 
 
@@ -109,7 +135,7 @@ namespace chaos
 
 	uint32 Buffer::WriteBuffer(const char* buffer, uint32 size)
 	{
-		//  ≈‰ø’º‰
+		//ÈÄÇÈÖçÁ©∫Èó¥
 		while (GetLeftSize() < size)
 		{
 			if (Expand() != 0)
@@ -127,7 +153,7 @@ namespace chaos
 
 		while (0 < leftLen)
 		{
-			//µ±«∞bufferΩ⁄µ„ ˝æ›“—¬˙  π”√œ¬“ª∏ˆΩ⁄µ„
+			//ÂΩìÂâçbufferËäÇÁÇπÊï∞ÊçÆÂ∑≤Êª° ‰ΩøÁî®‰∏ã‰∏Ä‰∏™ËäÇÁÇπ
 			if (pCurNode->totalSize == pCurNode->useSize)
 			{
 				m_wNodeIt = GetNextWNodeIt();
@@ -195,7 +221,7 @@ namespace chaos
 
 	int Buffer::Expand()
 	{
-		//buffer…œœﬁ÷µ
+		//buffer‰∏äÈôêÂÄº
 		if (m_buffList.size() * BUFFER_INIT_SIZE >= 0xFFFFFFFF)
 			return -1;
 
@@ -216,8 +242,8 @@ namespace chaos
 		}
 		else
 		{
-			m_buffList.insert(++m_wNodeIt, pNewNode);
-			--(--m_wNodeIt);
+			m_wNodeIt = m_buffList.insert(++m_wNodeIt, pNewNode);
+			--m_wNodeIt;
 		}
 
 		return 0;

@@ -12,6 +12,17 @@
 #include "IOCP.h"
 #include "thread/Mutex.h"
 
+
+#define SOCKET_ERR_TRY_AGAIN(e) \
+(e == EINTR || e == EWOULDBLOCK || e == EAGAIN)
+
+#define SOCKET_ERR_NOT_TRY_AGAIN(e) \
+(e != EINTR && e != EWOULDBLOCK && e != EAGAIN)
+
+
+#define MAX_SINGLE_READ_DEFAULT 16384			//æœ€å¤§å•æ¬¡è¯»å…¥æ•°é‡
+#define MAX_SINGLE_WRITE_DEFAULT 16384			//æœ€å¤§å•æ¬¡å†™å…¥æ•°é‡
+
 enum
 {
 	EV_IOREAD = 1,
@@ -56,6 +67,9 @@ namespace chaos
 
 	union EventKey
 	{
+		EventKey(timer_id timerid) :timerId(timerid){}
+		EventKey() {}
+
 		socket_t	fd;
 		timer_id	timerId;
 	};
@@ -63,7 +77,7 @@ namespace chaos
 	const int IO_CARE_EVENT = EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT | EV_CANCEL;
 	const int TIMEOUT_CART_EVENT = EV_TIMEOUT | EV_CANCEL;
 
-	//ÊÂ¼ş
+	//äº‹ä»¶
 	class Event : public NonCopyable
 	{
 	public:
@@ -78,7 +92,7 @@ namespace chaos
 
 		virtual ~Event() {}
 
-		//ÏìÓ¦ÊÂ¼ş´¦Àí
+		//å“åº”äº‹ä»¶å¤„ç†
 		virtual void Handle() = 0;
 
 		short GetEv() const { return m_ev; }
@@ -118,11 +132,11 @@ namespace chaos
 		void CallbackRegister(int ret) { if (m_registerCb) m_registerCb(ret); }
 
 	private:
-		EventCentre* m_pCenter;		//ËùÊôµÄÊÂ¼şÖĞĞÄ
+		EventCentre* m_pCenter;		//æ‰€å±çš„äº‹ä»¶ä¸­å¿ƒ
 
-		short m_ev;					//×¢²áµÄÊÂ¼ş
+		short m_ev;					//æ³¨å†Œçš„äº‹ä»¶
 		
-		std::queue<short> m_curEv;	//µ±Ç°·¢ÉúµÄÊÂ¼ş¶ÓÁĞ
+		std::queue<short> m_curEv;	//å½“å‰å‘ç”Ÿçš„äº‹ä»¶é˜Ÿåˆ—
 
 		EventKey	m_evKey;
 
@@ -134,7 +148,7 @@ namespace chaos
 	};
 
 
-	//ÊÂ¼şÖĞĞÄ(ÊÂ¼şÏìÓ¦,·Ö·¢)
+	//äº‹ä»¶ä¸­å¿ƒ(äº‹ä»¶å“åº”,åˆ†å‘)
 	class EventCentre : public NonCopyable
 	{
 	public:
@@ -165,8 +179,8 @@ namespace chaos
 
 		void PushEvent(Event* pEvent, short ev);
 
-		//¸üĞÂÊÂ¼ş
-		//@ev:ĞèÒª¸üĞÂµÄÊÂ¼ş
+		//æ›´æ–°äº‹ä»¶
+		//@ev:éœ€è¦æ›´æ–°çš„äº‹ä»¶
 		void UpdateEvent(Event* pEvent, short op, short ev);
 
 		Mutex& GetMutex() { return m_mutex; }
@@ -176,22 +190,22 @@ namespace chaos
 
 		int ProcessActiveEvent();
 
-		//Çå³ıËùÓĞ×¢²áÊÂ¼şºÍ»î¶¯ÊÂ¼ş
+		//æ¸…é™¤æ‰€æœ‰æ³¨å†Œäº‹ä»¶å’Œæ´»åŠ¨äº‹ä»¶
 		void ClearAllEvent();
 	
-		//¼ÆËãµ±Ç°µÈ´ıIOµÄtimeout
+		//è®¡ç®—å½“å‰ç­‰å¾…IOçš„timeout
 		int CalculateTimeout();
 
 	private:
-		Poller* m_pPoller;				//ÍøÂçÊÂ¼şµ÷¶ÈÆ÷
+		Poller* m_pPoller;				//ç½‘ç»œäº‹ä»¶è°ƒåº¦å™¨
 
-		Timer* m_pTimer;				//¶¨Ê±Æ÷
+		Timer* m_pTimer;				//å®šæ—¶å™¨
 
 		SignalEventMap m_signalEvs;
 
-		EventList m_activeEvs;			//»î¶¯ÊÂ¼ş
+		EventList m_activeEvs;			//æ´»åŠ¨äº‹ä»¶
 
-		EventList m_waittingEvs;			//ÒÑµÈ´ıÖĞµÄÊÂ¼ş
+		EventList m_waittingEvs;			//å·²ç­‰å¾…ä¸­çš„äº‹ä»¶
 
 		bool m_running;
 
@@ -209,7 +223,7 @@ namespace chaos
 	public:
 #ifdef IOCP_ENABLE
 		static const int INIT_ASYNACCEPTING			= 8;
-		static const int INIT_ACCEPTADDRBUF_SIZE	= 128; //AcceptEx´«ÈëµÄbuffer´óĞ¡(´«ÊäĞ­ÒéµÄ×î´óµØÖ·´óĞ¡ + 16) * 2
+		static const int INIT_ACCEPTADDRBUF_SIZE	= 128; //AcceptExä¼ å…¥çš„bufferå¤§å°(ä¼ è¾“åè®®çš„æœ€å¤§åœ°å€å¤§å° + 16) * 2
 #endif // IOCP_ENABLE
 
 		typedef std::function<void(Listener* listener, Connecter* newconn, void* userdata)>	ListenerCb;
@@ -218,7 +232,8 @@ namespace chaos
 
 		~Listener();
 
-		static Listener* CreateListener(int af, int socktype, int protocol, unsigned short port, const char* ip = 0);
+		static Listener* CreateListener(int af, int socktype, int protocol, unsigned short port, 
+			const char* ip = NULL, ListenerCb cb = NULL, void * userdata = NULL);
 
 		int Listen(const sockaddr* sa, int salen);
 
@@ -239,7 +254,7 @@ namespace chaos
 #ifdef IOCP_ENABLE
 		int AsynAccept(LPACCEPT_OVERLAPPED lo);
 
-		//GetQueuedCompletionStatusºóµÄ»Øµ÷
+		//GetQueuedCompletionStatusåçš„å›è°ƒ
 		void AcceptComplete(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool bOk);
 #endif // IOCP_ENABLE
 
@@ -286,25 +301,25 @@ namespace chaos
 
 		int Connect(sockaddr* sa, int salen);
 
-		//½²Êı¾İĞ´Èëµ½buffÖĞ, ²¢ÇÒÍÆËÍÒ»¸öEV_IOWRITEÊÂ¼şÔÚÏÂÒ»Ö¡Ğ´Èësocket
-		int WriteBuffer(const char* buf, int len);
+		//å°†bufferä¸­çš„lenä¸ªé•¿åº¦çš„æ•°æ®å†™å…¥åˆ°å†…éƒ¨bufferä¸­, å¹¶ä¸”æ¨é€ä¸€ä¸ªEV_IOWRITEäº‹ä»¶åœ¨ä¸‹ä¸€å¸§å†™å…¥socket
+		int WriteBuffer(const char* buffer, int len);
 
-		//Ğ´Èësocket
+		//å†™å…¥socket
 		int Send(const char* buf, int size);
 
-		//´ÓRBufferÖĞ¶ÁÈ¡len¸ö×Ö½Úµ½bufÖĞ
-		//return:·µ»ØÊµ¼Ê¶ÁÈ¡µÄ×Ö½ÚÊı
+		//ä»RBufferä¸­è¯»å–lenä¸ªå­—èŠ‚åˆ°bufä¸­
+		//return:è¿”å›å®é™…è¯»å–çš„å­—èŠ‚æ•°
 		int ReadBuffer(char* buf, int size);
 
-		//»ñÈ¡RBufferÖĞ¿É¶ÁÈ¡µÄ×Ö½ÚÊı
+		//è·å–RBufferä¸­å¯è¯»å–çš„å­—èŠ‚æ•°
 		int GetReadableSize() { if (!m_pReadBuffer) return 0; return m_pReadBuffer->GetReadSize(); }
 
 		void SetCallback(const NetCallback& readcb, const NetCallback& writecb, const NetCallback& connectcb, void* userdata);
 
-		//ÆôÓÃÒ»¸öĞÂÊÂ¼ş
+		//å¯ç”¨ä¸€ä¸ªæ–°äº‹ä»¶
 		void EnableEvent(short ev);
 
-		//¹Ø±Õ¹Ø×¢µÄÊÂ¼ş
+		//å…³é—­å…³æ³¨çš„äº‹ä»¶
 		void DisableEvent(short ev);
 
 	private:
@@ -343,13 +358,13 @@ namespace chaos
 
 #ifdef IOCP_ENABLE
 		LPCOMPLETION_OVERLAPPED m_pReadOverlapped;
-		bool m_isPostRecv;			//ÊÇ·ñÒÑÍ¶µİWSARecvÊÂ¼ş(IOCPÔÚµÈ´ıÊÂ¼şÍê³É)
+		bool m_isPostRecv;			//æ˜¯å¦å·²æŠ•é€’WSARecväº‹ä»¶(IOCPåœ¨ç­‰å¾…äº‹ä»¶å®Œæˆ)
 
 		LPCOMPLETION_OVERLAPPED m_pWriteOverlapped;
-		bool m_isPostWrite;			//ÊÇ·ñÒÑÍ¶µİWSASendÊÂ¼ş(IOCPÔÚµÈ´ıÊÂ¼şÍê³É)
+		bool m_isPostWrite;			//æ˜¯å¦å·²æŠ•é€’WSASendäº‹ä»¶(IOCPåœ¨ç­‰å¾…äº‹ä»¶å®Œæˆ)
 
 		LPCOMPLETION_OVERLAPPED m_pConnectOverlapped;
-		bool m_isPostConnect;		//ÊÇ·ñÒÑÍ¶µİConnectExÊÂ¼ş(IOCPÔÚµÈ´ıÊÂ¼şÍê³É)
+		bool m_isPostConnect;		//æ˜¯å¦å·²æŠ•é€’ConnectExäº‹ä»¶(IOCPåœ¨ç­‰å¾…äº‹ä»¶å®Œæˆ)
 		//std::shared_ptr<COMPLETION_OVERLAPPED> m_pConnectOverlapped;
 
 #endif // IOCP_ENABLE
@@ -368,26 +383,15 @@ namespace chaos
 	};
 
 
-
 	class TimerEvent : public Event
 	{
 	public:
 		friend class Timer;
 		typedef std::function<void()> TimerHandler;
 
-		TimerEvent(timer_id timerId, uint32 timeout, bool isLoop = false) :
-			Event(EV_TIMEOUT, (EventKey&)timerId),
-			m_timeout(timeout),
-			m_isLoop(isLoop),
-			m_isCancel(false),
-			m_isSuspend(false),
-			m_handleFunc(NULL)
-		{
-			m_nextTime = time(NULL) + m_timeout;
-		}
+		explicit TimerEvent(uint32 timeout, bool isLoop = false);
 
-		virtual ~TimerEvent()
-		{}
+		virtual ~TimerEvent();
 
 		uint32 GetTimeOut() const { return m_timeout; }
 
@@ -420,11 +424,11 @@ namespace chaos
 
 		time_t m_nextTime;
 
-		bool m_isLoop;						//Ñ­»·¶¨Ê±Æ÷
+		bool m_isLoop;						//å¾ªç¯å®šæ—¶å™¨
 
-		bool m_isCancel;					//È¡Ïû¶¨Ê±Æ÷
+		bool m_isCancel;					//å–æ¶ˆå®šæ—¶å™¨
 
-		bool m_isSuspend;					//ÔİÍ£¶¨Ê±Æ÷
+		bool m_isSuspend;					//æš‚åœå®šæ—¶å™¨
 
 		TimerHandler m_handleFunc;
 	};

@@ -95,8 +95,13 @@ namespace chaos
 
 		//如果fd已经注册到epoll中,上一次的epoll_ctl将返回ENOENT错误
 		//将忽略该错误 并用EPOLL_CTL_MOD再次调用epoll_ctl以修改已注册的fd事件
-		if (errno == ENOENT && epoll_ctl(m_epfd, EPOLL_CTL_MOD, fd, &epev) == -1)
-			return -1;
+		if (errno == EEXIST)
+		{
+			if (epoll_ctl(m_epfd, EPOLL_CTL_MOD, fd, &epev) == -1)
+				return -1;
+			else
+				return 0;
+		}
 
 		return -1;
 	}

@@ -24,6 +24,10 @@ int maxClient = 10000;
 
 static const char MESSAGE[] = "Hello, World!";
 
+static const int SENDMAX = 1024 * 1024 * 1;
+
+static const char BUF[SENDMAX]{ 0 };
+
 class Client
 {
 public:
@@ -38,13 +42,18 @@ public:
 
 	void WriteCb(chaos::Connecter* ev, int nTransBytes, void* userdata);
 
+	void Send(const char* buf, int buflen);
 private:
 	chaos::Connecter* m_pConnecter;
+	bool m_isEstablished;
+	uint64 m_totalReadSize;
 };
 
 
 Client::Client():
-	m_pConnecter(new chaos::Connecter(socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)))
+	m_pConnecter(new chaos::Connecter(socket(AF_INET, SOCK_STREAM, IPPROTO_TCP))),
+	m_isEstablished(false),
+	m_totalReadSize(0)
 {
 }
 
@@ -74,17 +83,28 @@ void Client::ConnectCb(chaos::Connecter* pConnecter, int bOk, void* userdata)
 
 	if (maxClient == cnt)
 	{
-		printf("accept cost time:%d\n", time(NULL) - timenow);
+		printf("connect cost time:%d\n", time(NULL) - timenow);
 	}
 
-	int sendSize = pConnecter->Send(MESSAGE, strlen(MESSAGE));
-	LOG_DEBUG("send size:%d\n", sendSize);
+	m_isEstablished = true;
 }
 
 
 void Client::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 {
 	LOG_DEBUG("read socket:%d trans bytes:%d", ev->GetSocket().GetFd(), nTransBytes);
+
+	static int cnt = 0;
+	static int timenow = 0;
+	static uint64 readSize = 0;
+	static uint64 totalReadable = 0;
+
+	if (0 == timenow)
+		timenow = time(NULL);
+
+	++cnt;
+	readSize += nTransBytes;
+	m_totalReadSize += nTransBytes;
 
 	if (0 == nTransBytes)
 	{
@@ -93,6 +113,10 @@ void Client::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 	}
 
 	int readable = ev->GetReadableSize() + 1;
+	totalReadable += readable - 1;
+
+	printf("total read size:%llu, total readable:%llu\n", m_totalReadSize, totalReadable);
+
 	char* buf = new char[readable];
 	if (!buf)
 		return;
@@ -100,18 +124,14 @@ void Client::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 	memset(buf, 0, readable);
 
 	ev->ReadBuffer(buf, readable);
+	//printf("read socket recv data:%s\n", buf);
 
-	static int cnt = 0;
-	static int timenow = 0;
-	if (0 == cnt)
-		timenow = time(NULL);
-	++cnt;
-	if (maxClient == cnt)
+	if (readSize >= SENDMAX * maxClient)
 	{
 		printf("read cost time:%d\n", time(NULL) - timenow);
 	}
-
-	printf("read socket recv data:%s\n", buf);
+	//ev->Send(MESSAGE, strlen(MESSAGE));
+	
 	delete[] buf;
 }
 
@@ -121,6 +141,29 @@ void Client::WriteCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 	LOG_DEBUG("write socket:%d trans bytes:%d", ev->GetSocket().GetFd(), nTransBytes);
 }
 
+
+void Client::Send(const char* buf, int bulen)
+{
+	static int cnt = 0;
+	static int timenow = 0;
+
+	if (0 == cnt)
+		timenow = time(NULL);
+
+	++cnt;
+
+	if (!m_isEstablished)
+		return;
+
+	int sendSize = m_pConnecter->Send(BUF, sizeof(BUF));
+
+	printf("send size:%d\n", sendSize);
+
+	if (maxClient == cnt)
+	{
+		printf("send data cost time:%d\n", time(NULL) - timenow);
+	}
+}
 
 
 int main(int argc, char** argv)
@@ -180,6 +223,11 @@ int main(int argc, char** argv)
 			printf("socket:%d connect failed. err:%d\n", pConnect->GetSocket().GetFd(), chaos::GetLastErrorno());
 			continue;
 		}
+	}
+
+	for (int i = 0; i < maxClient; ++i)
+	{
+		clients[i].Send(BUF, sizeof(BUF));
 	}
 
 	p->EventLoop();

@@ -28,6 +28,7 @@ namespace chaos
 		};
 
 		friend EventCentre;
+		friend TimerEvent;
 
 		typedef std::unordered_map<int, TimerEvent*> TimerMap;
 		typedef std::vector<Event*> EventList;
@@ -53,12 +54,11 @@ namespace chaos
 
 		void Clear();
 
-	public:
-		//分配一个定时器ID, 返回0表示无ID可用
-		static timer_id CreateTimerID();
-
 	private:
 		TimerMap& GetAllTimer() { return m_timerMap; }
+
+		//分配一个定时器ID, 返回0表示无ID可用
+		static timer_id CreateTimerID();
 
 		//扩展ID
 		static int ExpandID();
