@@ -7,6 +7,7 @@
 #include <unordered_set>
 #include <functional>
 #include <memory>
+#include <atomic>
 #include "Poller.h"
 #include "Buffer.h"
 #include "IOCP.h"
@@ -74,8 +75,9 @@ namespace chaos
 		timer_id	timerId;
 	};
 
-	const int IO_CARE_EVENT = EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT | EV_CANCEL;
-	const int TIMEOUT_CART_EVENT = EV_TIMEOUT | EV_CANCEL;
+	const int BASE_CARE_EVENT = EV_CANCEL;
+	const int IO_CARE_EVENT = EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT;
+	const int TIMEOUT_CART_EVENT = EV_TIMEOUT;
 
 	//事件
 	class Event : public NonCopyable
@@ -171,7 +173,7 @@ namespace chaos
 
 		int Init();
 
-		int EventLoop(int loopTickTimeMs = 0);
+		int EventLoop();
 
 		void Exit() { m_running = false; }
 
@@ -196,6 +198,9 @@ namespace chaos
 		//计算当前等待IO的timeout
 		int CalculateTimeout();
 
+		//将等到中的事件移动到活动列表
+		void MakeWaittingToActive();
+
 	private:
 		Poller* m_pPoller;				//网络事件调度器
 
@@ -209,7 +214,7 @@ namespace chaos
 
 		bool m_running;
 
-		int m_evcount;
+		std::atomic<int> m_evcount;
 
 		bool m_isInit;
 

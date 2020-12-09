@@ -18,13 +18,13 @@
 
 #define MAX_CLIENT	1000
 #define IP	"127.0.0.1"
-#define PORT	3308
+#define PORT	3307
 
-int maxClient = 10000;
+int maxClient = 1;
 
 static const char MESSAGE[] = "Hello, World!";
 
-static const int SENDMAX = 1024 * 1024 * 1;
+static const int SENDMAX = 1024 *1024 * 1;
 
 static const char BUF[SENDMAX]{ 0 };
 
@@ -47,13 +47,15 @@ private:
 	chaos::Connecter* m_pConnecter;
 	bool m_isEstablished;
 	uint64 m_totalReadSize;
+	uint64 m_totalSendSize;
 };
 
 
 Client::Client():
 	m_pConnecter(new chaos::Connecter(socket(AF_INET, SOCK_STREAM, IPPROTO_TCP))),
 	m_isEstablished(false),
-	m_totalReadSize(0)
+	m_totalReadSize(0),
+	m_totalSendSize(0)
 {
 }
 
@@ -87,6 +89,8 @@ void Client::ConnectCb(chaos::Connecter* pConnecter, int bOk, void* userdata)
 	}
 
 	m_isEstablished = true;
+
+	Send(BUF, sizeof(BUF));
 }
 
 
@@ -113,9 +117,10 @@ void Client::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 	}
 
 	int readable = ev->GetReadableSize() + 1;
-	totalReadable += readable - 1;
+	totalReadable += nTransBytes;//readable - 1;
 
-	printf("total read size:%llu, total readable:%llu\n", m_totalReadSize, totalReadable);
+	if(m_totalReadSize == SENDMAX)
+		printf("socket:%d,total read size:%llu, total readable:%llu\n",ev->GetSocket().GetFd(), m_totalReadSize, totalReadable);
 
 	char* buf = new char[readable];
 	if (!buf)
@@ -130,7 +135,6 @@ void Client::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 	{
 		printf("read cost time:%d\n", time(NULL) - timenow);
 	}
-	//ev->Send(MESSAGE, strlen(MESSAGE));
 	
 	delete[] buf;
 }
@@ -138,6 +142,8 @@ void Client::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 
 void Client::WriteCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 {
+	m_totalSendSize += nTransBytes;
+	printf("socket:%d, send total size:%llu\n", ev->GetSocket().GetFd(), m_totalSendSize);
 	LOG_DEBUG("write socket:%d trans bytes:%d", ev->GetSocket().GetFd(), nTransBytes);
 }
 
@@ -155,7 +161,8 @@ void Client::Send(const char* buf, int bulen)
 	if (!m_isEstablished)
 		return;
 
-	int sendSize = m_pConnecter->Send(BUF, sizeof(BUF));
+	//int sendSize = m_pConnecter->Send(BUF, sizeof(BUF));
+	int sendSize = m_pConnecter->WriteBuffer(BUF, sizeof(BUF));
 
 	printf("send size:%d\n", sendSize);
 
@@ -225,10 +232,10 @@ int main(int argc, char** argv)
 		}
 	}
 
-	for (int i = 0; i < maxClient; ++i)
-	{
-		clients[i].Send(BUF, sizeof(BUF));
-	}
+	//for (int i = 0; i < maxClient; ++i)
+	//{
+	//	clients[i].Send(BUF, sizeof(BUF));
+	//}
 
 	p->EventLoop();
 

@@ -106,30 +106,65 @@ namespace chaos
 	}
 
 
+	int Buffer::ReadBuffer(IOVEC_TYPE* iov, int iovcnt, uint32 size)
+	{
+		if (size > m_useSize)
+			size = m_useSize;
+
+		int i = 0;
+		BufferNodeIt it = m_rNodeIt;
+
+		while (i < iovcnt && size > 0)
+		{
+			BufferNode* pCurNode = *it;
+			if (!pCurNode)
+				break;
+
+			IOVEC_TYPE& iove = iov[i++];
+
+			iove.IOVEC_BUF = pCurNode->readCursor;
+			iove.IOVEC_LEN = pCurNode->useSize > size ? size : pCurNode->useSize;
+			size -= iove.IOVEC_LEN;
+
+			if (++it == m_buffList.end())
+				it = m_buffList.begin();
+		}
+
+		return i;
+	}
+
+
 	void Buffer::MoveReadBufferPos(uint32 size)
 	{
+		if (m_rNodeIt == m_buffList.end())
+			return;
+
 		BufferNode* pCurNode = *m_rNodeIt;
 		if (!pCurNode)
 			return;
 
-		if (size > pCurNode->useSize)
-			size = pCurNode->useSize;
+		if (size > m_useSize)
+			size = m_useSize;
 
-		m_useSize -= size;
-		pCurNode->useSize -= size;
-		pCurNode->readCursor += size;
-
-		if (0 == pCurNode->useSize)
+		while (0 < size)
 		{
-			pCurNode->readCursor = pCurNode->buffer;
-			GetNextRNodeIt();
+			BufferNode* pCurNode = *m_rNodeIt;
+			if (!pCurNode)
+				break;
+
+			uint32 validSize = pCurNode->useSize > size ? size : pCurNode->useSize;
+
+			m_useSize -= validSize;
+			pCurNode->useSize -= validSize;
+			pCurNode->readCursor += validSize;
+			size -= validSize;
+
+			if (0 == pCurNode->useSize)
+			{
+				pCurNode->readCursor = pCurNode->buffer;
+				GetNextRNodeIt();
+			}
 		}
-	}
-
-
-	uint32 Buffer::GetReadSize()
-	{
-		return m_useSize;
 	}
 
 

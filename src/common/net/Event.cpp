@@ -1,14 +1,11 @@
 #include "Event.h"
 #include "Timer.h"
-#include <stdio.h>
-#include <stdexcept>
-
 
 namespace chaos
 {
 	Event::Event(short ev, const EventKey& evKey) :
 		m_pCenter(NULL),
-		m_ev(ev | EV_CANCEL),
+		m_ev(ev | BASE_CARE_EVENT),
 		m_userdata(NULL)
 	{
 		memcpy(&m_evKey, &evKey, sizeof(EventKey));
@@ -97,7 +94,7 @@ namespace chaos
 	}
 
 
-	int EventCentre::EventLoop(int loopTickTimeMs/* = 0*/)
+	int EventCentre::EventLoop()
 	{
 		if (!m_isInit)
 		{
@@ -111,22 +108,11 @@ namespace chaos
 			return -1;
 		}
 
-		if (0 >= loopTickTimeMs)
-			loopTickTimeMs = 0;
-
 		m_running = true;
 
 		while (m_running)
 		{
-			//没有任何事件的时候不做后续处理(直接退出还是continue?)
-			/*if (0 >= m_evcount)
-				continue;*/
-
-			if (!m_waittingEvs.empty())
-			{
-				m_activeEvs.insert(m_activeEvs.begin(), m_waittingEvs.begin(), m_waittingEvs.end());
-				m_waittingEvs.clear();
-			}
+			MakeWaittingToActive();
 
 			int timeout = CalculateTimeout();
 
@@ -167,14 +153,11 @@ namespace chaos
 
 		for(auto pev : m_activeEvs)
 		{
-			//Event* pev = m_activeEvs.front();
-			//m_activeEvs.pop();
-
 			if (!pev)
 				continue;
 
 			//EV_CANCEL时GetCentre已为NULL
-			//优先处理Centre,这个判断必须在GetCentre之前
+			//优先处理CANCEL,这个判断必须在GetCentre之前
 			if (pev->GetCurEv() & EV_CANCEL)
 			{
 				pev->Callback();
@@ -236,6 +219,17 @@ namespace chaos
 	}
 
 
+	void EventCentre::MakeWaittingToActive()
+	{
+		MutexGuard lock(m_mutex);
+		if (!m_waittingEvs.empty())
+		{
+			m_activeEvs.insert(m_activeEvs.begin(), m_waittingEvs.begin(), m_waittingEvs.end());
+			m_waittingEvs.clear();
+		}
+	}
+
+
 	int EventCentre::RegisterEvent(Event* pEvent)
 	{
 
@@ -252,11 +246,11 @@ namespace chaos
 
 		MutexGuard lock(m_mutex);
 
-		if (ev & IO_CARE_EVENT && !(ev & ~IO_CARE_EVENT) && m_pPoller)
+		if (ev & IO_CARE_EVENT /*&& !(ev & ~IO_CARE_EVENT)*/ && m_pPoller)
 		{
 			ret = m_pPoller->AddEvent(pEvent);
 		}
-		else if (ev & TIMEOUT_CART_EVENT && !(ev & ~TIMEOUT_CART_EVENT) && m_pTimer)
+		else if (ev & TIMEOUT_CART_EVENT /*&& !(ev & ~TIMEOUT_CART_EVENT)*/ && m_pTimer)
 		{
 			ret = m_pTimer->AddTimer(pEvent);
 		}
@@ -791,7 +785,9 @@ namespace chaos
 
 			//在iocp的回调中通过eventDestroy的判定来释放;
 			if (!m_isPostRecv)
+			{
 				delete m_pReadOverlapped;
+			}
 		}
 
 		if (m_pWriteOverlapped)
@@ -800,7 +796,9 @@ namespace chaos
 
 			//在iocp的回调中通过eventDestroy的判定来释放;
 			if (!m_isPostWrite)
+			{
 				delete m_pWriteOverlapped;
+			}
 		}
 
 		if (m_pConnectOverlapped)
@@ -848,6 +846,9 @@ namespace chaos
 			return -1;
 
 #ifdef IOCP_ENABLE
+		if (m_isPostConnect)
+			return 0;
+
 		sockaddr_in ss;
 		memset(&ss, 0, sizeof(ss));
 
@@ -868,7 +869,7 @@ namespace chaos
 			if (GetLastErrorno() != WSA_IO_PENDING)
 			{
 				printf("ConnectEx failed:%d\n", GetLastErrorno());
-				ConnectComplete(&m_pReadOverlapped->overlapped, ret, 0, false);
+				ConnectComplete(&m_pConnectOverlapped->overlapped, ret, 0, false);
 				return ret;
 			}
 			else
@@ -978,10 +979,10 @@ namespace chaos
 		UpdateEvent(EV_CTL_ADD, valid);
 
 #ifdef IOCP_ENABLE
-		if (GetEv() & EV_IOREAD && !m_isPostRecv && m_peeraddr.sa.sa_family != AF_UNSPEC)
+		if (ev & EV_IOREAD && !m_isPostRecv && m_peeraddr.sa.sa_family != AF_UNSPEC)
 			AsynRead();
 
-		if (GetEv() & EV_IOWRITE && !m_isPostWrite && m_peeraddr.sa.sa_family != AF_UNSPEC)
+		if (ev & EV_IOWRITE && !m_isPostWrite && m_peeraddr.sa.sa_family != AF_UNSPEC)
 			AsynWrite();
 #endif // IOCP_ENABLE
 	}
@@ -1077,7 +1078,9 @@ namespace chaos
 			} while (hasbytes > 0);
 
 			if (0 >= sendSize)
+			{
 				break;
+			}
 		}
 
 		if (m_pWriteBuffer->GetReadSize() <= 0)
@@ -1114,6 +1117,9 @@ namespace chaos
 			return -1;
 		}
 
+		if (m_isPostRecv)
+			return 0;
+
 		Socket& s = GetSocket();
 
 		uint32 size = 0;
@@ -1137,14 +1143,14 @@ namespace chaos
 				ReadComplete(&m_pReadOverlapped->overlapped, ret, 0, false);
 				return ret;
 			}
-			else
-				m_isPostRecv = true;
 		}
 		//立即返回也会触发 GetQueuedCompletionStatus 所以这里不需要手动调用callback;
 		//else
 		//{
 		//	ReadComplete(&m_pReadOverlapped->overlapped, bytesRead, 0, true);
 		//}
+
+		m_isPostRecv = true;
 
 		return 0;
 	}
@@ -1158,47 +1164,38 @@ namespace chaos
 			return -1;
 		}
 
-	
-		uint32 readySize = m_pWriteBuffer->GetReadSize();
+		if (m_isPostWrite)
+			return 0;
 
-		while (0 < readySize)
+		uint32 readable = m_pWriteBuffer->GetReadSize();
+		if (readable <= 0)
+			return 0;
+
+		int iovcnt = m_pWriteBuffer->ReadBuffer(m_pWriteOverlapped->databufs, MAX_WSABUFS, readable);
+
+		DWORD sendBytes = 0;
+		DWORD flags = 0;
+
+		if (!(GetEv() & EV_IOWRITE))
+			return -1;
+
+		int ret = WSASend(GetSocket().GetFd(), m_pWriteOverlapped->databufs, iovcnt, &sendBytes, flags, &m_pWriteOverlapped->overlapped, NULL);
+		if (ret)
 		{
-			uint32 readSize = readySize;
-			m_pWriteOverlapped->databufs[0].buf = m_pWriteBuffer->ReadBuffer(&readSize);
-			m_pWriteOverlapped->databufs[0].len = readSize;
-
-			if (!m_pWriteOverlapped->databufs[0].buf || 0 == readSize)
-			{	
-				printf("error read buffer!\n");
-				break;
-			}
-
-			DWORD sendBytes = 0;
-			DWORD flags = 0;
-
-			if (!(GetEv() & EV_IOWRITE))
-				return -1;
-
-			int ret = WSASend(GetSocket().GetFd(), &m_pWriteOverlapped->databufs[0], 1, &sendBytes, flags, &m_pWriteOverlapped->overlapped, NULL);
-			if (ret)
+			if (GetLastErrorno() != WSA_IO_PENDING)
 			{
-				if (GetLastErrorno() != WSA_IO_PENDING)
-				{
-					printf("WSASend failed:%d\n", GetLastErrorno());
-					WriteComplete(&m_pWriteOverlapped->overlapped, ret, 0, false);
-					return  GetLastErrorno();
-				}
-				else
-				{
-					m_isPostWrite = true;
-				}
+				printf("WSASend failed:%d\n", GetLastErrorno());
+				WriteComplete(&m_pWriteOverlapped->overlapped, sendBytes, 0, false);
+				return GetLastErrorno();
 			}
-			//立即返回也会触发 GetQueuedCompletionStatus 所以这里不需要手动调用callback;
-			//else
-			//{
-			//	WriteComplete(&m_pWriteOverlapped->overlapped, sendBytes, 0, true);
-			//}
 		}
+		//立即返回也会触发 GetQueuedCompletionStatus 所以这里不需要手动调用callback;
+		//else
+		//{
+		//	WriteComplete(&m_pWriteOverlapped->overlapped, sendBytes, 0, true);
+		//}
+
+		m_isPostWrite = true;
 
 		return 0;
 	}
@@ -1220,13 +1217,14 @@ namespace chaos
 			return;
 		}
 
+		m_isPostRecv = false;
+
 		if (!bOk)
 		{
+			int n = WSAGetLastError();
 			CallErr(-1);
 			return;
 		}
-
-		m_isPostRecv = false;
 
 		//收完数据后调整buffer下次写入的位置
 		m_pReadBuffer->MoveWriteBufferPos(bytes);
@@ -1260,6 +1258,12 @@ namespace chaos
 		}
 
 		m_isPostWrite = false;
+
+		m_pWriteBuffer->MoveReadBufferPos(bytes);
+
+		int readable = m_pWriteBuffer->GetReadSize();
+		if (readable > 0)
+			GetCentre()->PushEvent(this, EV_IOWRITE);
 
 		CallbackWrite(bytes);
 	}

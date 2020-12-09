@@ -4,6 +4,17 @@
 #include <list>
 
 
+#ifdef _WIN32
+#define IOVEC_TYPE	WSABUF
+#define IOVEC_BUF	buf
+#define IOVEC_LEN	len
+#else
+#define IOVEC_TYPE	iovec
+#define IOVEC_BUF	iov_base
+#define IOVEC_LEN	iov_len
+#endif // _WIN32
+
+
 
 namespace chaos
 {
@@ -44,12 +55,20 @@ namespace chaos
 		//@return 当前节点数据地址
 		char* ReadBuffer(uint32* size);
 
+		//将size个字节分成最多iovcnt个链传入到iov中
+		//该调用并未实际消耗buffer中的数据,之后可根据实际使用情况调用MoveReadBuffePos
+		//@param iov:待接收buffer链的结构
+		//@param iovcnt:传入的iov数组长度
+		//@param size:期望读取的字节数
+		//@return 返回实际已填充的iov个数
+		int ReadBuffer(IOVEC_TYPE* iov, int iovcnt, uint32 size);
+
 		//移动可读缓冲区
-		//将可读缓冲区浮标从当前位置移动size个位置(只针对单个buffer节点)
+		//将可读缓冲区浮标从当前位置移动size个位置
 		void MoveReadBufferPos(uint32 size);
 
 		//获取当前可读数据大小
-		uint32 GetReadSize();
+		uint32 GetReadSize() const { return m_useSize; };
 
 		//将buffer数据写入到m_bufferList中
 		//@param size:待写入的字节数

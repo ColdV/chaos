@@ -34,9 +34,19 @@ void ShowMemUse()
 #endif // _WIN32
 
 
+struct Client
+{
+	socket_t fd;
+	uint64 totalReadSize;
+	uint64 totalWriteSize;
+};
+
 class Server
 {
 public:
+	Server() : m_totalSendSize(0), m_totalRecvSize(0) {}
+	~Server() {}
+
 	void ListenCb(chaos::Listener* ev, chaos::Connecter* ,/*socket_t fd,*/ void* userdata);
 
 	void ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata);
@@ -44,6 +54,13 @@ public:
 	void WriteCb(chaos::Connecter* ev, int nTransBytes, void* userdata);
 
 	void TimerCb(chaos::Event* pev, short ev, void* userdata);
+
+	void EventCb(chaos::Event* pev, short ev, void* userdata);
+
+private:
+	uint64 m_totalSendSize;
+	uint64 m_totalRecvSize;
+	std::unordered_map<socket_t, Client> m_clients;
 };
 
 
@@ -55,8 +72,17 @@ void Server::ListenCb(chaos::Listener* pListener, chaos::Connecter* pConner, voi
 		return;
 	}
 
+	socket_t connfd = pConner->GetSocket().GetFd();
+
 	pConner->SetCallback(std::bind(&Server::ReadCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
 		std::bind(&Server::WriteCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), NULL, NULL);
+
+	pConner->SetEventCallback(std::bind(&Server::EventCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), NULL);
+
+	if (m_clients.find(connfd) == m_clients.end())
+		m_clients.insert(std::make_pair(connfd, Client{ connfd, 0 }));
+
+	printf("socket:%d, newsocket:%d\n", pListener->GetSocket().GetFd(), pConner->GetSocket().GetFd());
 
 	LOG_DEBUG("socket:%d, newsocket:%d", pListener->GetSocket().GetFd(), pConner->GetSocket().GetFd());
 }
@@ -97,7 +123,11 @@ void Server::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 		return;
 	}
 
-	LOG_DEBUG("read socket recv data:%s, ready send size:%d\n", buf, readable);
+	socket_t fd = ev->GetSocket().GetFd();
+	Client& c = m_clients.find(fd)->second;
+	c.totalReadSize += nTransBytes;
+
+	LOG_DEBUG("socket:%d, total read size:%d", fd, c.totalReadSize);
 
 	delete[] buf;
 }
@@ -112,6 +142,18 @@ void Server::WriteCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 void Server::TimerCb(chaos::Event* pev, short ev, void* userdata)
 {
 	LOG_DEBUG("timer:%d call back", pev->GetEvKey().timerId);
+}
+
+
+void Server::EventCb(chaos::Event* pev, short ev, void* userdata)
+{
+	if (ev & (EV_CANCEL | EV_ERROR))
+	{
+		if (pev->GetEv() & chaos::IO_CARE_EVENT)
+			m_clients.erase(pev->GetEvKey().fd);
+
+		pev->CancelEvent();
+	}
 }
 
 
