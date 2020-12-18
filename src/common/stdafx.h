@@ -20,6 +20,7 @@
 #include <stack>
 #include <list>
 #include "noncopyable.h"
+#include "event_config.h"
 
 #ifndef FD_SETSIZE
 #define FD_SETSIZE 1024
@@ -46,6 +47,7 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <pthread.h>
+#include <sys/uio.h>
 
 #endif  //_WIN32
 
@@ -83,6 +85,19 @@ typedef int socket_unread_t;
 
 
 const int MAX_INT = 0x7FFFFFFF;
+
+
+#ifdef _WIN32
+#define IOVEC_TYPE	WSABUF
+#define IOVEC_BUF	buf
+#define IOVEC_LEN	len
+#else
+#define IOVEC_TYPE	iovec
+#define IOVEC_BUF	iov_base
+#define IOVEC_LEN	iov_len
+#endif // _WIN32
+
+#define MAX_IOVEC 8
 
 
 #ifndef INVALID_SOCKET

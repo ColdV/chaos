@@ -136,9 +136,9 @@ namespace chaos
 			if (!pEvent)
 				continue;
 
-			int timeout = pEvent->GetNextTime() - time(NULL);
+			time_t timeout = pEvent->GetNextTime() - time(NULL);
 
-			return timeout > 0 ? timeout : 0;
+			return (int)(timeout > 0 ? timeout : 0);
 		}
 
 		return -1;

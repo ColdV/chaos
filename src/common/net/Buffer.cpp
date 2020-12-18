@@ -96,11 +96,6 @@ namespace chaos
 		char* readPos = pCurNode->readCursor;
 
 		*size = pCurNode->useSize;
-		//m_useSize -= pCurNode->useSize;
-		//pCurNode->useSize = 0;
-		//pCurNode->readCursor = pCurNode->buffer;
-
-		//GetNextRNodeIt();
 
 		return readPos;
 	}
@@ -134,7 +129,7 @@ namespace chaos
 	}
 
 
-	void Buffer::MoveReadBufferPos(uint32 size)
+	void Buffer::MoveReadPos(uint32 size)
 	{
 		if (m_rNodeIt == m_buffList.end())
 			return;
@@ -175,6 +170,7 @@ namespace chaos
 		{
 			if (Expand() != 0)
 			{
+				printf("[error]:buffer expand failed!\n");
 				return 0;
 			}
 		}
@@ -183,7 +179,7 @@ namespace chaos
 			return 0;
 
 		BufferNode* pCurNode = *m_wNodeIt;
-		unsigned int leftLen = size;
+		uint32 leftLen = size;
 		uint32 cpSize = 0;
 
 		while (0 < leftLen)
@@ -210,46 +206,53 @@ namespace chaos
 	}
 
 
-	char* Buffer::GetWriteBuffer(uint32* size)
+	int Buffer::GetWriteBuffer(IOVEC_TYPE* iov, int iovcnt, uint32 size)
 	{
-		if (!size)
-			return NULL;
+		size = iovcnt * BUFFER_INIT_SIZE > size ? size : iovcnt * BUFFER_INIT_SIZE;
 
-		*size = 0;
-
-		if (GetLeftSize() <= 0 && 0 != Expand())
-			return NULL;
-
-		if (m_wNodeIt == m_buffList.end())
-			return NULL;
-
-		BufferNode* pCurNode = *m_wNodeIt;
-		if (!pCurNode)
-			return NULL;
-
-		*size = pCurNode->totalSize - pCurNode->useSize;
-		if (0 >= *size)
+		while (GetLeftSize() < size)
 		{
-			pCurNode = *GetNextWNodeIt();
-			*size = pCurNode->totalSize - pCurNode->useSize;
+			if (Expand() != 0)
+			{
+				printf("[error]:get write buffer expand failed!\n");
+				return 0;
+			}
 		}
 
-		return pCurNode->buffer + pCurNode->useSize;
+		auto it = m_wNodeIt;
+		int i = 0;
 
+		while (i < iovcnt && size > 0)
+		{
+			IOVEC_TYPE& iovec = iov[i++];
+
+			iovec.IOVEC_BUF = (*it)->buffer + (*it)->useSize;
+			iovec.IOVEC_LEN = (*it)->totalSize - (*it)->useSize > size ? size : (*it)->totalSize - (*it)->useSize;
+			size -= iovec.IOVEC_LEN;
+
+			if (++it == m_buffList.end())
+				it = m_buffList.begin();
+		}
+
+		return i;
 	}
 
 
-	void Buffer::MoveWriteBufferPos(uint32 size)
+	void Buffer::MoveWritePos(uint32 size)
 	{
-		if (m_wNodeIt == m_buffList.end())
-			return;
+		size = GetLeftSize() > size ? size : GetLeftSize();
 
-		BufferNode* pCurNode = *m_wNodeIt;
-		if (!pCurNode)
-			return;
+		while (size > 0)
+		{
+			int addSize = ((*m_wNodeIt)->useSize + size) > (*m_wNodeIt)->totalSize ? 
+				(*m_wNodeIt)->totalSize - (*m_wNodeIt)->useSize : size;
 
-		pCurNode->useSize += size;
-		m_useSize += size;
+			m_useSize += addSize;
+			(*m_wNodeIt)->useSize += addSize;
+			size -= addSize;
+
+			m_wNodeIt = GetNextWNodeIt();
+		}
 	}
 
 
@@ -277,8 +280,29 @@ namespace chaos
 		}
 		else
 		{
-			m_wNodeIt = m_buffList.insert(++m_wNodeIt, pNewNode);
-			--m_wNodeIt;
+			//处理读写节点相同并且该节点有数据未读完时,新插入的节点应当在该节点之前,
+			//否则会覆盖后面的未读节点导致数据错乱
+			if (m_wNodeIt == m_rNodeIt && (*m_wNodeIt)->useSize > 0)
+			{
+				auto writeNodeIt = m_wNodeIt;
+				m_wNodeIt = m_buffList.insert(writeNodeIt, pNewNode);
+ 
+				//处理当前需要扩展的节点既是读节点也是写节点,并且在当前节点中,前一半是已写入,后一般是未读
+				//此时新插入的节点在该节点之前, 应当将该节点readCursor之前已写入的数据拷贝到新节点之中,并重新计算该节点的useSize 
+				int realUseSize = (*writeNodeIt)->totalSize - ((*writeNodeIt)->readCursor - (*writeNodeIt)->buffer);
+				if (realUseSize < (*writeNodeIt)->useSize)
+				{
+					int moveSize = (*writeNodeIt)->useSize - realUseSize;
+					memcpy((*m_wNodeIt)->buffer, (*writeNodeIt)->buffer, moveSize);
+					(*m_wNodeIt)->useSize = moveSize;
+					(*writeNodeIt)->useSize = realUseSize;
+				}
+			}
+			else
+			{
+				m_wNodeIt = m_buffList.insert(++m_wNodeIt, pNewNode);
+				--m_wNodeIt;
+			}
 		}
 
 		return 0;

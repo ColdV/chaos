@@ -47,7 +47,7 @@ public:
 	Server() : m_totalSendSize(0), m_totalRecvSize(0) {}
 	~Server() {}
 
-	void ListenCb(chaos::Listener* ev, chaos::Connecter* ,/*socket_t fd,*/ void* userdata);
+	void ListenCb(chaos::Listener* ev, chaos::Connecter*, void* userdata);
 
 	void ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata);
 
@@ -55,7 +55,7 @@ public:
 
 	void TimerCb(chaos::Event* pev, short ev, void* userdata);
 
-	void EventCb(chaos::Event* pev, short ev, void* userdata);
+	void EventCb(chaos::Event* pev, short ev, int errcode, void* userdata);
 
 private:
 	uint64 m_totalSendSize;
@@ -77,20 +77,18 @@ void Server::ListenCb(chaos::Listener* pListener, chaos::Connecter* pConner, voi
 	pConner->SetCallback(std::bind(&Server::ReadCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
 		std::bind(&Server::WriteCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), NULL, NULL);
 
-	pConner->SetEventCallback(std::bind(&Server::EventCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), NULL);
+	pConner->SetErrCallback(std::bind(&Server::EventCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4), NULL);
 
 	if (m_clients.find(connfd) == m_clients.end())
 		m_clients.insert(std::make_pair(connfd, Client{ connfd, 0 }));
 
-	printf("socket:%d, newsocket:%d\n", pListener->GetSocket().GetFd(), pConner->GetSocket().GetFd());
-
-	LOG_DEBUG("socket:%d, newsocket:%d", pListener->GetSocket().GetFd(), pConner->GetSocket().GetFd());
+	//LOG_DEBUG("socket:%d, newsocket:%d", pListener->GetSocket().GetFd(), pConner->GetSocket().GetFd());
 }
 
 
 void Server::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 {
-	LOG_DEBUG("read socket:%d trans bytes:%d", ev->GetSocket().GetFd(), nTransBytes);
+	//LOG_DEBUG("read socket:%d trans bytes:%d", ev->GetSocket().GetFd(), nTransBytes);
 
 	if (0 == nTransBytes)
 	{
@@ -99,7 +97,7 @@ void Server::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 	}
 
 	int readable = ev->GetReadableSize();
-	char* buf = new char[readable + 1];
+	char* buf = new char[readable];
 	if (!buf)
 		return;
 
@@ -119,7 +117,7 @@ void Server::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 
 	if (0 >= ev->WriteBuffer(buf, readable))
 	{
-		LOG_DEBUG("wirte buffer faled!\n");
+		LOG_DEBUG("wirte buffer faled!");
 		return;
 	}
 
@@ -127,15 +125,20 @@ void Server::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 	Client& c = m_clients.find(fd)->second;
 	c.totalReadSize += nTransBytes;
 
-	LOG_DEBUG("socket:%d, total read size:%d", fd, c.totalReadSize);
-
 	delete[] buf;
 }
 
 
 void Server::WriteCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 {
-	LOG_DEBUG("write socket:%d trans bytes:%d", ev->GetSocket().GetFd(), nTransBytes);
+	socket_t fd = ev->GetSocket().GetFd();
+	Client& c = m_clients.find(fd)->second;
+	c.totalWriteSize += nTransBytes;
+
+	if (nTransBytes == 0)
+	{
+		LOG_DEBUG("write socket:%d trans bytes:%d", ev->GetSocket().GetFd(), nTransBytes);
+	}
 }
 
 
@@ -145,12 +148,15 @@ void Server::TimerCb(chaos::Event* pev, short ev, void* userdata)
 }
 
 
-void Server::EventCb(chaos::Event* pev, short ev, void* userdata)
+void Server::EventCb(chaos::Event* pev, short ev, int errcode, void* userdata)
 {
 	if (ev & (EV_CANCEL | EV_ERROR))
 	{
 		if (pev->GetEv() & chaos::IO_CARE_EVENT)
+		{
 			m_clients.erase(pev->GetEvKey().fd);
+			LOG_DEBUG("cancel connecter:%d", pev->GetEvKey().fd);
+		}
 
 		pev->CancelEvent();
 	}

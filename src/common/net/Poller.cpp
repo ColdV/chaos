@@ -64,16 +64,6 @@ namespace chaos
 	}
 
 
-	/*int Poller::DelEvent(socket_t fd)
-	{
-		CancelFd(fd);
-
-		m_events.erase(fd);
-
-		return 0;
-	}*/
-
-
 	void Poller::UpdateFd(socket_t fd, short op, short ev)
 	{
 		Event* pEvent = GetEvent(fd);

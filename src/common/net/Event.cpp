@@ -24,8 +24,10 @@ namespace chaos
 
 	void Event::CallErr(int errcode)
 	{
-		if (m_callback)
-			m_callback(this, GetCurEv() | EV_ERROR, m_userdata);
+		//if (m_callback)
+			//m_callback(this, GetCurEv() | EV_ERROR, m_userdata);
+		if (m_errcb)
+			m_errcb(this, GetCurEv() | EV_ERROR, errcode, m_userdata);
 		else
 			CancelEvent();
 	}
@@ -122,9 +124,6 @@ namespace chaos
 				break;
 			}
 
-			/*if (0 != SignalDispatch())
-				break;*/
-
 			m_pTimer->DispatchTimer(m_activeEvs);
 
 			if (0 != ProcessActiveEvent())
@@ -160,7 +159,7 @@ namespace chaos
 			//优先处理CANCEL,这个判断必须在GetCentre之前
 			if (pev->GetCurEv() & EV_CANCEL)
 			{
-				pev->Callback();
+				//pev->Callback();
 				CancelEvent(pev);
 				continue;
 			}
@@ -170,7 +169,7 @@ namespace chaos
 
 			pev->Handle();
 
-			pev->Callback();
+			//pev->Callback();
 
 			//清除此次已处理的事件
 			pev->PopCurEv();
@@ -367,15 +366,13 @@ namespace chaos
 			m_acceptOls[i].inListenerPos = i;
 			m_acceptOls[i].refcnt = m_overlappedsRefCnt;
 
-			//m_acceptBuffers[i].Reserver(INIT_ACCEPTADDRBUF_SIZE);
 			if(!(m_acceptBuffers[i] = new char[INIT_ACCEPTADDRBUF_SIZE]))
 				return;
 
 			//acceptex只使用一个数据块 用于存放连接后的地址信息
 			//之后可通过GetAcceptExSockaddrs获得本地或远程的地址
-			//uint32 n = 0;
-			m_acceptOls[i].overlapped.databufs[0].buf = m_acceptBuffers[i];// .GetWriteBuffer(&n);
-			m_acceptOls[i].overlapped.databufs[0].len = INIT_ACCEPTADDRBUF_SIZE;
+			m_acceptOls[i].overlapped.wsabufs[0].buf = m_acceptBuffers[i];
+			m_acceptOls[i].overlapped.wsabufs[0].len = INIT_ACCEPTADDRBUF_SIZE;
 
 			m_acceptOls[i].acceptfd = INVALID_SOCKET;
 			m_acceptOls[i].overlapped.fd = INVALID_SOCKET;
@@ -633,8 +630,8 @@ namespace chaos
 		lo->overlapped.fd = listenfd;
 		DWORD pending = 0;
 
-		if (IOCP::AcceptEx(listenfd, lo->acceptfd, lo->overlapped.databufs[0].buf, 0, lo->overlapped.databufs[0].len / 2,
-			lo->overlapped.databufs[0].len / 2, &pending, &lo->overlapped.overlapped))
+		if (IOCP::AcceptEx(listenfd, lo->acceptfd, lo->overlapped.wsabufs[0].buf, 0, lo->overlapped.wsabufs[0].len / 2,
+			lo->overlapped.wsabufs[0].len / 2, &pending, &lo->overlapped.overlapped))
 		{
 			++(*lo->refcnt);
 			AcceptComplete(&lo->overlapped.overlapped, 0, 1, true);
@@ -701,7 +698,6 @@ namespace chaos
 
 		//准备投递下一次AcceptEx
 		m_acceptedq.push(lo);
-		//pCentre->PushActiveEv(this, EV_IOREAD);
 		pCentre->PushEvent(this, EV_IOREAD);
 
 		DoneAccept(acceptedfd);
@@ -1010,34 +1006,35 @@ namespace chaos
 		Socket& s = GetSocket();
 
 		socket_unread_t unread = s.GetUnreadByte();
-		int transferBytes = 0;
+		if (unread <= 0)
+			unread = MAX_SINGLE_READ_DEFAULT;
 
-		while (0 < unread)
+		IOVEC_TYPE	iovec[MAX_IOVEC];
+		memset(iovec, 0, sizeof(iovec));
+
+		int iovcnt = m_pReadBuffer->GetWriteBuffer(iovec, MAX_IOVEC, unread);
+
+		int readBytes = s.Recv(iovec, iovcnt);
+
+		if (readBytes < 0 && SOCKET_ERR_NOT_TRY_AGAIN(errno))
 		{
-			uint32 size = 0;
-
-			char* buf = m_pReadBuffer->GetWriteBuffer(&size);
-			if (!buf)
-				break;
-
-			int read = s.Recv(buf, size);
-
-			if (0 >= read && SOCKET_ERR_NOT_TRY_AGAIN(errno))
-			{
-				transferBytes = 0;
-				break;
-			}
-
-			m_pReadBuffer->MoveWriteBufferPos(read);
-
-			unread -= read;
-			transferBytes += read;
+			CallErr(GetLastErrorno());
+			return readBytes;
 		}
 
-		if (0 == transferBytes)
-			CancelEvent();
+		if (0 == readBytes)
+		{
+			CallErr(0);
+			return 0;
+		}
 
-		CallbackRead(transferBytes);
+		if(readBytes > 0)
+			m_pReadBuffer->MoveWritePos(readBytes);
+
+		if (unread - readBytes > 0 )
+			EnableEvent(EV_IOREAD);
+
+		CallbackRead(readBytes);
 
 		return 0;
 	}
@@ -1050,45 +1047,32 @@ namespace chaos
 
 		Socket& s = GetSocket();
 
-		uint32 size = m_pWriteBuffer->GetReadSize();
-		int tranferBytes = 0;
+		uint32 readable = m_pWriteBuffer->GetReadSize();
+		if (readable <= 0)
+			return 0;
 
-		while (0 < size)
+		int sendBytes = 0;
+
+		IOVEC_TYPE	iovec[MAX_IOVEC];
+		memset(iovec, 0, sizeof(iovec));
+
+		int iovcnt = m_pWriteBuffer->ReadBuffer(iovec, MAX_IOVEC, readable);
+
+		sendBytes = s.Send(iovec, iovcnt);
+		if (sendBytes < 0 && SOCKET_ERR_NOT_TRY_AGAIN(errno))
 		{
-			uint32 hasbytes = 0;
-			char* buf = m_pWriteBuffer->ReadBuffer(&hasbytes);
-			if (!buf)
-				break;
-			
-			if (0 == hasbytes)
-				break;
-
-			int sendSize = 0;
-			do
-			{
-				sendSize = s.Send(buf, hasbytes);
-				if (0 >= sendSize)	// && UTIL_ERR_NOT_TRY_AGAIN(errno))
-					break;
-
-				size -= sendSize;
-				tranferBytes += sendSize;
-				hasbytes -= sendSize;
-				m_pWriteBuffer->MoveReadBufferPos(sendSize);
-
-			} while (hasbytes > 0);
-
-			if (0 >= sendSize)
-			{
-				break;
-			}
+			CallErr(sendBytes);
+			return sendBytes;
 		}
+
+		m_pWriteBuffer->MoveReadPos(sendBytes);
 
 		if (m_pWriteBuffer->GetReadSize() <= 0)
 			DisableEvent(EV_IOWRITE);
 		else
 			EnableEvent(EV_IOWRITE);
 
-		CallbackWrite(tranferBytes);
+		CallbackWrite(sendBytes);
 
 		return 0;
 	}
@@ -1122,19 +1106,17 @@ namespace chaos
 
 		Socket& s = GetSocket();
 
-		uint32 size = 0;
-		m_pReadOverlapped->databufs[0].buf = m_pReadBuffer->GetWriteBuffer(&size);
-		m_pReadOverlapped->databufs[0].len = size;
+		int iovcnt = m_pReadBuffer->GetWriteBuffer(m_pReadOverlapped->wsabufs, MAX_IOVEC, MAX_SINGLE_READ_DEFAULT);
 
 		m_pReadOverlapped->fd = s.GetFd();
 
-		DWORD bytesRead = 0;
+		DWORD readBytes = 0;
 		DWORD flags = 0;
 
 		if (!(GetEv() & EV_IOREAD))
 			return -1;
 
-		int ret = WSARecv(m_pReadOverlapped->fd, &m_pReadOverlapped->databufs[0], 1, &bytesRead, &flags, &m_pReadOverlapped->overlapped, NULL);
+		int ret = WSARecv(m_pReadOverlapped->fd, m_pReadOverlapped->wsabufs, iovcnt, &readBytes, &flags, &m_pReadOverlapped->overlapped, NULL);
 		if (ret)
 		{
 			if (GetLastErrorno() != WSA_IO_PENDING)
@@ -1171,7 +1153,7 @@ namespace chaos
 		if (readable <= 0)
 			return 0;
 
-		int iovcnt = m_pWriteBuffer->ReadBuffer(m_pWriteOverlapped->databufs, MAX_WSABUFS, readable);
+		int iovcnt = m_pWriteBuffer->ReadBuffer(m_pWriteOverlapped->wsabufs, MAX_IOVEC, readable);
 
 		DWORD sendBytes = 0;
 		DWORD flags = 0;
@@ -1179,7 +1161,7 @@ namespace chaos
 		if (!(GetEv() & EV_IOWRITE))
 			return -1;
 
-		int ret = WSASend(GetSocket().GetFd(), m_pWriteOverlapped->databufs, iovcnt, &sendBytes, flags, &m_pWriteOverlapped->overlapped, NULL);
+		int ret = WSASend(GetSocket().GetFd(), m_pWriteOverlapped->wsabufs, iovcnt, &sendBytes, flags, &m_pWriteOverlapped->overlapped, NULL);
 		if (ret)
 		{
 			if (GetLastErrorno() != WSA_IO_PENDING)
@@ -1227,7 +1209,7 @@ namespace chaos
 		}
 
 		//收完数据后调整buffer下次写入的位置
-		m_pReadBuffer->MoveWriteBufferPos(bytes);
+		m_pReadBuffer->MoveWritePos(bytes);
 
 		EventCentre* pCentre = GetCentre();
 		if (!pCentre)
@@ -1259,7 +1241,14 @@ namespace chaos
 
 		m_isPostWrite = false;
 
-		m_pWriteBuffer->MoveReadBufferPos(bytes);
+		if (!bOk)
+		{
+			int n = WSAGetLastError();
+			CallErr(-1);
+			return;
+		}
+
+		m_pWriteBuffer->MoveReadPos(bytes);
 
 		int readable = m_pWriteBuffer->GetReadSize();
 		if (readable > 0)
@@ -1310,7 +1299,7 @@ namespace chaos
 namespace chaos
 {
 	TimerEvent::TimerEvent(uint32 timeout, bool isLoop/* = false*/) :
-		Event(EV_TIMEOUT, EventKey(Timer::CreateTimerID())),	//EventKey{ Timer::CreateTimerID() }
+		Event(EV_TIMEOUT, EventKey(Timer::CreateTimerID())),
 		m_timeout(timeout),
 		m_isLoop(isLoop),
 		m_isCancel(false),

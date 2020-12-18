@@ -3,19 +3,6 @@
 #include "stdafx.h"
 #include <list>
 
-
-#ifdef _WIN32
-#define IOVEC_TYPE	WSABUF
-#define IOVEC_BUF	buf
-#define IOVEC_LEN	len
-#else
-#define IOVEC_TYPE	iovec
-#define IOVEC_BUF	iov_base
-#define IOVEC_LEN	iov_len
-#endif // _WIN32
-
-
-
 namespace chaos
 {
 	const uint32 BUFFER_INIT_SIZE = 1024 * 4;
@@ -55,17 +42,17 @@ namespace chaos
 		//@return 当前节点数据地址
 		char* ReadBuffer(uint32* size);
 
-		//将size个字节分成最多iovcnt个链传入到iov中
+		//将size个待读字节分成最多iovcnt个填充到iov中
 		//该调用并未实际消耗buffer中的数据,之后可根据实际使用情况调用MoveReadBuffePos
-		//@param iov:待接收buffer链的结构
+		//@param in/out iov:可读数据的buffer数组
 		//@param iovcnt:传入的iov数组长度
 		//@param size:期望读取的字节数
 		//@return 返回实际已填充的iov个数
 		int ReadBuffer(IOVEC_TYPE* iov, int iovcnt, uint32 size);
 
-		//移动可读缓冲区
-		//将可读缓冲区浮标从当前位置移动size个位置
-		void MoveReadBufferPos(uint32 size);
+		//移动读浮标
+		//将读浮标从当前位置移动size个位置
+		void MoveReadPos(uint32 size);
 
 		//获取当前可读数据大小
 		uint32 GetReadSize() const { return m_useSize; };
@@ -75,13 +62,17 @@ namespace chaos
 		//return:已写入的字节数
 		uint32 WriteBuffer(const char* buffer, uint32 size);
 
-		//可写缓冲区
-		//@param size:传出可写缓冲区大小
-		char* GetWriteBuffer(uint32* size);
+		//获取size个字节可写入的buffer, 并将这些buffer填充到iov中
+		//该调用并未实际消耗buffer,之后可根据实际写入了多少字节调用MoveReadBuffePos
+		//@param in/out iov:将写入数据的buffer数组
+		//@param iovcnt:iov最大长度
+		//@param size:待写入的数据的长度
+		//@return  返回实际填充的iov个数
+		int GetWriteBuffer(IOVEC_TYPE* iov, int iovcnt, uint32 size);
 
-		//移动可写缓冲区
-		//将可写缓冲区浮标从当前位置移动size个位置
-		void MoveWriteBufferPos(uint32 size);
+		//移动写浮标
+		//将写浮标从当前位置移动size个位置
+		void MoveWritePos(uint32 size);
 
 	private:
 		//扩张Buffer,每次新增一个BUFFER_INIT_SIZE大小的节点

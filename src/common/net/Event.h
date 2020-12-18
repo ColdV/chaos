@@ -88,7 +88,7 @@ namespace chaos
 
 		typedef std::function<void(Event* pEv, short ev, void* userdata)> EventCallback;
 
-		typedef std::function<void(Event* pEv, int errcode, void* userdata)> EventErrCallback;
+		typedef std::function<void(Event* pEv, short ev, int errcode, void* userdata)> EventErrCallback;
 
 		typedef std::function<void(int ret)> EventRegisterCallback;
 
@@ -107,7 +107,8 @@ namespace chaos
 
 		void CancelEvent();
 
-		void SetEventCallback(const EventCallback& cb, void* userdata) { m_callback = cb; m_userdata = userdata; }
+		//void SetEventCallback(const EventCallback& cb, void* userdata) { m_callback = cb; m_userdata = userdata; }
+		void SetErrCallback(const EventErrCallback& errcb, void* userdata) { m_errcb = errcb; m_userdata = userdata; }
 
 	protected:
 		Event(short ev, const EventKey& evKey);
@@ -121,7 +122,7 @@ namespace chaos
 		void SetRegisterCallback(const EventRegisterCallback& cb) { m_registerCb = cb; }
 
 	private:
-		void Callback() { if (m_callback) m_callback(this, GetCurEv(), m_userdata); }
+		//void Callback() { if (m_callback) m_callback(this, GetCurEv(), m_userdata); }
 
 		void PushCurEv(short ev) { m_curEv.push(ev); }
 
@@ -142,8 +143,8 @@ namespace chaos
 
 		EventKey	m_evKey;
 
-		EventCallback m_callback;
-
+		//EventCallback m_callback;
+		EventErrCallback m_errcb;
 		void* m_userdata;
 
 		EventRegisterCallback m_registerCb;

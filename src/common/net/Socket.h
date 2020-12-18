@@ -45,8 +45,12 @@ namespace chaos
 
 		int Recv(char* buf, const int size);
 
+		int Recv(IOVEC_TYPE* iov, int iovcnt);
+
 		int Send(const char* buf, const int size);
 
+		int Send(IOVEC_TYPE* iov, int iovcnt);
+		
 		socket_t GetFd() const { return m_fd; }
 
 		//缓冲区中的待接收数据大小

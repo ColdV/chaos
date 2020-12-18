@@ -23,12 +23,10 @@ namespace chaos
 
 	typedef std::function<void(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool bOk)> IOCP_CALLBACK;
 
-#define MAX_WSABUFS 8
-
 	typedef struct
 	{
 		OVERLAPPED overlapped;
-		WSABUF databufs[MAX_WSABUFS];
+		WSABUF wsabufs[MAX_IOVEC];
 		socket_t fd;
 		IOCP_CALLBACK	cb;
 		uint16 eventDestroy : 1;

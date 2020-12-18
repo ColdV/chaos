@@ -27,7 +27,6 @@ namespace chaos
 
 	Socket::~Socket()
 	{
-		printf("close socket:%llu\n", m_fd);
 		Close();
 	}
 
@@ -47,8 +46,6 @@ namespace chaos
 	int Socket::Listen(int backlog)
 	{
 		int ret = listen(m_fd, backlog);
-		if (0 != ret)
-			return ret;
 
 		return ret;
 	}
@@ -56,8 +53,6 @@ namespace chaos
 
 	socket_t Socket::Accept()
 	{
-		//printf("开始接受新的连接!\n");
-
 		sockaddr_in sockAddr;
 		socklen_t len = sizeof(sockAddr);
 		memset(&sockAddr, 0, sizeof(sockAddr));
@@ -106,20 +101,55 @@ namespace chaos
 	{
 		int len = recv(m_fd, buf, size, 0);
 
-		if (0 >= len)
-		{
-			printf("recv client socket[%llu] close msg!\n", m_fd);
-			return -1;
-		}
-
 		return len;
 	}
+
+
+	int Socket::Recv(IOVEC_TYPE* iov, int iovcnt)
+	{
+		int transBytes = 0;
+#ifdef _WIN32
+		DWORD readBytes = 0;
+		DWORD flags = 0;
+		if (WSARecv(m_fd, iov, iovcnt, &readBytes, &flags, NULL, NULL))
+		{
+			if (WSAGetLastError() != WSAECONNABORTED)
+				transBytes = -1;
+		}
+		else
+		{
+			transBytes = readBytes;
+		}
+#else
+		transBytes = readv(m_fd, iov, iovcnt);
+#endif // _WIN32
+
+		return transBytes;
+	}
+
 
 	int Socket::Send(const char* buf, const int size)
 	{
 		int len = send(m_fd, buf, size, 0);
 
 		return len;
+	}
+
+
+	int Socket::Send(IOVEC_TYPE* iov, int iovcnt)
+	{
+		int transBytes = 0;
+#ifdef _WIN32
+		DWORD sendBytes = 0;
+		if (WSASend(m_fd, iov, iovcnt, &sendBytes, 0, NULL, NULL))
+			transBytes = -1;
+		else
+			transBytes = sendBytes;	
+#else
+		transBytes = writev(m_fd, iov, iovcnt);
+#endif // _WIN32
+
+		return transBytes;
 	}
 
 
@@ -132,21 +162,12 @@ namespace chaos
 			printf("call ioctlsocket failed! err:%d\n", WSAGetLastError());
 			return 0;
 		}
-		/*else
-		{
-			printf("socket[%llu] ready recv msg len:%lu\n", m_fd, n);
-		}*/
-
 #else
 		if (ioctl(m_fd, FIONREAD, &n) < 0)
 		{
 			printf("call ioctlsocket failed!\n");
-			return 0;
+			return -1;
 		}
-		/*else
-		{
-			printf("socket[%d] ready recv msg len:%llu\n", m_fd, n);	
-		}*/
 
 #endif // _WIN32
 

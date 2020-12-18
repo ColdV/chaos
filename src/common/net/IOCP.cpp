@@ -12,7 +12,6 @@
 
 #include "IOCP.h"
 #include "Event.h"
-#include "log/Logger.h"
 
 #if defined _WIN32 && defined IOCP_ENABLE
 
@@ -105,7 +104,7 @@ namespace chaos
 				return -1;
 		}
 
-		if (!s_acceptEx || /*!s_connectEx ||*/ !s_getAcceptExSockaddrs)
+		if (!s_acceptEx || !s_connectEx || !s_getAcceptExSockaddrs)
 		{
 			//获取Ex系列函数
 			GUID acceptex = WSAID_ACCEPTEX;
@@ -180,18 +179,6 @@ namespace chaos
 	}
 
 
-	//int IOCP::CancelFd(socket_t fd)
-	//{
-	//	//if (!CloseHandle((HANDLE)fd))
-	//	//{
-	//	//	LOG_DEBUG("closehandle:%d\n", fd);
-	//	//	return GetLastError();
-	//	//}
-
-	//	return 0;
-	//}
-
-
 	int IOCP::Launch(int timeoutMs, Poller::EventList& activeEvents)
 	{
 		if (0 >= timeoutMs)
@@ -234,20 +221,6 @@ namespace chaos
 			{
 				LPCOMPLETION_OVERLAPPED lo = (LPCOMPLETION_OVERLAPPED)overlapped;
 
-				if (bOk)
-				{
-					//printf("GetQueuedCompletionStatus sucess!\n");
-
-					//if (0 != bytes)
-					//	printf("recv[%d]:%s\n", lo->fd, lo->databufs[0].buf);
-				}
-				else
-				{
-					int err = WSAGetLastError();
-					if ((err != WAIT_TIMEOUT) && (err != ERROR_NETNAME_DELETED))
-						printf("GetQueuedCompletionStatus failed:%d\n", err);
-				}
-
 				if (lo->cb)
 				{
 					MutexGuard lock(centre.GetMutex());
@@ -258,14 +231,6 @@ namespace chaos
 			else
 			{
 				printf("GetQueuedCompletionStatus return overlapped is null!\n");
-				if (bOk)
-				{
-					printf("GetQueuedCompletionStatus sucess but overlapped is null!\n"); 
-				}
-				else
-				{
-					printf("GetQueuedCompletionStatus failed:%d\n", WSAGetLastError());
-				}
 			}
 		}
 
