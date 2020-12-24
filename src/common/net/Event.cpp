@@ -4,6 +4,9 @@
 namespace chaos
 {
 	Event::Event(short ev, const EventKey& evKey) :
+#ifndef _WIN32
+		m_mutex(PTHREAD_MUTEX_RECURSIVE),
+#endif // !_WIN32
 		m_pCenter(NULL),
 		m_ev(ev | BASE_CARE_EVENT),
 		m_userdata(NULL)
@@ -24,8 +27,6 @@ namespace chaos
 
 	void Event::CallErr(int errcode)
 	{
-		//if (m_callback)
-			//m_callback(this, GetCurEv() | EV_ERROR, m_userdata);
 		if (m_errcb)
 			m_errcb(this, GetCurEv() | EV_ERROR, errcode, m_userdata);
 		else
@@ -159,7 +160,6 @@ namespace chaos
 			//优先处理CANCEL,这个判断必须在GetCentre之前
 			if (pev->GetCurEv() & EV_CANCEL)
 			{
-				//pev->Callback();
 				CancelEvent(pev);
 				continue;
 			}
@@ -168,8 +168,6 @@ namespace chaos
 				continue;
 
 			pev->Handle();
-
-			//pev->Callback();
 
 			//清除此次已处理的事件
 			pev->PopCurEv();
@@ -264,7 +262,6 @@ namespace chaos
 		}
 
 		pEvent->SetCenter(this);
-		pEvent->CallbackRegister(ret);
 
 		++m_evcount;
 
@@ -381,8 +378,6 @@ namespace chaos
 				std::placeholders::_3, std::placeholders::_4);
 		}
 
-		SetRegisterCallback(std::bind(&Listener::RegisterCallback, this, std::placeholders::_1));
-
 #endif // IOCP_ENABLE
 	}
 
@@ -470,11 +465,16 @@ namespace chaos
 	{
 		Socket& s = GetSocket();
 
-		int ret = 0;
+		bool isListen = false;
+		socklen_t optsize = sizeof(isListen);
+		if (getsockopt(s.GetFd(), SOL_SOCKET, SO_ACCEPTCONN, (char*)&isListen, &optsize) || isListen)
+			return -1;
 
 		int on = 1;
-		if (0 > (ret = setsockopt(s.GetFd(), SOL_SOCKET, SO_KEEPALIVE, (char*)&on, sizeof(on))))
-			return ret;
+		if (setsockopt(s.GetFd(), SOL_SOCKET, SO_KEEPALIVE, (char*)&on, sizeof(on)))
+			return -1;
+
+		int ret = 0;
 
 		//设置socket为非阻塞
 		if (0 > (ret = s.SetNonBlock()))
@@ -493,6 +493,10 @@ namespace chaos
 		//	printf("set TCP_NODELAY failed\n");
 		//	return ret;
 		//}
+
+#ifdef IOCP_ENABLE
+		StartAsynRequest();
+#endif // IOCP_ENABLE
 
 		return ret;
 	}
@@ -542,18 +546,6 @@ namespace chaos
 		}
 
 	}
-
-
-	void Listener::RegisterCallback(int ret)
-	{
-		if (0 != ret)
-			return;
-
-#ifdef IOCP_ENABLE
-		StartAsynRequest();
-#endif // IOCP_ENABLE
-	}
-
 
 
 	void Listener::DoneAccept(socket_t acceptedfd)
@@ -684,8 +676,6 @@ namespace chaos
 			return;
 		}
 
-		//Socket& s = GetSocket();
-
 		socket_t acceptedfd = lo->acceptfd;		//已经连接成功的fd
 		socket_t listenfd = GetSocket().GetFd();
 
@@ -757,8 +747,6 @@ namespace chaos
 		}
 
 #endif // IOCP_ENABLE
-
-		SetRegisterCallback(std::bind(&Connecter::RegisterCallback, this, std::placeholders::_1));
 
 		memset(&m_peeraddr, 0, sizeof(m_peeraddr));
 
@@ -1078,21 +1066,7 @@ namespace chaos
 	}
 
 
-	void Connecter::RegisterCallback(int ret)
-	{
-		if (0 != ret)
-			return;
-
 #ifdef IOCP_ENABLE
-		//AsynRead();
-		//AsynWrite();
-#endif // IOCP_ENABLE
-
-	}
-
-
-#ifdef IOCP_ENABLE
-
 	int Connecter::AsynRead()
 	{
 		if (!m_pReadOverlapped || !m_pReadBuffer)

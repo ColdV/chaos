@@ -81,7 +81,7 @@ void Client::ConnectCb(chaos::Connecter* pConnecter, int bOk, void* userdata)
 	pConnecter->SetCallback(std::bind(&Client::ReadCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
 		std::bind(&Client::WriteCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), NULL, NULL);
 
-	printf("connect sucess::%d, cnt:%d\n", pConnecter->GetSocket().GetFd(), cnt);
+	//printf("connect sucess::%d, cnt:%d\n", pConnecter->GetSocket().GetFd(), cnt);
 
 	if (maxClient == cnt)
 	{
@@ -119,8 +119,8 @@ void Client::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 	int readable = ev->GetReadableSize() + 1;
 	totalReadable += nTransBytes;//readable - 1;
 
-	if(m_totalReadSize == SENDMAX)
-		printf("socket:%d,total read size:%llu, total readable:%llu\n",ev->GetSocket().GetFd(), m_totalReadSize, totalReadable);
+	if (m_totalReadSize == SENDMAX)
+		;//printf("socket:%d,total read size:%llu, total readable:%llu\n",ev->GetSocket().GetFd(), m_totalReadSize, totalReadable);
 
 	char* buf = new char[readable];
 	if (!buf)
@@ -143,7 +143,7 @@ void Client::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 void Client::WriteCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 {
 	m_totalSendSize += nTransBytes;
-	printf("socket:%d, send total size:%llu\n", ev->GetSocket().GetFd(), m_totalSendSize);
+	//printf("socket:%d, send total size:%llu\n", ev->GetSocket().GetFd(), m_totalSendSize);
 	LOG_DEBUG("write socket:%d trans bytes:%d", ev->GetSocket().GetFd(), nTransBytes);
 }
 
@@ -164,7 +164,7 @@ void Client::Send(const char* buf, int bulen)
 	//int sendSize = m_pConnecter->Send(BUF, sizeof(BUF));
 	int sendSize = m_pConnecter->WriteBuffer(BUF, sizeof(BUF));
 
-	printf("send size:%d\n", sendSize);
+	//printf("send size:%d\n", sendSize);
 
 	if (maxClient == cnt)
 	{

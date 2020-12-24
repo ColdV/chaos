@@ -90,8 +90,6 @@ namespace chaos
 
 		typedef std::function<void(Event* pEv, short ev, int errcode, void* userdata)> EventErrCallback;
 
-		typedef std::function<void(int ret)> EventRegisterCallback;
-
 		virtual ~Event() {}
 
 		//响应事件处理
@@ -107,7 +105,6 @@ namespace chaos
 
 		void CancelEvent();
 
-		//void SetEventCallback(const EventCallback& cb, void* userdata) { m_callback = cb; m_userdata = userdata; }
 		void SetErrCallback(const EventErrCallback& errcb, void* userdata) { m_errcb = errcb; m_userdata = userdata; }
 
 	protected:
@@ -119,11 +116,7 @@ namespace chaos
 
 		void CallErr(int errcode);
 
-		void SetRegisterCallback(const EventRegisterCallback& cb) { m_registerCb = cb; }
-
 	private:
-		//void Callback() { if (m_callback) m_callback(this, GetCurEv(), m_userdata); }
-
 		void PushCurEv(short ev) { m_curEv.push(ev); }
 
 		void PopCurEv() { if (!m_curEv.empty()) m_curEv.pop(); }
@@ -132,7 +125,8 @@ namespace chaos
 
 		void SetEvKey(const EventKey& evKey) { memcpy(&m_evKey, &evKey, sizeof(evKey)); }
 
-		void CallbackRegister(int ret) { if (m_registerCb) m_registerCb(ret); }
+	protected:
+		Mutex m_mutex;
 
 	private:
 		EventCentre* m_pCenter;		//所属的事件中心
@@ -141,13 +135,10 @@ namespace chaos
 		
 		std::queue<short> m_curEv;	//当前发生的事件队列
 
-		EventKey	m_evKey;
+		EventKey m_evKey;
 
-		//EventCallback m_callback;
 		EventErrCallback m_errcb;
 		void* m_userdata;
-
-		EventRegisterCallback m_registerCb;
 	};
 
 
@@ -213,11 +204,11 @@ namespace chaos
 
 		EventList m_waittingEvs;			//已等待中的事件
 
-		bool m_running;
+		std::atomic_bool m_running;
 
 		std::atomic<int> m_evcount;
 
-		bool m_isInit;
+		std::atomic_bool m_isInit;
 
 		Mutex m_mutex;
 	};
@@ -263,8 +254,6 @@ namespace chaos
 		//GetQueuedCompletionStatus后的回调
 		void AcceptComplete(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool bOk);
 #endif // IOCP_ENABLE
-
-		void RegisterCallback(int ret);
 
 		void DoneAccept(socket_t acceptedfd);
 
@@ -331,8 +320,6 @@ namespace chaos
 	private:
 		virtual void Handle() override;
 
-		void RegisterCallback(int ret);
-
 		void CallbackRead(int nTransferBytes) { if (m_readcb) m_readcb(this, nTransferBytes, m_userdata); }
 
 		void CallbackWrite(int nTransferBytes) { if (m_writecb) m_writecb(this, nTransferBytes, m_userdata); }
@@ -371,7 +358,6 @@ namespace chaos
 
 		LPCOMPLETION_OVERLAPPED m_pConnectOverlapped;
 		bool m_isPostConnect;		//是否已投递ConnectEx事件(IOCP在等待事件完成)
-		//std::shared_ptr<COMPLETION_OVERLAPPED> m_pConnectOverlapped;
 
 #endif // IOCP_ENABLE
 
