@@ -25,7 +25,6 @@ namespace chaos
 			MAX_FD = 1024,
 		};
 
-		//static Select& Instance();
 		Select(EventCentre* pCentre);
 
 		virtual ~Select();

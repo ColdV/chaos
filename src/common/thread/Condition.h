@@ -30,15 +30,15 @@ public:
 	}
 
 
-	int CondWait(int timeOut = -1)
+	int CondWait(int timeoutMs = -1)
 	{
 #ifdef _WIN32
-		if (0 > timeOut)
-			timeOut = INFINITE;
+		if (0 > timeoutMs)
+			timeoutMs = INFINITE;
 
 		//这里,先UnLock,后Lock,用来模拟pthread_cond_wait
 		m_mutex.UnLock();
-		int ret = WaitForSingleObject(m_cond, timeOut * 1000);
+		int ret = WaitForSingleObject(m_cond, timeoutMs);
 		if (0 == ret)
 		{
 			//由于创建Event时是手动模式,需要手动重置信号, 
@@ -50,11 +50,11 @@ public:
 
 		return ret;
 #else
-		if (0 <= timeOut)
+		if (timeoutMs >= 0)
 		{
 			struct timespec timeSpec;
-			timeSpec.tv_sec = timeOut;
-			timeSpec.tv_nsec = 0;
+			timeSpec.tv_sec = timeoutMs / SEC2MSEC;
+			timeSpec.tv_nsec = (timeoutMs % SEC2MSEC) * SEC2MSEC * SEC2MSEC;
 			
 			return pthread_cond_timedwait(&m_cond, m_mutex.GetMutex(), &timeSpec);
 		}

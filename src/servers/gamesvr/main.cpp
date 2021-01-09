@@ -105,16 +105,6 @@ void Server::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 
 	ev->ReadBuffer(buf, readable);
 
-	//int sendSize = 0;
-	//while (sendSize < readable)
-	//{
-	//	int sended = ev->Send(buf + sendSize, readable - sendSize);
-	//	if (0 > sended)
-	//		break;
-
-	//	sendSize += sended;
-	//}
-
 	if (0 >= ev->WriteBuffer(buf, readable))
 	{
 		LOG_DEBUG("wirte buffer faled!");
@@ -155,7 +145,7 @@ void Server::EventCb(chaos::Event* pev, short ev, int errcode, void* userdata)
 		if (pev->GetEv() & chaos::IO_CARE_EVENT)
 		{
 			m_clients.erase(pev->GetEvKey().fd);
-			LOG_DEBUG("cancel connecter:%d", pev->GetEvKey().fd);
+			printf("cancel connecter:%d\n", pev->GetEvKey().fd);
 		}
 
 		pev->CancelEvent();
@@ -189,15 +179,15 @@ int main()
 
 	chaos::EventCentre* p = new chaos::EventCentre;
 
-	if (0 != p->Init())
-	{
-		printf("init event centre failed!\n");
-		return 0;
-	}
+	//if (0 != p->Init())
+	//{
+	//	printf("init event centre failed!\n");
+	//	return 0;
+	//}
 
 	auto cb = std::bind(&Server::ListenCb, &t, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 
-	chaos::Listener* ev = chaos::Listener::CreateListener(AF_INET, SOCK_STREAM, IPPROTO_TCP, PORT, 0, cb);
+	chaos::Listener* ev = chaos::Listener::CreateListener(NULL, PORT, 0, TCP_OPT_TCP_NODELAY, cb);
 	if (!ev)
 	{
 		printf("create listener failed!\n");

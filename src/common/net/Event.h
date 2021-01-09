@@ -8,10 +8,14 @@
 #include <functional>
 #include <memory>
 #include <atomic>
+#include <assert.h>
 #include "Poller.h"
 #include "Buffer.h"
 #include "IOCP.h"
 #include "thread/Mutex.h"
+#include "thread/Condition.h"
+#include <condition_variable>
+#include <mutex>
 
 
 #define SOCKET_ERR_TRY_AGAIN(e) \
@@ -36,7 +40,14 @@ enum
 };
 
 
+//可设置的SOCK/TCP选项
 enum
+{
+	TCP_OPT_TCP_NODELAY = 1,
+};
+
+
+enum EVENT_UPDATE_OP
 {
 	EV_CTL_ADD = 1,
 	EV_CTL_DEL,
@@ -75,6 +86,15 @@ namespace chaos
 		timer_id	timerId;
 	};
 
+
+	union SockAddr
+	{
+		sockaddr sa;
+		sockaddr_in sin;
+		sockaddr_in6 sin6;
+	};
+
+
 	const int BASE_CARE_EVENT = EV_CANCEL;
 	const int IO_CARE_EVENT = EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT;
 	const int TIMEOUT_CART_EVENT = EV_TIMEOUT;
@@ -101,7 +121,7 @@ namespace chaos
 
 		const EventKey& GetEvKey() const { return m_evKey; }
 
-		EventCentre* GetCentre() const { return m_pCenter; }
+		EventCentre* GetCentre() const { return m_pCentre; }
 
 		void CancelEvent();
 
@@ -121,23 +141,21 @@ namespace chaos
 
 		void PopCurEv() { if (!m_curEv.empty()) m_curEv.pop(); }
 
-		void SetCenter(EventCentre* pCentre) { m_pCenter = pCentre; }
+		void SetCenter(EventCentre* pCentre) { m_pCentre = pCentre; }
 
 		void SetEvKey(const EventKey& evKey) { memcpy(&m_evKey, &evKey, sizeof(evKey)); }
 
-	protected:
-		Mutex m_mutex;
-
 	private:
-		EventCentre* m_pCenter;		//所属的事件中心
+		EventCentre* m_pCentre;			//所属的事件中心
 
-		short m_ev;					//注册的事件
+		std::atomic<short> m_ev;		//注册的事件
 		
-		std::queue<short> m_curEv;	//当前发生的事件队列
+		std::queue<short> m_curEv;		//当前发生的事件队列
 
 		EventKey m_evKey;
 
 		EventErrCallback m_errcb;
+
 		void* m_userdata;
 	};
 
@@ -152,11 +170,6 @@ namespace chaos
 			Event* pEvent;
 		};
 
-
-		typedef std::map<socket_t, Event*> NetEventMap;
-		typedef std::map<int, Event*>	SignalEventMap;
-		typedef std::list<Event*>	ActiveEventList;
-		typedef std::queue<Event*>	EvQueue;
 		typedef std::vector<Event*> EventList;
 		
 	public:
@@ -171,16 +184,21 @@ namespace chaos
 
 		int RegisterEvent(Event* pEvent);
 
+		void CancelEvent(Event* pEvent);
+
 		void PushEvent(Event* pEvent, short ev);
 
-		//更新事件
+		//更新已注册的事件
+		//@op:更新操作enum EVENT_UPDATE_OP
 		//@ev:需要更新的事件
 		void UpdateEvent(Event* pEvent, short op, short ev);
 
 		Mutex& GetMutex() { return m_mutex; }
 
+		void WaitWaittintEvsCond(int timeoutMs = -1) { MutexGuard lock(m_mutex); m_waittintEvsCond.CondWait(timeoutMs); }
+
 	private:
-		int CancelEvent(Event* pEvent);
+		int DeleteEvent(Event* pEvent);
 
 		int ProcessActiveEvent();
 
@@ -188,7 +206,7 @@ namespace chaos
 		void ClearAllEvent();
 	
 		//计算当前等待IO的timeout
-		int CalculateTimeout();
+		int CalculateTimeoutMs();
 
 		//将等到中的事件移动到活动列表
 		void MakeWaittingToActive();
@@ -198,11 +216,9 @@ namespace chaos
 
 		Timer* m_pTimer;				//定时器
 
-		SignalEventMap m_signalEvs;
-
 		EventList m_activeEvs;			//活动事件
 
-		EventList m_waittingEvs;			//已等待中的事件
+		EventList m_waittingEvs;		//等待中的事件
 
 		std::atomic_bool m_running;
 
@@ -211,8 +227,9 @@ namespace chaos
 		std::atomic_bool m_isInit;
 
 		Mutex m_mutex;
-	};
 
+		Condition m_waittintEvsCond;
+	};
 
 
 	class Listener :public Event
@@ -229,8 +246,8 @@ namespace chaos
 
 		~Listener();
 
-		static Listener* CreateListener(int af, int socktype, int protocol, unsigned short port, 
-			const char* ip = NULL, ListenerCb cb = NULL, void * userdata = NULL);
+		static Listener* CreateListener(const char* ip = NULL, unsigned short port = 0,
+				bool ipv6 = false, int opt = 0, ListenerCb cb = NULL, void * userdata = NULL);
 
 		int Listen(const sockaddr* sa, int salen);
 
@@ -258,7 +275,8 @@ namespace chaos
 		void DoneAccept(socket_t acceptedfd);
 
 	private:
-		Socket* m_socket;
+		//Socket* m_socket;
+		std::unique_ptr<Socket> m_socket;
 
 		ListenerCb m_cb;
 
@@ -280,13 +298,6 @@ namespace chaos
 	{
 	public:
 		typedef std::function<void(Connecter* pConnect, int nTransBytes, void* userdata)> NetCallback;
-
-		union SockAddr
-		{
-			sockaddr sa;
-			sockaddr_in sin;
-			sockaddr_in6 sin6;
-		};
 
 		explicit Connecter(socket_t fd);
 
@@ -317,6 +328,11 @@ namespace chaos
 		//关闭关注的事件
 		void DisableEvent(short ev);
 
+#ifdef IOCP_ENABLE
+		int AsyncConnect(sockaddr* sa, int salen);
+#endif // IOCP_ENABLE
+
+
 	private:
 		virtual void Handle() override;
 
@@ -343,7 +359,8 @@ namespace chaos
 #endif // IOCP_ENABLE
 
 	private:
-		Socket* m_socket;
+		//Socket* m_socket;
+		std::unique_ptr<Socket> m_socket;
 
 		Buffer* m_pReadBuffer;
 

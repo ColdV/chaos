@@ -15,17 +15,10 @@
 
 namespace chaos
 { 
-
-	//Epoll& Epoll::Instance()
-	//{
-	//	static Epoll s_inst;
-	//	return s_inst;
-	//}
-
 	Epoll::Epoll(EventCentre* pCentre):
 		Poller(pCentre),
 		m_epfd(0),
-		m_epevs(0)
+		m_epevs(new epoll_event[INIT_EVENT_LIST_SIZE])
 	{
 	}
 
@@ -34,16 +27,14 @@ namespace chaos
 	{
 		if (m_epevs)
 			delete[] m_epevs;
+
+		close(m_epfd);
 	}
 
 
 	int Epoll::Init()
 	{
-		m_epevs = new epoll_event[MAX_FD];
-		if (!m_epevs)
-			return -1;
-
-		m_epfd = epoll_create(MAX_FD);
+		m_epfd = epoll_create1(EPOLL_CLOEXEC);
 		if (0 >= m_epfd)
 			return m_epfd;
 
@@ -56,7 +47,7 @@ namespace chaos
 		if (0 > timeoutMs)
 			timeoutMs = -1;
 
-		int cnt = epoll_wait(m_epfd, m_epevs, MAX_FD, timeoutMs);
+		int cnt = epoll_wait(m_epfd, m_epevs, INIT_EVENT_LIST_SIZE, timeoutMs);
 		if (0 > cnt && errno != EINTR)
 			return -1;
 

@@ -21,13 +21,9 @@ namespace chaos
 	class Event;
 	class EventCentre;
 
-	const int NET_TICK = 1;	// 1000 / 60;		//“ª√Î60÷°
-
 	class Poller : public NonCopyable
 	{
 	public:
-		friend EventCentre;
-
 		typedef std::unordered_map<socket_t, Event*> NetEventMap;
 		typedef std::vector<Event*> EventList;
 
@@ -54,6 +50,10 @@ namespace chaos
 
 		EventCentre& GetCentre() const { return *m_pCentre; }
 
+		const NetEventMap& GetAllEvents() const { return m_events; }
+
+		NetEventMap& GetAllEvents() { return m_events; }
+
 		void Clear();
 
 		static Poller* AdapterNetDrive(EventCentre* pCentre);
@@ -62,15 +62,9 @@ namespace chaos
 	protected:
 		virtual int RegistFd(socket_t fd, short ev) { return 0; }
 
-		//virtual int RegistFd(const Event*) { return 0; }
-
 		virtual int CancelFd(socket_t fd, short ev) { return 0; }
 
 		int PushActiveEvent(socket_t fd, short ev, EventList& activeEvents);
-
-		const NetEventMap& GetAllEvents() const { return m_events; }
-
-		NetEventMap& GetAllEvents() { return m_events; }
 
 	private:
 		Poller(const Poller&);

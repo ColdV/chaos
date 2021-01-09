@@ -42,13 +42,13 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netinet/tcp.h>
 #include <sys/select.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <pthread.h>
 #include <sys/uio.h>
-
 #endif  //_WIN32
 
 typedef unsigned char				byte; 
@@ -106,5 +106,5 @@ const int MAX_INT = 0x7FFFFFFF;
 
 
 const int DAY2SEC = 24 * 3600;
-
+const int SEC2MSEC = 1000;
 

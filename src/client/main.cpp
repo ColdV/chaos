@@ -130,7 +130,6 @@ void Client::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 
 	ev->ReadBuffer(buf, readable);
 	//printf("read socket recv data:%s\n", buf);
-
 	if (readSize >= SENDMAX * maxClient)
 	{
 		printf("read cost time:%d\n", time(NULL) - timenow);

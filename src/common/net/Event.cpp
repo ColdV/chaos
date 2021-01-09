@@ -4,10 +4,7 @@
 namespace chaos
 {
 	Event::Event(short ev, const EventKey& evKey) :
-#ifndef _WIN32
-		m_mutex(PTHREAD_MUTEX_RECURSIVE),
-#endif // !_WIN32
-		m_pCenter(NULL),
+		m_pCentre(NULL),
 		m_ev(ev | BASE_CARE_EVENT),
 		m_userdata(NULL)
 	{
@@ -17,10 +14,11 @@ namespace chaos
 
 	void Event::CancelEvent()
 	{
-		if (m_pCenter)
+		if (m_pCentre)
 		{
-			m_pCenter->PushEvent(this, EV_CANCEL);
-			SetCenter(NULL);
+			/*m_pCentre->PushEvent(this, EV_CANCEL);
+			SetCenter(NULL);*/
+			m_pCentre->CancelEvent(this);
 		}
 	}
 
@@ -36,7 +34,7 @@ namespace chaos
 
 	void Event::UpdateEvent(short op, short ev)
 	{
-		if (!m_pCenter)
+		if (!m_pCentre)
 			return;
 
 		if (EV_CTL_ADD == op)
@@ -44,7 +42,7 @@ namespace chaos
 		else if (EV_CTL_DEL == op)
 			m_ev &= ~ev;
 
-		m_pCenter->UpdateEvent(this, op, ev);
+		m_pCentre->UpdateEvent(this, op, ev);
 	}
 
 }	//namespace chaos
@@ -55,15 +53,17 @@ namespace chaos
 namespace chaos
 {
 	EventCentre::EventCentre() :
-		m_pPoller(0),
-		m_pTimer(0),
+		m_pPoller(Poller::AdapterNetDrive(this)),
+		m_pTimer(new Timer()),
 		m_running(false),
 		m_evcount(0),
-		m_isInit(false)
+		m_isInit(false),
 #ifndef _WIN32
-		, m_mutex(PTHREAD_MUTEX_RECURSIVE)
+		m_mutex(PTHREAD_MUTEX_RECURSIVE),
 #endif // !_WIN32
+		m_waittintEvsCond(m_mutex)
 	{
+		Init();
 	}
 
 
@@ -81,15 +81,14 @@ namespace chaos
 
 	int EventCentre::Init()
 	{
-		m_pPoller = Poller::AdapterNetDrive(this);
-		if (!m_pPoller)
-			return -1;
+		if (m_isInit)
+			return 0;
 
-		m_pPoller->Init();
-
-		m_pTimer = new Timer();
-		if (!m_pTimer)
+		if (0 != m_pPoller->Init())
+		{
+			printf("init poller failed!\n");
 			return -1;
+		}
 
 		m_isInit = true;
 
@@ -117,9 +116,9 @@ namespace chaos
 		{
 			MakeWaittingToActive();
 
-			int timeout = CalculateTimeout();
+			int timeoutMs = CalculateTimeoutMs();
 
-			if (0 != m_pPoller->Launch(timeout, m_activeEvs))
+			if (0 != m_pPoller->Launch(timeoutMs, m_activeEvs))
 			{
 				printf("called poller failed!\n");
 				break;
@@ -146,9 +145,6 @@ namespace chaos
 
 	int EventCentre::ProcessActiveEvent()
 	{
-		if (m_activeEvs.empty())
-			return 0;
-
 		MutexGuard lock(m_mutex);
 
 		for(auto pev : m_activeEvs)
@@ -160,7 +156,7 @@ namespace chaos
 			//优先处理CANCEL,这个判断必须在GetCentre之前
 			if (pev->GetCurEv() & EV_CANCEL)
 			{
-				CancelEvent(pev);
+				DeleteEvent(pev);
 				continue;
 			}
 
@@ -183,36 +179,30 @@ namespace chaos
 	{
 		MutexGuard lock(m_mutex);
 
-		if (m_pPoller)
+		Poller::NetEventMap& allNetEvent = m_pPoller->GetAllEvents();
+		for (auto it : allNetEvent)
 		{
-			Poller::NetEventMap& allNetEvent = m_pPoller->GetAllEvents();
-			for (auto it : allNetEvent)
-			{
-				delete it.second;
-			}
-			allNetEvent.clear();
+			delete it.second;
 		}
+		allNetEvent.clear();
 
-		if (m_pTimer)
+		Timer::TimerMap& allTimer = m_pTimer->GetAllTimer();
+		for (auto it : allTimer)
 		{
-			Timer::TimerMap& allTimer = m_pTimer->GetAllTimer();
-			for (auto it : allTimer)
-			{
-				delete it.second;
-			}
-			allTimer.clear();
+			delete it.second;
 		}
+		allTimer.clear();
 	}
 
 
-	int EventCentre::CalculateTimeout()
+	int EventCentre::CalculateTimeoutMs()
 	{
 		if(!m_activeEvs.empty())
 			return 0;
 
-		int timeout = m_pTimer->GetNextTimeout();
+		int timeoutMs = m_pTimer->GetNextTimeout() * SEC2MSEC;
 
-		return timeout;
+		return timeoutMs;
 	}
 
 
@@ -269,7 +259,17 @@ namespace chaos
 	}
 
 
-	int EventCentre::CancelEvent(Event* pEvent)
+	void EventCentre::CancelEvent(Event* pEvent)
+	{
+		if (!pEvent || pEvent->GetCentre() != this)
+			return;
+
+		PushEvent(pEvent, EV_CANCEL);
+		pEvent->SetCenter(NULL);
+	}
+
+
+	int EventCentre::DeleteEvent(Event* pEvent)
 	{
 		if (!pEvent)
 			return -1;
@@ -311,6 +311,8 @@ namespace chaos
 		pEvent->PushCurEv(ev);
 
 		m_waittingEvs.push_back(pEvent);
+
+		m_waittintEvsCond.CondBroadCast();
 	}
 
 
@@ -338,23 +340,18 @@ namespace chaos
 		m_cb(NULL),
 		m_userdata(0)
 #ifdef IOCP_ENABLE
-		, m_acceptOls(0)
-		, m_overlappedsRefCnt(0)
-		, m_acceptBuffers(0)
+		, m_acceptOls(new ACCEPT_OVERLAPPED[INIT_ASYNACCEPTING])
+		, m_overlappedsRefCnt(new int(0))
+		, m_acceptBuffers(new char* [INIT_ASYNACCEPTING])
 #endif // IOCP_ENABLE
 
 	{
+		assert(m_socket);
+		m_socket->CloseOnExec();
+
 #ifdef IOCP_ENABLE
-		m_acceptOls = new ACCEPT_OVERLAPPED[INIT_ASYNACCEPTING];
-		if (!m_acceptOls)
-			return;
-
-		m_overlappedsRefCnt = new int;
-		*m_overlappedsRefCnt = 0;
-
-		m_acceptBuffers = new char* [INIT_ASYNACCEPTING];
-		if (!m_acceptBuffers)
-			return;
+		assert(m_acceptOls);
+		assert(m_acceptBuffers);
 
 		for (int i = 0; i < INIT_ASYNACCEPTING; ++i)
 		{
@@ -363,8 +360,7 @@ namespace chaos
 			m_acceptOls[i].inListenerPos = i;
 			m_acceptOls[i].refcnt = m_overlappedsRefCnt;
 
-			if(!(m_acceptBuffers[i] = new char[INIT_ACCEPTADDRBUF_SIZE]))
-				return;
+			m_acceptBuffers[i] = new char[INIT_ACCEPTADDRBUF_SIZE] {0};
 
 			//acceptex只使用一个数据块 用于存放连接后的地址信息
 			//之后可通过GetAcceptExSockaddrs获得本地或远程的地址
@@ -417,15 +413,19 @@ namespace chaos
 
 		//delete socket必须放在最后.
 		//close socket导致触发iocp时,须先让上面的IOCP_ENABLE代码中设置eventDestroy
-		if (m_socket)
-			delete m_socket;
+		/*if (m_socket)
+			delete m_socket;*/
 	}
 
 
-	Listener* Listener::CreateListener(int af, int socktype, int protocol, unsigned short port, 
-		const char* ip /*= NULL*/, ListenerCb cb/* = NULL*/, void* userdata/* = NULL*/)
+	Listener* Listener::CreateListener(const char* ip /*= NULL*/, unsigned short port /*= 0*/,
+		bool ipv6 /*= false*/, int opt /*= 0*/, ListenerCb cb/* = NULL*/, void* userdata/* = NULL*/)
 	{
-		socket_t fd = socket(af, socktype, protocol);
+		int af = AF_INET;
+		if (ipv6)
+			af = AF_INET6;
+
+		socket_t fd = socket(af, SOCK_STREAM, IPPROTO_TCP);
 		if (-1 == fd)
 		{
 			printf("create socket failed!\n");
@@ -433,20 +433,57 @@ namespace chaos
 		}
 
 		Listener* listener = new Listener(fd);
-		if (!listener)
-		{
-			printf("allocate listener failed!\n");
-			return NULL;
-		}
 
 		listener->SetListenerCb(cb, userdata);
 
-		sockaddr_in sa;
+		int on = 1;
+		if(opt & TCP_OPT_TCP_NODELAY)
+		{
+			if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char*)&on, static_cast<socklen_t>(sizeof(on))))
+			{
+				printf("set tcp nodelay failed!\n");
+				return NULL;
+			}
+		}
+
+		//默认设置的选项
+		if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (char*)&on, static_cast <socklen_t>(sizeof(on))))
+			return NULL;
+
+		if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char*)&on, static_cast <socklen_t>(sizeof(on))))
+			return NULL;
+
+		SockAddr sa;
 		memset(&sa, 0, sizeof(sa));
-		sa.sin_family = af;
-		sa.sin_port = htons(port);
-		if(ip)
-			inet_pton(af, ip, &sa.sin_addr);
+
+		if (ipv6)
+		{
+			sa.sin6.sin6_family = af;
+			sa.sin6.sin6_port = htons(port);
+			if (ip)
+			{
+				if (inet_pton(af, ip, &sa.sin6.sin6_addr) <= 0)
+				{
+					printf("inet_pton in inet6 failed:%d\n", GetLastErrorno());
+					return NULL;
+				}
+			}
+			else
+				sa.sin6.sin6_addr = in6addr_any;
+		}
+		else
+		{
+			sa.sin.sin_family = af;
+			sa.sin.sin_port = htons(port);
+			if (ip )
+			{
+				if (inet_pton(af, ip, &sa.sin.sin_addr) <= 0)
+				{
+					printf("inet_pton in inet4 failed:%d\n", GetLastErrorno());
+					return NULL;
+				}
+			}
+		}
 
 		if (0 != listener->Listen((sockaddr*)&sa, sizeof(sa)))
 		{
@@ -470,10 +507,6 @@ namespace chaos
 		if (getsockopt(s.GetFd(), SOL_SOCKET, SO_ACCEPTCONN, (char*)&isListen, &optsize) || isListen)
 			return -1;
 
-		int on = 1;
-		if (setsockopt(s.GetFd(), SOL_SOCKET, SO_KEEPALIVE, (char*)&on, sizeof(on)))
-			return -1;
-
 		int ret = 0;
 
 		//设置socket为非阻塞
@@ -486,16 +519,9 @@ namespace chaos
 		if (0 != (ret = s.Listen(128)))
 			return ret;
 
-		//int flag = 1;
-		//ret = setsockopt(s.GetFd(), IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(flag));
-		//if (0 != ret)
-		//{
-		//	printf("set TCP_NODELAY failed\n");
-		//	return ret;
-		//}
-
 #ifdef IOCP_ENABLE
-		StartAsynRequest();
+		if (0 != (ret = StartAsynRequest()))
+			return ret;
 #endif // IOCP_ENABLE
 
 		return ret;
@@ -551,8 +577,6 @@ namespace chaos
 	void Listener::DoneAccept(socket_t acceptedfd)
 	{
 		Connecter* newconn = new Connecter(acceptedfd);
-		if (!newconn)
-			return;
 
 		EventCentre* pCentre = GetCentre();
 		if (!pCentre)
@@ -599,7 +623,8 @@ namespace chaos
 		Socket& s = GetSocket();
 		socket_t listenfd = s.GetFd();
 
-		sockaddr_in addr;
+		//sockaddr_in6 addr;
+		SockAddr addr;
 		int addrlen = sizeof(addr);
 		memset(&addr, 0, addrlen);
 		if (getsockname(listenfd, (sockaddr*)&addr, &addrlen))
@@ -616,7 +641,7 @@ namespace chaos
 			return GetLastErrorno();
 		}
 
-		socket_t acceptfd = socket(addr.sin_family, type, 0);
+		socket_t acceptfd = socket(addr.sa.sa_family, type, 0);
 
 		lo->acceptfd = acceptfd;
 		lo->overlapped.fd = listenfd;
@@ -721,30 +746,26 @@ namespace chaos
 		m_userdata(NULL),
 		m_peeraddrlen(sizeof(SockAddr))
 	{
+		assert(m_socket);
+		m_socket->CloseOnExec();
+
 #ifdef IOCP_ENABLE
-		if (m_pReadOverlapped)
-		{
-			memset(m_pReadOverlapped, 0, sizeof(COMPLETION_OVERLAPPED));
+		assert(m_pReadOverlapped);
+		assert(m_pWriteOverlapped);
+		assert(m_pConnectOverlapped);
 
-			m_pReadOverlapped->cb = std::bind(&Connecter::ReadComplete, this, std::placeholders::_1, std::placeholders::_2,
-				std::placeholders::_3, std::placeholders::_4);
-		}
+		memset(m_pReadOverlapped, 0, sizeof(COMPLETION_OVERLAPPED));
+		m_pReadOverlapped->cb = std::bind(&Connecter::ReadComplete, this, std::placeholders::_1, std::placeholders::_2,
+			std::placeholders::_3, std::placeholders::_4);
 
-		if (m_pWriteOverlapped)
-		{
-			memset(m_pWriteOverlapped, 0, sizeof(COMPLETION_OVERLAPPED));
 
-			m_pWriteOverlapped->cb = std::bind(&Connecter::WriteComplete, this, std::placeholders::_1, std::placeholders::_2,
-				std::placeholders::_3, std::placeholders::_4);
-		}
+		memset(m_pWriteOverlapped, 0, sizeof(COMPLETION_OVERLAPPED));
+		m_pWriteOverlapped->cb = std::bind(&Connecter::WriteComplete, this, std::placeholders::_1, std::placeholders::_2,
+			std::placeholders::_3, std::placeholders::_4);
 
-		if (m_pConnectOverlapped)
-		{
-			memset(m_pConnectOverlapped, 0, sizeof(COMPLETION_OVERLAPPED));
-
-			m_pConnectOverlapped->cb = std::bind(&Connecter::ConnectComplete, this, std::placeholders::_1, std::placeholders::_2,
-				std::placeholders::_3, std::placeholders::_4);
-		}
+		memset(m_pConnectOverlapped, 0, sizeof(COMPLETION_OVERLAPPED));
+		m_pConnectOverlapped->cb = std::bind(&Connecter::ConnectComplete, this, std::placeholders::_1, std::placeholders::_2,
+			std::placeholders::_3, std::placeholders::_4);
 
 #endif // IOCP_ENABLE
 
@@ -795,8 +816,8 @@ namespace chaos
 		}
 #endif // IOCP_ENABLE
 
-		if (m_socket)
-			delete m_socket;
+		//if (m_socket)
+		//	delete m_socket;
 	}
 
 
@@ -826,10 +847,64 @@ namespace chaos
 
 	int Connecter::Connect(sockaddr* sa, int salen)
 	{
-		if (!sa || !m_socket)
+		if (!sa)
 			return -1;
 
+//#ifdef IOCP_ENABLE
+//		if (m_isPostConnect)
+//			return 0;
+//
+//		sockaddr_in ss;
+//		memset(&ss, 0, sizeof(ss));
+//
+//		ss.sin_family = sa->sa_family;
+//
+//		if (bind(m_socket->GetFd(), (struct sockaddr*) & ss, sizeof(ss)) < 0 &&
+//			WSAGetLastError() != WSAEINVAL)
+//		{
+//			printf("bind failed! err:%d\n", GetLastErrorno());
+//			return -1;
+//		}
+//
+//		m_pConnectOverlapped->fd = m_socket->GetFd();
+//
+//		int ret = IOCP::ConnectEx(m_socket->GetFd(), sa, salen, NULL, 0, NULL, &m_pConnectOverlapped->overlapped);
+//		if (ret)
+//		{
+//			if (GetLastErrorno() != WSA_IO_PENDING && errno != EISCONN && SOCKET_ERR_NOT_TRY_AGAIN(errno))
+//			{
+//				printf("ConnectEx failed:%d\n", GetLastErrorno());
+//				ConnectComplete(&m_pConnectOverlapped->overlapped, ret, 0, false);
+//				return ret;
+//			}
+//			else
+//				m_isPostConnect = true;
+//		}
+//
+//		return 0;
+//#else
+		int ret = m_socket->Connect(sa, salen);
+		
+		bool sucess = true;
+		if (ret != 0 && errno != EISCONN /*&& SOCKET_ERR_NOT_TRY_AGAIN(errno)*/)
+			sucess = false;
+
+		getpeername(m_socket->GetFd(), &m_peeraddr.sa, &m_peeraddrlen);
+
+		CallbackConnect(sucess);
+
+		return ret;
+//#endif // !IOCP_ENABLE
+
+	}
+
+
 #ifdef IOCP_ENABLE
+	int Connecter::AsyncConnect(sockaddr* sa, int salen)
+	{
+		if (!sa)
+			return -1;
+
 		if (m_isPostConnect)
 			return 0;
 
@@ -850,7 +925,7 @@ namespace chaos
 		int ret = IOCP::ConnectEx(m_socket->GetFd(), sa, salen, NULL, 0, NULL, &m_pConnectOverlapped->overlapped);
 		if (ret)
 		{
-			if (GetLastErrorno() != WSA_IO_PENDING)
+			if (GetLastErrorno() != WSA_IO_PENDING && errno != EISCONN/* && SOCKET_ERR_NOT_TRY_AGAIN(errno)*/)
 			{
 				printf("ConnectEx failed:%d\n", GetLastErrorno());
 				ConnectComplete(&m_pConnectOverlapped->overlapped, ret, 0, false);
@@ -861,24 +936,12 @@ namespace chaos
 		}
 
 		return 0;
-#else
-		int ret = m_socket->Connect(sa, salen);
-
-		getpeername(m_socket->GetFd(), &m_peeraddr.sa, &m_peeraddrlen);
-
-		CallbackConnect(ret == 0 ? true : false);
-
-		return ret;
-#endif // !IOCP_ENABLE
-
 	}
+#endif // IOCP_ENABLE
 
 
 	int Connecter::WriteBuffer(const char* buf, int size)
 	{
-		if (!m_pWriteBuffer)
-			return -1;
-
 		uint32 written = m_pWriteBuffer->WriteBuffer(buf, size);
 
 		if (0 >= written)
@@ -920,9 +983,6 @@ namespace chaos
 
 	int Connecter::ReadBuffer(char* buf, int size)
 	{
-		if (!m_pReadBuffer)
-			return 0;
-
 		int readed = m_pReadBuffer->ReadBuffer(buf, size);
 
 		return readed;
@@ -988,9 +1048,6 @@ namespace chaos
 
 	int Connecter::HandleRead()
 	{
-		if (!m_pReadBuffer)
-			return -1;
-
 		Socket& s = GetSocket();
 
 		socket_unread_t unread = s.GetUnreadByte();
@@ -1030,9 +1087,6 @@ namespace chaos
 
 	int Connecter::HandleWrite()
 	{
-		if (!m_pWriteBuffer)
-			return -1;
-
 		Socket& s = GetSocket();
 
 		uint32 readable = m_pWriteBuffer->GetReadSize();
@@ -1069,12 +1123,6 @@ namespace chaos
 #ifdef IOCP_ENABLE
 	int Connecter::AsynRead()
 	{
-		if (!m_pReadOverlapped || !m_pReadBuffer)
-		{
-			CallErr(-1);
-			return -1;
-		}
-
 		if (m_isPostRecv)
 			return 0;
 
@@ -1114,12 +1162,6 @@ namespace chaos
 
 	int Connecter::AsynWrite()
 	{
-		if (!m_pWriteOverlapped || !m_pWriteBuffer)
-		{
-			CallErr(-1);
-			return -1;
-		}
-
 		if (m_isPostWrite)
 			return 0;
 

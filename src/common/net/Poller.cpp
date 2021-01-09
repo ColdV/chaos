@@ -113,15 +113,20 @@ namespace chaos
 
 	void Poller::Clear()
 	{
-		NetEventMap evs(m_events);
-		
-		//CancelEvent中会删除m_events中的成员 这里使用m_events的拷贝
-		for (auto it = evs.begin(); it != evs.end(); ++it)
-		{
-			if (!it->second)
-				continue;
+		//NetEventMap evs(m_events);
+		//
+		////CancelEvent中会删除m_events中的成员 这里使用m_events的拷贝
+		//for (auto it = evs.begin(); it != evs.end(); ++it)
+		//{
+		//	if (!it->second)
+		//		continue;
 
-			it->second->CancelEvent();
+		//	it->second->CancelEvent();
+		//}
+
+		for (auto ev : m_events)
+		{
+			ev.second->CancelEvent();
 		}
 	}
 

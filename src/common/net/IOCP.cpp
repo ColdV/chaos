@@ -17,13 +17,6 @@
 
 namespace chaos
 {
-
-	/*IOCP& IOCP::Instance()
-	{
-		static IOCP s_iocp;
-		return s_iocp;
-	}*/
-
 	IOCP::AcceptExPtr IOCP::s_acceptEx = NULL;
 	IOCP::ConnectExPtr IOCP::s_connectEx = NULL;
 	IOCP::GetAcceptExSockaddrsPtr IOCP::s_getAcceptExSockaddrs = NULL;
@@ -34,24 +27,21 @@ namespace chaos
 		m_completionPort(0),
 		m_isInit(false),
 		m_workThreads(0),
-		m_threadHandles(0),
+		m_threadHandles(NULL),
 		m_liveThreads(0),
-		m_tids(0),
-		m_pThreadParam(0)
+		m_tids(NULL),
+		m_pThreadParam(new THREAD_PARAM())
 	{
 		SYSTEM_INFO systemInfo;
 		GetSystemInfo(&systemInfo);
 		m_workThreads = systemInfo.dwNumberOfProcessors * 2;
 
 		m_completionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, m_workThreads);
-
 		m_threadHandles = new HANDLE[m_workThreads]{ 0 };
-		if (!m_threadHandles)
-			return; 
-
 		m_tids = new thread_t[m_workThreads]{ 0 };
-		if (!m_tids)
-			return;
+
+		m_pThreadParam->iocp = m_completionPort;
+		m_pThreadParam->pIOCP = this;
 	}
 
 
@@ -89,13 +79,6 @@ namespace chaos
 	{
 		if (m_isInit)
 			return 0;
-
-		if (!m_pThreadParam)
-		{
-			m_pThreadParam = new THREAD_PARAM();
-			m_pThreadParam->iocp = m_completionPort;
-			m_pThreadParam->pIOCP = this;
-		}
 
 		for (DWORD i = 0; i < m_workThreads; ++i)
 		{
@@ -181,10 +164,13 @@ namespace chaos
 
 	int IOCP::Launch(int timeoutMs, Poller::EventList& activeEvents)
 	{
-		if (0 >= timeoutMs)
-			timeoutMs = NET_TICK;
+		if (!activeEvents.empty())
+			return 0;
 
-		Sleep(timeoutMs);
+		if (0 > timeoutMs)
+			timeoutMs = DEFAULT_TIMEOUT;
+
+		m_pCentre->WaitWaittintEvsCond(timeoutMs);
 
 		return 0;
 	}
@@ -192,8 +178,6 @@ namespace chaos
 
 	unsigned int IOCP::Loop(void* arg)
 	{
-		_CrtSetBreakAlloc(151);
-		_CrtSetBreakAlloc(152);
 		if (!arg)
 			return -1;
 
@@ -235,10 +219,7 @@ namespace chaos
 		}
 
 		if (iocp->DecLiveThread() == 0)
-		{
-			MutexGuard lock(iocp->m_mutex);
 			iocp->m_sem.SemPost();
-		}
 
 		return 0;
 	}

@@ -26,10 +26,9 @@ namespace chaos
 	public:
 		enum
 		{
-			MAX_FD = 1024,
+			INIT_EVENT_LIST_SIZE = 64,
 		};
 
-		//static Epoll& Instance();
 		Epoll(EventCentre* pCentre);
 
 		virtual ~Epoll();

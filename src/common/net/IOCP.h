@@ -11,6 +11,7 @@
 
 #include "Poller.h"
 #include <functional>
+#include <atomic>
 #include "thread/Sem.h"
 #include "thread/Mutex.h"
 
@@ -53,11 +54,12 @@ namespace chaos
 	class IOCP : public Poller
 	{
 	public:
+		static const int DEFAULT_TIMEOUT = 10000;
+
 		typedef BOOL(WINAPI *AcceptExPtr)(SOCKET, SOCKET, PVOID, DWORD, DWORD, DWORD, LPDWORD, LPOVERLAPPED);
 		typedef BOOL(WINAPI *ConnectExPtr)(SOCKET, const struct sockaddr *, int, PVOID, DWORD, LPDWORD, LPOVERLAPPED);
 		typedef void (WINAPI *GetAcceptExSockaddrsPtr)(PVOID, DWORD, DWORD, DWORD, LPSOCKADDR *, LPINT, LPSOCKADDR *, LPINT);
 
-		//static IOCP& Instance();
 		IOCP(EventCentre* pCentre);
 		~IOCP();
 
@@ -77,15 +79,13 @@ namespace chaos
 	protected:
 		virtual int RegistFd(socket_t fd, short ev) override;
 
-		//virtual int CancelFd(socket_t fd) override;
-
 	public:
 		static unsigned int __stdcall Loop(void* arg);
 
 	private:
-		int AddLiveThread() { MutexGuard lock(m_mutex); return ++m_liveThreads; }
+		int AddLiveThread() { return ++m_liveThreads; }
 
-		int DecLiveThread() { MutexGuard lock(m_mutex); return --m_liveThreads; }
+		int DecLiveThread() { return --m_liveThreads; }
 
 	private:
 		HANDLE m_completionPort;
@@ -96,7 +96,7 @@ namespace chaos
 
 		HANDLE* m_threadHandles;			//所有线程
 
-		int m_liveThreads;				//活动线程数量
+		std::atomic<int> m_liveThreads;		//活动线程数量
 
 		thread_t* m_tids;					//所有线程ID
 

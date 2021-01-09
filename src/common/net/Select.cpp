@@ -14,13 +14,6 @@
 
 namespace chaos
 {
-
-	//Select& Select::Instance()
-	//{
-	//	static Select s_inst;
-	//	return s_inst;
-	//}
-
 	Select::Select(EventCentre* pCentre):
 		Poller(pCentre)
 #ifndef _WIN32
@@ -74,10 +67,9 @@ namespace chaos
 		m_wfdsout = m_wfds;
 		m_efdsout = m_efds;
 
-		timeval val{0, timeoutMs * 1000};
+		timeval val{ timeoutMs / SEC2MSEC, timeoutMs % SEC2MSEC * SEC2MSEC };
 
 		int cnt = select(MAX_FD, &m_rfdsout, &m_wfdsout, &m_efdsout, &val);
-		
 
 		if (0 > cnt)
 		{
