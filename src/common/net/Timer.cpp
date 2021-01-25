@@ -4,22 +4,15 @@
 
 namespace chaos
 {
+	std::vector<byte> Timer::s_ids(INIT_ID_SIZE);
 
-	timer_id Timer::s_maxIDSize = Timer::INIT_ID_SIZE;
+	std::atomic<uint32> Timer::s_curTimers(0);
 
-	char* Timer::s_ids = new char[INIT_ID_SIZE];
-
-	uint32 Timer::s_curTimers = 0;
-
-
-	//Timer& Timer::Instance()
-	//{
-	//	static Timer g_timer;
-	//	return g_timer;
-	//}
+	Mutex Timer::s_mutex;
 
 
-	Timer::Timer() :
+	Timer::Timer(EventCentre* pCentre) :
+		m_pCentre(pCentre),
 		m_lastRunTime(0)
 	{
 	}
@@ -27,25 +20,26 @@ namespace chaos
 
 	Timer::~Timer()
 	{
-		if (s_ids && 0 >= s_curTimers)
-			delete [] s_ids;
 	}
 
 
-	void Timer::DispatchTimer(EventList& activeEvents)
+	void Timer::Launch(EventList& activeEvents)
 	{
+		m_lastRunTime = GetCurrentMSec();
+
 		while (!m_timers.Empty())
 		{
-			TimerEvent* pEvent = m_timers.Front();
-			if (!pEvent)
-				continue;
+			TimerSharedPtr pEvent(m_timers.Front().lock());
 
-			if (pEvent->IsCancel())
+			if (!pEvent)
 			{
+				//这里不需要去调用DelTimer(TimerMap中是shared_ptr如果执行到这里,TimerMap中必然不存在该元素)
 				m_timers.Pop();
-				DelTimer(pEvent);
 				continue;
 			}
+
+			if (m_lastRunTime < pEvent->GetNextTime())
+				break;
 
 			if (pEvent->IsSuspend())
 			{
@@ -53,41 +47,33 @@ namespace chaos
 				if (pEvent->IsLoop())
 				{
 					pEvent->SetNextTime();
-					AddTimer(pEvent);
+					m_timers.Push(pEvent);
 				}
 				else
 				{
-					m_timers.Pop();
-					DelTimer(pEvent);
+					DelTimer(pEvent.get());
 				}
 
+				m_timers.Pop();
 				continue;
 			}
 
-			if (m_lastRunTime < pEvent->GetNextTime())
-				break;
-
-			EventCentre* pCentre = pEvent->GetCentre();
-			if (!pCentre)
-				continue;
-
-			activeEvents.push_back(pEvent);
+			activeEvents.push_back(pEvent.get());
 
 			//循环定时任务
 			if (pEvent->IsLoop())
 			{
 				pEvent->SetNextTime();
-				AddTimer(pEvent);
+				m_timers.Push(pEvent);
 			}
 
 			m_timers.Pop();
+
 		}
-
-		m_lastRunTime = time(NULL);
 	}
+		
 
-
-	uint32 Timer::AddTimer(TimerEvent* pTimerEv)
+	uint32 Timer::AddTimer(const TimerSharedPtr& pTimerEv)
 	{
 		if (!pTimerEv)
 			return -1;
@@ -95,20 +81,18 @@ namespace chaos
 		const EventKey& key = pTimerEv->GetEvKey();
 
 		int id = key.timerId;
-		if (0 >= id)
+
+		if (m_timerMap.find(id) != m_timerMap.end())
 			return -1;
 
-		if (0 > m_timers.Push(pTimerEv))
-		{
-			s_ids[id] = 0;
-			return -1;
-		}
+		m_timerMap.insert(std::make_pair(id, pTimerEv));
+		
+		m_timers.Push(pTimerEv);
 
-		if (m_timerMap.find(id) == m_timerMap.end())
-		{
-			m_timerMap.insert(std::make_pair(id, pTimerEv));
-			++s_curTimers;
-		}
+		++s_curTimers;
+
+		if (m_pCentre)
+			m_pCentre->WakeUp();
 
 		return 0;
 
@@ -118,7 +102,7 @@ namespace chaos
 	uint32 Timer::DelTimer(TimerEvent* pTimerEv)
 	{
 		if (!pTimerEv)
-			return 0;
+			return -1;
 
 		m_timerMap.erase(pTimerEv->GetEvKey().timerId);
 
@@ -130,14 +114,14 @@ namespace chaos
 
 	int Timer::GetNextTimeout()
 	{
-		while (!m_timers.Empty())
+		if (!m_timers.Empty())
 		{
-			TimerEvent* pEvent = m_timers.Front();
+			TimerSharedPtr pEvent(m_timers.Front().lock());
 			if (!pEvent)
-				continue;
+				return 0;
 
-			time_t timeout = pEvent->GetNextTime() - time(NULL);
-
+			TIME_T timeout = pEvent->GetNextTime() - GetCurrentMSec();
+			
 			return (int)(timeout > 0 ? timeout : 0);
 		}
 
@@ -149,60 +133,64 @@ namespace chaos
 	{
 		while (!m_timers.Empty())
 		{
-			TimerEvent* pEvent = m_timers.Front();
+			TimerSharedPtr pEvent(m_timers.Front().lock());
 			m_timers.Pop();
 
 			if (!pEvent)
 				continue;
 
-			pEvent->Cancel();
+			pEvent->CancelEvent();
 		}
 	}
 
 
 	timer_id Timer::CreateTimerID()
 	{
-		if (!s_ids)
-			return 0;
+		MutexGuard lock(s_mutex);
 
+		if (s_curTimers >= s_ids.size() * BYTE2BIT)
+			s_ids.emplace_back(0);
+
+		uint32 max = s_ids.size();
 		uint32 i = 0;
-		while(i < s_maxIDSize)
+
+		while(i < max)
 		{
-			if (s_ids[i] != 1)
+			byte& idBytes = s_ids[i++];
+
+			byte bit = 0;
+			while (bit < BYTE2BIT)
 			{
-				s_ids[i] = 1;
-				return i + 1;
+				byte bitPos = bit++;
+				if (!GetBit(idBytes, bitPos))
+				{
+					SetBit(idBytes, bitPos);
+					return (i - 1) * BYTE2BIT + bit;
+				}
 			}
-
-			++i;
 		}
-
-		//当前ID 已用完 扩展ID
-		if (i == s_maxIDSize && 0 == Timer::ExpandID())
-			return i;
 
 		return 0;
 	}
 
 
-	int Timer::ExpandID()
+	void Timer::ReleaseTimerID(timer_id id)
 	{
-		if (!s_ids || s_maxIDSize >= 0xFFFFFFFF)
-			return -1;
+		if (0 == id)
+			return;
 
-		uint32 size = 0xFFFFFFFF / 2 > s_maxIDSize ? 0xFFFFFFFF : s_maxIDSize * 2;
+		int pos = id / BYTE2BIT;
+		int bit = id % BYTE2BIT;
 
-		char* pNewIDs = new char[size];
-		if (!pNewIDs)
-			return -1;
-		
-		memset(pNewIDs, 0, size);
-		memcpy(pNewIDs, s_ids, s_maxIDSize);
-		delete[] s_ids;
-		s_ids = pNewIDs;
-		s_maxIDSize = size;
+		MutexGuard lock(s_mutex);
 
-		return 0;
+		if (pos >= s_ids.size())
+			return;
+
+		if (0 == bit)
+			ClrBit(s_ids[pos], BYTE2BIT - 1);
+		else
+			ClrBit(s_ids[pos], bit - 1);
 	}
 
 }

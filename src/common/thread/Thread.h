@@ -9,12 +9,19 @@
 #endif // _WIN32
 
 
-
 #ifdef _WIN32
 typedef unsigned int (__stdcall *PThreadFunc)(void*);
 #else
 typedef	void* (*PThreadFunc)(void*);
 #endif // _WIN32
+
+
+#ifdef _WIN32
+#define THREAD_LOCAL_STORAGE	__declspec(thread)
+#else
+#define THREAD_LOCAL_STORAGE	__thread
+#endif // _WIN32
+
 
 class Thread : public NonCopyable
 {

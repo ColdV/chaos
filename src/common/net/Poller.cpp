@@ -29,7 +29,7 @@ namespace chaos
 	}
 
 
-	int Poller::AddEvent(Event* pEvent)
+	int Poller::AddEvent(const EventSharedPtr& pEvent)
 	{
 		if (!pEvent)
 			return -1;
@@ -84,11 +84,11 @@ namespace chaos
 		if (it == m_events.end())
 			return NULL;
 
-		return it->second;
+		return it->second.get();
 	}
 
 
-	int Poller::PushActiveEvent(socket_t fd, short ev, EventCentre::EventList& activeEvents)
+	int Poller::PushActiveEvent(socket_t fd, short ev, EventList& activeEvents)
 	{
 		auto it = m_events.find(fd);
 
@@ -98,14 +98,14 @@ namespace chaos
 		if (!m_pCentre)
 			return -1;
 		
-		Event* pEvent = it->second;
+		EventSharedPtr& pEvent = it->second;
 
 		if (!pEvent || pEvent->GetCentre() != m_pCentre || !(pEvent->GetEv() & ev))
 			return -1;
 
 		pEvent->PushCurEv(ev);
 
-		activeEvents.push_back(pEvent);
+		activeEvents.push_back(pEvent.get());
 
 		return 0;
 	}
@@ -113,17 +113,6 @@ namespace chaos
 
 	void Poller::Clear()
 	{
-		//NetEventMap evs(m_events);
-		//
-		////CancelEvent中会删除m_events中的成员 这里使用m_events的拷贝
-		//for (auto it = evs.begin(); it != evs.end(); ++it)
-		//{
-		//	if (!it->second)
-		//		continue;
-
-		//	it->second->CancelEvent();
-		//}
-
 		for (auto ev : m_events)
 		{
 			ev.second->CancelEvent();

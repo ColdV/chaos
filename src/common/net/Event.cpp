@@ -1,12 +1,15 @@
 #include "Event.h"
 #include "Timer.h"
+#include <unordered_set>
+
 
 namespace chaos
 {
 	Event::Event(short ev, const EventKey& evKey) :
 		m_pCentre(NULL),
 		m_ev(ev | BASE_CARE_EVENT),
-		m_userdata(NULL)
+		m_errcb(NULL),
+		m_registercb(NULL)
 	{
 		memcpy(&m_evKey, &evKey, sizeof(EventKey));
 	}
@@ -16,17 +19,24 @@ namespace chaos
 	{
 		if (m_pCentre)
 		{
-			/*m_pCentre->PushEvent(this, EV_CANCEL);
-			SetCenter(NULL);*/
 			m_pCentre->CancelEvent(this);
 		}
+	}
+
+
+	void Event::PushEventToCentre(short ev)
+	{
+		if (!m_pCentre)
+			return;
+
+		m_pCentre->PushEvent(this, ev);
 	}
 
 
 	void Event::CallErr(int errcode)
 	{
 		if (m_errcb)
-			m_errcb(this, GetCurEv() | EV_ERROR, errcode, m_userdata);
+			m_errcb(*this, GetCurEv() | EV_ERROR, errcode);
 		else
 			CancelEvent();
 	}
@@ -52,16 +62,93 @@ namespace chaos
 //EventCentre Implement
 namespace chaos
 {
+	EventCentre::WakeUpEvent::WakeUpEvent(socket_t fd) :
+		Event(EV_IOREAD, { fd })
+	{
+		m_sockets.emplace_back(new Socket(fd));
+	}
+
+
+	EventCentre::WakeUpEvent::~WakeUpEvent()
+	{}
+
+
+	bool EventCentre::WakeUpEvent::Init()
+	{
+#ifdef _WIN32
+#ifndef IOCP_ENABLE
+		SOCKADDR_IN sin;
+		memset(&sin, 0, sizeof(SOCKADDR_IN));
+		sin.sin_family = AF_INET;
+		sin.sin_addr.s_addr = 0;
+		sin.sin_port = htons(0);
+
+		if (0 != m_sockets[0]->Bind((sockaddr*)&sin, sizeof(SOCKADDR_IN)))
+			return false;
+
+		if (0 != m_sockets[0]->Listen(2))
+			return false;
+
+		m_sockets.emplace_back(new Socket(AF_INET, SOCK_STREAM, IPPROTO_TCP));
+
+		return true;
+#endif // !IOCP_ENABLE
+#endif //  _WIN32
+
+		return true;
+	}
+
+
+	void EventCentre::WakeUpEvent::Handle()
+	{
+		int ret = 0;
+#ifdef _WIN32
+#ifndef IOCP_ENABLE
+		char buf(0);
+		ret = m_sockets[1]->Recv(&buf, sizeof(buf));
+#endif // !IOCP_ENABLE
+#else
+		uint64_t buf = 1;
+		ret = read(m_sockets[0]->GetFd(), &buf, sizeof(buf));
+	
+#endif // _WIN32
+		if (ret < 0)
+		{
+			printf("wake up fd read data failed! errno:%d\n", GetLastErrorno());
+		}
+	}
+
+
+	bool EventCentre::WakeUpEvent::WakeUp()
+	{
+#ifdef _WIN32
+#ifndef IOCP_ENABLE
+		char buf(0);
+		return m_sockets[1]->Send(&buf, sizeof(buf)) < 0 ? false : true;
+#endif // !IOCP_ENABLE
+		GetCentre()->m_waittintEvsCond.CondBroadCast();
+#else	//linux event fd
+		uint64_t buf = 1;
+		return write(m_sockets[0]->GetFd(), &buf, sizeof(buf)) < 0 ? false : true;
+#endif // _WIN32
+
+		return true;	
+	}
+
+
 	EventCentre::EventCentre() :
 		m_pPoller(Poller::AdapterNetDrive(this)),
-		m_pTimer(new Timer()),
+		m_pTimer(new Timer(this)),
 		m_running(false),
-		m_evcount(0),
+		m_eventsNum(0),
 		m_isInit(false),
-#ifndef _WIN32
-		m_mutex(PTHREAD_MUTEX_RECURSIVE),
-#endif // !_WIN32
-		m_waittintEvsCond(m_mutex)
+		m_waittintEvsCond(m_mutex),
+#ifdef _WIN32
+		m_wakeUpEvent(new WakeUpEvent(socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)))
+#else
+		m_wakeUpEvent(new WakeUpEvent(eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC)))
+#endif // _WIN32
+
 	{
 		Init();
 	}
@@ -69,30 +156,42 @@ namespace chaos
 
 	EventCentre::~EventCentre()
 	{
-		ClearAllEvent();
+		//ClearAllEvent();
 
-		if (m_pPoller)
-			delete m_pPoller;
+		//if (m_pPoller)
+		//	delete m_pPoller;
 
-		if (m_pTimer)
-			delete m_pTimer;
+		//if (m_pTimer)
+		//	delete m_pTimer;
 	}
 
 
-	int EventCentre::Init()
+	bool EventCentre::Init()
 	{
 		if (m_isInit)
-			return 0;
+			return true;
 
 		if (0 != m_pPoller->Init())
 		{
 			printf("init poller failed!\n");
-			return -1;
+			return false;
+		}
+
+		if (!m_wakeUpEvent->Init())
+		{
+			printf("init wake up event failed!\n");
+			return false;
+		}
+
+		if (0 != RegisterEvent(m_wakeUpEvent))
+		{
+			printf("register wake up event failed!\n");
+			return false;
 		}
 
 		m_isInit = true;
 
-		return 0;
+		return false;
 	}
 
 
@@ -124,7 +223,7 @@ namespace chaos
 				break;
 			}
 
-			m_pTimer->DispatchTimer(m_activeEvs);
+			m_pTimer->Launch(m_activeEvs);
 
 			if (0 != ProcessActiveEvent())
 			{
@@ -135,7 +234,7 @@ namespace chaos
 
 		m_running = false;
 
-		ClearAllEvent();
+		//ClearAllEvent();
 
 		printf("EventCentre exit!\n");
 
@@ -177,21 +276,21 @@ namespace chaos
 
 	void EventCentre::ClearAllEvent()
 	{
-		MutexGuard lock(m_mutex);
+		//MutexGuard lock(m_mutex);
 
-		Poller::NetEventMap& allNetEvent = m_pPoller->GetAllEvents();
-		for (auto it : allNetEvent)
-		{
-			delete it.second;
-		}
-		allNetEvent.clear();
+		//Poller::NetEventMap& allNetEvent = m_pPoller->GetAllEvents();
+		//for (auto it : allNetEvent)
+		//{
+		//	delete it.second;
+		//}
+		//allNetEvent.clear();
 
-		Timer::TimerMap& allTimer = m_pTimer->GetAllTimer();
-		for (auto it : allTimer)
-		{
-			delete it.second;
-		}
-		allTimer.clear();
+		//Timer::TimerMap& allTimer = m_pTimer->GetAllTimer();
+		//for (auto it : allTimer)
+		//{
+		//	delete it.second;
+		//}
+		//allTimer.clear();
 	}
 
 
@@ -200,7 +299,7 @@ namespace chaos
 		if(!m_activeEvs.empty())
 			return 0;
 
-		int timeoutMs = m_pTimer->GetNextTimeout() * SEC2MSEC;
+		int timeoutMs = m_pTimer->GetNextTimeout();
 
 		return timeoutMs;
 	}
@@ -209,6 +308,7 @@ namespace chaos
 	void EventCentre::MakeWaittingToActive()
 	{
 		MutexGuard lock(m_mutex);
+
 		if (!m_waittingEvs.empty())
 		{
 			m_activeEvs.insert(m_activeEvs.begin(), m_waittingEvs.begin(), m_waittingEvs.end());
@@ -217,13 +317,11 @@ namespace chaos
 	}
 
 
-	int EventCentre::RegisterEvent(Event* pEvent)
+	int EventCentre::RegisterEvent(const EventSharedPtr& pEvent)
 	{
 
-		if (!pEvent || (pEvent->GetCentre() && this != pEvent->GetCentre()))
-		{
+		if (!pEvent || pEvent->GetCentre())
 			return -1;
-		}
 
 		uint32 ev = pEvent->GetEv();
 
@@ -253,7 +351,10 @@ namespace chaos
 
 		pEvent->SetCenter(this);
 
-		++m_evcount;
+		if(pEvent->m_registercb)
+			pEvent->m_registercb();
+
+		++m_eventsNum;
 
 		return ret;
 	}
@@ -261,6 +362,8 @@ namespace chaos
 
 	void EventCentre::CancelEvent(Event* pEvent)
 	{
+		MutexGuard lock(m_mutex);
+
 		if (!pEvent || pEvent->GetCentre() != this)
 			return;
 
@@ -293,9 +396,7 @@ namespace chaos
 			return -1;
 		}
 
-		--m_evcount;
-
-		delete pEvent;
+		--m_eventsNum;
 
 		return 0;
 	}
@@ -306,7 +407,10 @@ namespace chaos
 		MutexGuard lock(m_mutex);
 
 		if (!pEvent || pEvent->GetCentre() != this || !(pEvent->GetEv() & ev))
+		{
+			printf("push event failed!\n");
 			return;
+		}
 
 		pEvent->PushCurEv(ev);
 
@@ -318,15 +422,132 @@ namespace chaos
 
 	void EventCentre::UpdateEvent(Event* pEvent, short op, short ev)
 	{
+		MutexGuard lock(m_mutex);
+
 		if (!pEvent)
 			return;
-
+		
 		const EventKey& key = pEvent->GetEvKey();
 
 		if (m_pPoller->GetEvent(key.fd))
 			m_pPoller->UpdateFd(key.fd, op, ev);
 	}
 
+	
+	void EventCentre::WakeUp()
+	{
+		if (!m_wakeUpEvent->WakeUp())
+		{
+			printf("wake up falied! errno:%d\n", GetLastErrorno());
+		}
+	}
+
+}
+
+
+
+//EventCentrePool Implemet
+namespace chaos
+{
+	EventCentrePool::EventCentrePool(int threadNum /*= 0*/) :
+		m_threadNum(threadNum),
+		m_started(false),
+		m_pool(new ThreadPool(m_threadNum)),
+		m_cond(m_mutex),
+		m_startedCb(NULL)
+	{	
+	}
+
+
+	EventCentrePool::~EventCentrePool()
+	{
+		m_pool->Stop();
+	}
+
+
+	void EventCentrePool::Start(const StartedCallBack& cb/* = NULL*/)
+	{
+		if (m_started)
+			return;
+
+		m_pool->Run();
+
+		for (int i = 0; i < m_threadNum; ++i)
+			m_pool->PushTask(std::bind(&EventCentrePool::Work, this));
+
+		if (cb)
+			m_startedCb = cb;
+		else
+		{
+			MutexGuard lock(m_mutex);
+			m_cond.CondWait();
+		}
+	}
+
+
+	void EventCentrePool::Stop()
+	{
+		MutexGuard lock(m_mutex);
+		for (auto centre : m_centres)
+		{
+			assert(centre);
+			centre->Exit();
+		}
+
+		m_started = false;
+	}
+
+
+	int EventCentrePool::RegisterEvent(const EventSharedPtr& pEvent)
+	{
+		if (!pEvent || pEvent->GetCentre() || !m_started)
+			return -1;
+
+		EventCentre* pCentre = NULL;
+		{
+			MutexGuard lock(m_mutex);
+
+			int eventNum = 0;
+			for (auto centre : m_centres)
+			{
+				if (!pCentre)
+					pCentre = centre;
+
+				if (centre->GetEventsNum() < pCentre->GetEventsNum())
+					pCentre = centre;
+			}
+		}
+
+		if (!pCentre)
+			return -1;
+
+		return pCentre->RegisterEvent(pEvent);
+	}
+
+
+	void EventCentrePool::Work()
+	{
+		static std::atomic<int> worked(0);
+
+		EventCentre centre;
+		{	
+			MutexGuard lock(m_mutex);
+			m_centres.push_back(&centre);
+		}
+
+		if (++worked >= m_threadNum)
+		{
+			m_started = true;
+
+			if (m_startedCb)
+				m_startedCb(this);
+
+			else
+				m_cond.CondSignal();
+		}
+
+		centre.EventLoop();
+	}
 }
 
 
@@ -334,11 +555,10 @@ namespace chaos
 //Listener Implement
 namespace chaos
 {
-	Listener::Listener(socket_t fd) :
-		Event(EV_IOREAD, (EventKey&)fd),
+	Listener::Listener(socket_t fd, const SockAddr& addr) :
+		Event(EV_IOREAD, { fd }),
 		m_socket(new Socket(fd)),
-		m_cb(NULL),
-		m_userdata(0)
+		m_cb(NULL)
 #ifdef IOCP_ENABLE
 		, m_acceptOls(new ACCEPT_OVERLAPPED[INIT_ASYNACCEPTING])
 		, m_overlappedsRefCnt(new int(0))
@@ -348,6 +568,8 @@ namespace chaos
 	{
 		assert(m_socket);
 		m_socket->CloseOnExec();
+
+		memcpy(&m_addr, &addr, sizeof(SockAddr));
 
 #ifdef IOCP_ENABLE
 		assert(m_acceptOls);
@@ -375,6 +597,8 @@ namespace chaos
 		}
 
 #endif // IOCP_ENABLE
+
+		SetRegisterCallback(std::move(std::bind(&Listener::RegisterCallback, this)));
 	}
 
 
@@ -394,7 +618,7 @@ namespace chaos
 			if (oset.find(&m_acceptOls[i]) == oset.end() && m_acceptOls[i].acceptfd != INVALID_SOCKET)
 			{
 				Socket s(m_acceptOls[i].acceptfd);
-				m_acceptOls[i].overlapped.eventDestroy = 1;
+				m_acceptOls[i].overlapped.eventDestroy = true;
 			}
 		}
 
@@ -418,8 +642,8 @@ namespace chaos
 	}
 
 
-	Listener* Listener::CreateListener(const char* ip /*= NULL*/, unsigned short port /*= 0*/,
-		bool ipv6 /*= false*/, int opt /*= 0*/, ListenerCb cb/* = NULL*/, void* userdata/* = NULL*/)
+	std::shared_ptr<Listener> Listener::CreateListener(const char* ip /*= NULL*/, unsigned short port /*= 0*/,
+		bool ipv6 /*= false*/, int opt /*= 0*/, const ListenerCb& cb/* = NULL*/)
 	{
 		int af = AF_INET;
 		if (ipv6)
@@ -431,10 +655,6 @@ namespace chaos
 			printf("create socket failed!\n");
 			return NULL;
 		}
-
-		Listener* listener = new Listener(fd);
-
-		listener->SetListenerCb(cb, userdata);
 
 		int on = 1;
 		if(opt & TCP_OPT_TCP_NODELAY)
@@ -485,20 +705,15 @@ namespace chaos
 			}
 		}
 
-		if (0 != listener->Listen((sockaddr*)&sa, sizeof(sa)))
-		{
-			printf("listen failed! err:%d\n", GetLastErrorno());
-			delete listener;
-			return NULL;
-		}
+		std::shared_ptr<Listener> listener(new Listener(fd, sa));
 
-		printf("listen socket:%lld\n", fd);
+		listener->SetListenerCb(cb);
 
 		return listener;
 	}
 
 
-	int Listener::Listen(const sockaddr* sa, int salen)
+	int Listener::Listen()
 	{
 		Socket& s = GetSocket();
 
@@ -513,14 +728,14 @@ namespace chaos
 		if (0 > (ret = s.SetNonBlock()))
 			return ret;
 
-		if (0 != (ret = s.Bind(sa, salen)))
+		if (0 != (ret = s.Bind(&m_addr.sa, sizeof(m_addr))))
 			return ret;
 
 		if (0 != (ret = s.Listen(128)))
 			return ret;
 
 #ifdef IOCP_ENABLE
-		if (0 != (ret = StartAsynRequest()))
+		if(0 != (ret = StartAsynAccept()))
 			return ret;
 #endif // IOCP_ENABLE
 
@@ -570,32 +785,45 @@ namespace chaos
 			} 
 #endif // IOCP_ENABLE
 		}
-
 	}
 
 
 	void Listener::DoneAccept(socket_t acceptedfd)
 	{
-		Connecter* newconn = new Connecter(acceptedfd);
+		//Connecter* newconn = new Connecter(acceptedfd);
 
-		EventCentre* pCentre = GetCentre();
-		if (!pCentre)
-			return;
+		//EventCentre* pCentre = GetCentre();
+		//if (!pCentre)
+		//	return;
 
-		int ret = pCentre->RegisterEvent(newconn);
+		//int ret = pCentre->RegisterEvent(newconn);
 
-		if (0 != ret)
+		//if (0 != ret)
+		//{
+		//	delete newconn;
+		//	return;
+		//}
+
+		//CallListenerCb(newconn);
+		CallListenerCb(acceptedfd);
+	}
+
+
+	void Listener::RegisterCallback()
+	{
+		int ret = 0;
+		if (0 != (ret = Listen()))
 		{
-			delete newconn;
+			CallErr(ret);
 			return;
 		}
 
-		CallListenerCb(newconn);
+		printf("listen socket:%lld\n", GetSocket().GetFd());
 	}
 
 
 #ifdef IOCP_ENABLE
-	int Listener::StartAsynRequest()
+	int Listener::StartAsynAccept()
 	{
 		if (!m_acceptOls)
 			return -1;
@@ -623,7 +851,6 @@ namespace chaos
 		Socket& s = GetSocket();
 		socket_t listenfd = s.GetFd();
 
-		//sockaddr_in6 addr;
 		SockAddr addr;
 		int addrlen = sizeof(addr);
 		memset(&addr, 0, addrlen);
@@ -694,13 +921,6 @@ namespace chaos
 		if (!bOk)
 			return;
 
-		EventCentre* pCentre = GetCentre();
-		if (!pCentre)
-		{
-			CallErr(-1);
-			return;
-		}
-
 		socket_t acceptedfd = lo->acceptfd;		//已经连接成功的fd
 		socket_t listenfd = GetSocket().GetFd();
 
@@ -713,7 +933,7 @@ namespace chaos
 
 		//准备投递下一次AcceptEx
 		m_acceptedq.push(lo);
-		pCentre->PushEvent(this, EV_IOREAD);
+		PushEventToCentre(EV_IOREAD);
 
 		DoneAccept(acceptedfd);
 
@@ -726,9 +946,8 @@ namespace chaos
 //Connecter Implement
 namespace chaos
 {
-
 	Connecter::Connecter(socket_t fd) :
-		Event(EV_IOREAD | EV_IOWRITE, (EventKey&)fd),
+		Event(EV_IOREAD | EV_IOWRITE, { fd }),
 		m_socket(new Socket(fd)),
 		m_pReadBuffer(new Buffer),
 		m_pWriteBuffer(new Buffer),
@@ -743,8 +962,8 @@ namespace chaos
 		m_readcb(NULL),
 		m_writecb(NULL),
 		m_connectcb(NULL),
-		m_userdata(NULL),
-		m_peeraddrlen(sizeof(SockAddr))
+		m_peeraddrlen(sizeof(SockAddr)),
+		m_connected(false)
 	{
 		assert(m_socket);
 		m_socket->CloseOnExec();
@@ -769,9 +988,13 @@ namespace chaos
 
 #endif // IOCP_ENABLE
 
+		SetRegisterCallback(std::move(std::bind(&Connecter::RegisterCallback, this)));
+
 		memset(&m_peeraddr, 0, sizeof(m_peeraddr));
 
 		getpeername(fd, &m_peeraddr.sa, &m_peeraddrlen);
+		if (m_peeraddr.sa.sa_family != AF_UNSPEC)
+			m_connected = true;
 	}
 
 
@@ -786,7 +1009,7 @@ namespace chaos
 #ifdef IOCP_ENABLE
 		if (m_pReadOverlapped)
 		{
-			m_pReadOverlapped->eventDestroy = 1;
+			m_pReadOverlapped->eventDestroy = true;
 
 			//在iocp的回调中通过eventDestroy的判定来释放;
 			if (!m_isPostRecv)
@@ -797,7 +1020,7 @@ namespace chaos
 
 		if (m_pWriteOverlapped)
 		{
-			m_pWriteOverlapped->eventDestroy = 1;
+			m_pWriteOverlapped->eventDestroy = true;
 
 			//在iocp的回调中通过eventDestroy的判定来释放;
 			if (!m_isPostWrite)
@@ -808,7 +1031,7 @@ namespace chaos
 
 		if (m_pConnectOverlapped)
 		{
-			m_pConnectOverlapped->eventDestroy = 1;
+			m_pConnectOverlapped->eventDestroy = true;
 
 			//在iocp的回调中通过eventDestroy的判定来释放;
 			if (!m_isPostConnect)
@@ -850,39 +1073,6 @@ namespace chaos
 		if (!sa)
 			return -1;
 
-//#ifdef IOCP_ENABLE
-//		if (m_isPostConnect)
-//			return 0;
-//
-//		sockaddr_in ss;
-//		memset(&ss, 0, sizeof(ss));
-//
-//		ss.sin_family = sa->sa_family;
-//
-//		if (bind(m_socket->GetFd(), (struct sockaddr*) & ss, sizeof(ss)) < 0 &&
-//			WSAGetLastError() != WSAEINVAL)
-//		{
-//			printf("bind failed! err:%d\n", GetLastErrorno());
-//			return -1;
-//		}
-//
-//		m_pConnectOverlapped->fd = m_socket->GetFd();
-//
-//		int ret = IOCP::ConnectEx(m_socket->GetFd(), sa, salen, NULL, 0, NULL, &m_pConnectOverlapped->overlapped);
-//		if (ret)
-//		{
-//			if (GetLastErrorno() != WSA_IO_PENDING && errno != EISCONN && SOCKET_ERR_NOT_TRY_AGAIN(errno))
-//			{
-//				printf("ConnectEx failed:%d\n", GetLastErrorno());
-//				ConnectComplete(&m_pConnectOverlapped->overlapped, ret, 0, false);
-//				return ret;
-//			}
-//			else
-//				m_isPostConnect = true;
-//		}
-//
-//		return 0;
-//#else
 		int ret = m_socket->Connect(sa, salen);
 		
 		bool sucess = true;
@@ -890,6 +1080,12 @@ namespace chaos
 			sucess = false;
 
 		getpeername(m_socket->GetFd(), &m_peeraddr.sa, &m_peeraddrlen);
+
+		if (sucess)
+		{
+			m_connected = true;
+			EnableEvent(IO_CARE_EVENT);
+		}
 
 		CallbackConnect(sucess);
 
@@ -905,7 +1101,7 @@ namespace chaos
 		if (!sa)
 			return -1;
 
-		if (m_isPostConnect)
+		if (m_isPostConnect || m_connected)
 			return 0;
 
 		sockaddr_in ss;
@@ -989,29 +1185,10 @@ namespace chaos
 	}
 
 
-	void Connecter::SetCallback(const NetCallback& readcb, const NetCallback& writecb, const NetCallback& connectcb, void* userdata)
-	{
-		//只在第一次有效的设置回调时投递异步事件
-#ifdef IOCP_ENABLE
-		//这里判断peeraddr是因为:在Connecter未连接时(调用Connect成功之前)调用该函数,
-		//会导致投递异步事件发生错误而删除该事件
-		if (!m_readcb && readcb && !m_isPostRecv && m_peeraddr.sa.sa_family != AF_UNSPEC)
-			AsynRead();
-
-		if (!m_writecb && writecb && !m_isPostWrite && m_peeraddr.sa.sa_family != AF_UNSPEC)
-			AsynWrite();
-#endif // IOCP_ENABLE
-
-		m_readcb = readcb;
-		m_writecb = writecb;
-		m_connectcb = connectcb;
-		m_userdata = userdata;
-	}
-
-
 	void Connecter::EnableEvent(short ev)
 	{
 		short valid = 0;
+
 
 		if (ev & EV_IOREAD)
 			valid |= EV_IOREAD;
@@ -1023,13 +1200,14 @@ namespace chaos
 		UpdateEvent(EV_CTL_ADD, valid);
 
 #ifdef IOCP_ENABLE
-		if (ev & EV_IOREAD && !m_isPostRecv && m_peeraddr.sa.sa_family != AF_UNSPEC)
+		if (ev & EV_IOREAD && !m_isPostRecv && m_connected)
 			AsynRead();
 
-		if (ev & EV_IOWRITE && !m_isPostWrite && m_peeraddr.sa.sa_family != AF_UNSPEC)
+		if (ev & EV_IOWRITE && !m_isPostWrite && m_connected)
 			AsynWrite();
 #endif // IOCP_ENABLE
 	}
+
 
 	void Connecter::DisableEvent(short ev)
 	{
@@ -1046,11 +1224,26 @@ namespace chaos
 	}
 
 
+	void Connecter::RegisterCallback()
+	{
+#ifdef IOCP_ENABLE
+		//(!m_readcb && readcb)只在第一次有效的设置回调时投递异步事件
+		//用m_peeraddr判断Connecter是否已连接
+		//如果未连接就投递异步事件会导致iocp返回错误而删除该事件
+		if (!m_isPostRecv && m_connected)
+			AsynRead();
+
+		if (!m_isPostWrite && m_connected)
+			AsynWrite();
+#endif // IOCP_ENABLE
+	}
+
+
 	int Connecter::HandleRead()
 	{
 		Socket& s = GetSocket();
 
-		socket_unread_t unread = s.GetUnreadByte();
+		int unread = s.GetUnreadByte();
 		if (unread <= 0)
 			unread = MAX_SINGLE_READ_DEFAULT;
 
@@ -1124,7 +1317,10 @@ namespace chaos
 	int Connecter::AsynRead()
 	{
 		if (m_isPostRecv)
+		{
+			printf("is in post!\n");
 			return 0;
+		}
 
 		Socket& s = GetSocket();
 
@@ -1136,7 +1332,10 @@ namespace chaos
 		DWORD flags = 0;
 
 		if (!(GetEv() & EV_IOREAD))
+		{
+			printf("not register io_read!\n");
 			return -1;
+		}
 
 		int ret = WSARecv(m_pReadOverlapped->fd, m_pReadOverlapped->wsabufs, iovcnt, &readBytes, &flags, &m_pReadOverlapped->overlapped, NULL);
 		if (ret)
@@ -1168,6 +1367,9 @@ namespace chaos
 		uint32 readable = m_pWriteBuffer->GetReadSize();
 		if (readable <= 0)
 			return 0;
+		
+		if (readable > MAX_SINGLE_WRITE_DEFAULT)
+			readable = MAX_SINGLE_WRITE_DEFAULT;
 
 		int iovcnt = m_pWriteBuffer->ReadBuffer(m_pWriteOverlapped->wsabufs, MAX_IOVEC, readable);
 
@@ -1201,13 +1403,9 @@ namespace chaos
 
 	void Connecter::ReadComplete(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool bOk)
 	{
+		assert(o);
+
 		LPCOMPLETION_OVERLAPPED lo = (LPCOMPLETION_OVERLAPPED)o;
-		if (!lo)
-		{
-			printf("read overlapped is null\n");
-			CallErr(-1);
-			return;
-		}
 
 		if (lo->eventDestroy)
 		{
@@ -1227,13 +1425,9 @@ namespace chaos
 		//收完数据后调整buffer下次写入的位置
 		m_pReadBuffer->MoveWritePos(bytes);
 
-		EventCentre* pCentre = GetCentre();
-		if (!pCentre)
-			return;
-
 		//准备投递下一次WSARecv
 		if(0 < bytes)
-			pCentre->PushEvent(this, EV_IOREAD);
+			PushEventToCentre(EV_IOREAD);
 
 		CallbackRead(bytes);
 	}
@@ -1241,13 +1435,9 @@ namespace chaos
 
 	void Connecter::WriteComplete(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool bOk)
 	{
+		assert(o);
+
 		LPCOMPLETION_OVERLAPPED lo = (LPCOMPLETION_OVERLAPPED)o;
-		if (!lo)
-		{
-			printf("write overlapped is null\n");
-			CallErr(-1);
-			return;
-		}
 
 		if (lo->eventDestroy)
 		{
@@ -1267,8 +1457,9 @@ namespace chaos
 		m_pWriteBuffer->MoveReadPos(bytes);
 
 		int readable = m_pWriteBuffer->GetReadSize();
+
 		if (readable > 0)
-			GetCentre()->PushEvent(this, EV_IOWRITE);
+			PushEventToCentre(EV_IOWRITE);
 
 		CallbackWrite(bytes);
 	}
@@ -1276,13 +1467,9 @@ namespace chaos
 
 	void Connecter::ConnectComplete(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool bOk)
 	{
+		assert(o);
+
 		LPCOMPLETION_OVERLAPPED lo = (LPCOMPLETION_OVERLAPPED)o;
-		if (!lo)
-		{
-			printf("connect overlapped is null\n");
-			CallErr(-1);
-			return;
-		}
 
 		if (lo->eventDestroy)
 		{
@@ -1295,12 +1482,11 @@ namespace chaos
 		setsockopt(lo->fd, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0);
 		getpeername(lo->fd, &m_peeraddr.sa, &m_peeraddrlen);
 
-		//在调用Connect之前设置了回调 将在此生效
-		if (m_readcb && !m_isPostRecv && GetEv() & EV_IOREAD && m_peeraddr.sa.sa_family != AF_UNSPEC)
-			AsynRead();
-
-		if (m_writecb && !m_isPostWrite && GetEv() & EV_IOWRITE && m_peeraddr.sa.sa_family != AF_UNSPEC)
-			AsynWrite();
+		if (bOk)
+		{
+			m_connected = true;
+			EnableEvent(IO_CARE_EVENT);
+		}
 
 		CallbackConnect(bOk);
 
@@ -1312,36 +1498,31 @@ namespace chaos
 
 
 
+//TimerEvent Implemet
 namespace chaos
 {
-	TimerEvent::TimerEvent(uint32 timeout, bool isLoop/* = false*/) :
-		Event(EV_TIMEOUT, EventKey(Timer::CreateTimerID())),
-		m_timeout(timeout),
+	TimerEvent::TimerEvent(uint32 timeoutMs, const TimerHandler& func /* = NULL*/, bool isLoop/* = false*/) :
+		Event(EV_TIMEOUT, { Timer::CreateTimerID() }),
+		m_timeoutMs(timeoutMs),
 		m_isLoop(isLoop),
-		m_isCancel(false),
 		m_isSuspend(false),
-		m_handleFunc(NULL)
+		m_handleFunc(func)
 	{
-		m_nextTime = time(NULL) + m_timeout;
+		m_nextTime = GetCurrentMSec() + m_timeoutMs;
 	}
 
 
 	TimerEvent::~TimerEvent()
 	{
+		printf("delete timerevent!\n");
+		Timer::ReleaseTimerID(GetEvKey().timerId);
 	}
 
 
 	void TimerEvent::Handle()
 	{
 		if (m_handleFunc)
-			m_handleFunc();
-		else
-			DefaultHandle();
+			m_handleFunc(*this);
 	}
 
-	
-	void TimerEvent::DefaultHandle()
-	{
-		printf("test default timer handle!\n");
-	}
 }

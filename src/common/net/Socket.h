@@ -54,7 +54,7 @@ namespace chaos
 		socket_t GetFd() const { return m_fd; }
 
 		//缓冲区中的待接收数据大小
-		socket_unread_t GetUnreadByte() const;
+		int GetUnreadByte() const;
 
 		//设置非阻塞
 		int SetNonBlock();

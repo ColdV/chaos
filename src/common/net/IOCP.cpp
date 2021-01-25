@@ -17,9 +17,9 @@
 
 namespace chaos
 {
-	IOCP::AcceptExPtr IOCP::s_acceptEx = NULL;
-	IOCP::ConnectExPtr IOCP::s_connectEx = NULL;
-	IOCP::GetAcceptExSockaddrsPtr IOCP::s_getAcceptExSockaddrs = NULL;
+	IOCP::AcceptExPtr IOCP::s_acceptEx = (AcceptExPtr)IOCP::GetExtensionFunction(WSAID_ACCEPTEX);
+	IOCP::ConnectExPtr IOCP::s_connectEx = (ConnectExPtr)IOCP::GetExtensionFunction(WSAID_CONNECTEX);
+	IOCP::GetAcceptExSockaddrsPtr IOCP::s_getAcceptExSockaddrs = (GetAcceptExSockaddrsPtr)IOCP::GetExtensionFunction(WSAID_GETACCEPTEXSOCKADDRS);
 
 
 	IOCP::IOCP(EventCentre* pCentre):
@@ -32,10 +32,10 @@ namespace chaos
 		m_tids(NULL),
 		m_pThreadParam(new THREAD_PARAM())
 	{
-		SYSTEM_INFO systemInfo;
+		/*SYSTEM_INFO systemInfo;
 		GetSystemInfo(&systemInfo);
-		m_workThreads = systemInfo.dwNumberOfProcessors * 2;
-
+		m_workThreads = systemInfo.dwNumberOfProcessors * 2;*/
+		m_workThreads = 2;
 		m_completionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, m_workThreads);
 		m_threadHandles = new HANDLE[m_workThreads]{ 0 };
 		m_tids = new thread_t[m_workThreads]{ 0 };
@@ -87,32 +87,32 @@ namespace chaos
 				return -1;
 		}
 
-		if (!s_acceptEx || !s_connectEx || !s_getAcceptExSockaddrs)
-		{
-			//获取Ex系列函数
-			GUID acceptex = WSAID_ACCEPTEX;
-			GUID connectex = WSAID_CONNECTEX;
-			GUID getacceptexsockaddrs = WSAID_GETACCEPTEXSOCKADDRS;
-			Socket s(AF_INET, SOCK_STREAM, 0);
+		//if (!s_acceptEx || !s_connectEx || !s_getAcceptExSockaddrs)
+		//{
+		//	//获取Ex系列函数
+		//	GUID acceptex = WSAID_ACCEPTEX;
+		//	GUID connectex = WSAID_CONNECTEX;
+		//	GUID getacceptexsockaddrs = WSAID_GETACCEPTEXSOCKADDRS;
+		//	Socket s(AF_INET, SOCK_STREAM, 0);
 
-			if (INVALID_SOCKET == s.GetFd())
-				return -1;
+		//	if (INVALID_SOCKET == s.GetFd())
+		//		return -1;
 
-			socket_t fd = s.GetFd();
-			DWORD bytes = 0;
+		//	socket_t fd = s.GetFd();
+		//	DWORD bytes = 0;
 
-			if (0 != WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &acceptex, sizeof(acceptex),
-				&s_acceptEx, sizeof(s_acceptEx), &bytes, NULL, NULL))
-				return -1;
+		//	if (0 != WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &acceptex, sizeof(acceptex),
+		//		&s_acceptEx, sizeof(s_acceptEx), &bytes, NULL, NULL))
+		//		return -1;
 
-			if (0 != WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &connectex, sizeof(connectex),
-				&s_connectEx, sizeof(s_connectEx), &bytes, NULL, NULL))
-				return -1;
+		//	if (0 != WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &connectex, sizeof(connectex),
+		//		&s_connectEx, sizeof(s_connectEx), &bytes, NULL, NULL))
+		//		return -1;
 
-			if (0 != WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &getacceptexsockaddrs, sizeof(getacceptexsockaddrs),
-				&s_getAcceptExSockaddrs, sizeof(s_getAcceptExSockaddrs), &bytes, NULL, NULL))
-				return -1;
-		}
+		//	if (0 != WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &getacceptexsockaddrs, sizeof(getacceptexsockaddrs),
+		//		&s_getAcceptExSockaddrs, sizeof(s_getAcceptExSockaddrs), &bytes, NULL, NULL))
+		//		return -1;
+		//}
 
 		m_isInit = true;
 
@@ -162,15 +162,37 @@ namespace chaos
 	}
 
 
-	int IOCP::Launch(int timeoutMs, Poller::EventList& activeEvents)
+	void* IOCP::GetExtensionFunction(const GUID& funcGUID)
+	{
+		WsaData::Instance();
+
+		Socket s(AF_INET, SOCK_STREAM, 0);
+
+		if (s.GetFd() == INVALID_SOCKET)
+		{
+			printf("create socket failed:%d\n", WSAGetLastError());
+			return NULL;
+		}
+
+		void* pFunc = NULL;
+		DWORD bytes = 0;
+
+		WSAIoctl(s.GetFd(), SIO_GET_EXTENSION_FUNCTION_POINTER, &(const_cast<GUID&>(funcGUID)),
+			sizeof(funcGUID), &pFunc, sizeof(pFunc), &bytes, NULL, NULL);
+
+		return pFunc;
+	}
+
+
+	int IOCP::Launch(int timeoutMs, EventList& activeEvents)
 	{
 		if (!activeEvents.empty())
 			return 0;
 
-		if (0 > timeoutMs)
-			timeoutMs = DEFAULT_TIMEOUT;
-
-		m_pCentre->WaitWaittintEvsCond(timeoutMs);
+		if (0 != timeoutMs)
+		{
+			m_pCentre->WaitWaittintEvsCond(timeoutMs);
+		}
 
 		return 0;
 	}
@@ -205,9 +227,11 @@ namespace chaos
 			{
 				LPCOMPLETION_OVERLAPPED lo = (LPCOMPLETION_OVERLAPPED)overlapped;
 
+				//这里lo一定不会被其他线程释放掉(一定是一个有效的内存)
+				//因为释放lo前已经确保lo未被投递到WSA请求中
 				if (lo->cb)
 				{
-					MutexGuard lock(centre.GetMutex());
+					MutexGuard lock(centre.GetMutex());													
 					lo->cb(overlapped, bytes, key, bOk);
 				}
 			}

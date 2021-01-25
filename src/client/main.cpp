@@ -34,17 +34,17 @@ public:
 	Client();
 	~Client() {}
 
-	chaos::Connecter* GetConnecter() { return m_pConnecter; }
+	std::shared_ptr<chaos::Connecter>& GetConnecter() { return m_pConnecter; }
 
-	void ConnectCb(chaos::Connecter* pConnecter, int bOk, void* userdata);
+	void ConnectCb(chaos::Connecter& pConnecter, int bOk);
 
-	void ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata);
+	void ReadCb(chaos::Connecter& ev, int nTransBytes);
 
-	void WriteCb(chaos::Connecter* ev, int nTransBytes, void* userdata);
+	void WriteCb(chaos::Connecter& ev, int nTransBytes);
 
 	void Send(const char* buf, int buflen);
 private:
-	chaos::Connecter* m_pConnecter;
+	std::shared_ptr<chaos::Connecter> m_pConnecter;
 	bool m_isEstablished;
 	uint64 m_totalReadSize;
 	uint64 m_totalSendSize;
@@ -60,7 +60,7 @@ Client::Client():
 }
 
 
-void Client::ConnectCb(chaos::Connecter* pConnecter, int bOk, void* userdata)
+void Client::ConnectCb(chaos::Connecter& connecter, int bOk)
 {
 	static int cnt = 0;
 	static int timenow = 0;
@@ -69,19 +69,14 @@ void Client::ConnectCb(chaos::Connecter* pConnecter, int bOk, void* userdata)
 
 	++cnt;
 
-	if (!pConnecter)
-		return;
-
 	if (!bOk)
 	{
-		pConnecter->CancelEvent();
+		connecter.CancelEvent();
 		return;
 	}
 
-	pConnecter->SetCallback(std::bind(&Client::ReadCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
-		std::bind(&Client::WriteCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), NULL, NULL);
-
-	//printf("connect sucess::%d, cnt:%d\n", pConnecter->GetSocket().GetFd(), cnt);
+	connecter.SetReadCallback(std::bind(&Client::ReadCb, this, std::placeholders::_1, std::placeholders::_2));
+	connecter.SetWriteCallback(std::bind(&Client::WriteCb, this, std::placeholders::_1, std::placeholders::_2));
 
 	if (maxClient == cnt)
 	{
@@ -94,9 +89,9 @@ void Client::ConnectCb(chaos::Connecter* pConnecter, int bOk, void* userdata)
 }
 
 
-void Client::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
+void Client::ReadCb(chaos::Connecter& ev, int nTransBytes)
 {
-	LOG_DEBUG("read socket:%d trans bytes:%d", ev->GetSocket().GetFd(), nTransBytes);
+	LOG_DEBUG("read socket:%d trans bytes:%d", ev.GetSocket().GetFd(), nTransBytes);
 
 	static int cnt = 0;
 	static int timenow = 0;
@@ -112,15 +107,12 @@ void Client::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 
 	if (0 == nTransBytes)
 	{
-		ev->CancelEvent();
+		ev.CancelEvent();	
 		return;
 	}
 
-	int readable = ev->GetReadableSize() + 1;
+	int readable = ev.GetReadableSize() + 1;
 	totalReadable += nTransBytes;//readable - 1;
-
-	if (m_totalReadSize == SENDMAX)
-		;//printf("socket:%d,total read size:%llu, total readable:%llu\n",ev->GetSocket().GetFd(), m_totalReadSize, totalReadable);
 
 	char* buf = new char[readable];
 	if (!buf)
@@ -128,7 +120,7 @@ void Client::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 
 	memset(buf, 0, readable);
 
-	ev->ReadBuffer(buf, readable);
+	ev.ReadBuffer(buf, readable);
 	//printf("read socket recv data:%s\n", buf);
 	if (readSize >= SENDMAX * maxClient)
 	{
@@ -139,11 +131,11 @@ void Client::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 }
 
 
-void Client::WriteCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
+void Client::WriteCb(chaos::Connecter& ev, int nTransBytes)
 {
 	m_totalSendSize += nTransBytes;
-	//printf("socket:%d, send total size:%llu\n", ev->GetSocket().GetFd(), m_totalSendSize);
-	LOG_DEBUG("write socket:%d trans bytes:%d", ev->GetSocket().GetFd(), nTransBytes);
+	//LOG_DEBUG("write socket:%d trans bytes:%d", ev->GetSocket().GetFd(), nTransBytes);
+	//printf("write socket:%d trans bytes:%d\n", ev->GetSocket().GetFd(), nTransBytes);
 }
 
 
@@ -192,12 +184,6 @@ int main(int argc, char** argv)
 
 	chaos::EventCentre* p = new chaos::EventCentre;
 
-	if (0 != p->Init())
-	{
-		printf("init event centre failed!\n");
-		return 0;
-	}
-
 	Client* clients = new Client[maxClient];
 	if (!clients)
 		return 0;
@@ -211,8 +197,7 @@ int main(int argc, char** argv)
 			return 0;
 		}
 
-		pConnect->SetCallback(NULL,  NULL,
-			std::bind(&Client::ConnectCb, &clients[i], std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), NULL);
+		pConnect->SetConnectCallback(std::bind(&Client::ConnectCb, &clients[i], std::placeholders::_1, std::placeholders::_2));
 
 		p->RegisterEvent(pConnect);
 
@@ -231,10 +216,6 @@ int main(int argc, char** argv)
 		}
 	}
 
-	//for (int i = 0; i < maxClient; ++i)
-	//{
-	//	clients[i].Send(BUF, sizeof(BUF));
-	//}
 
 	p->EventLoop();
 

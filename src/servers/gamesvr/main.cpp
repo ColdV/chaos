@@ -5,6 +5,7 @@
 #include <functional>
 #include "common.h"
 #include "net/Timer.h"
+#include "thread/ThreadPool.h"
 
 #ifdef _WIN32
 
@@ -22,7 +23,6 @@
 #endif
 #endif  // _DEBUG
 
-
 void ShowMemUse()
 {
 	HANDLE handle = GetCurrentProcess();
@@ -32,6 +32,13 @@ void ShowMemUse()
 }
 
 #endif // _WIN32
+
+
+
+#define IP "127.0.0.1"
+#define PORT 3307
+
+
 
 
 struct Client
@@ -44,74 +51,111 @@ struct Client
 class Server
 {
 public:
-	Server() : m_totalSendSize(0), m_totalRecvSize(0) {}
+	Server();
 	~Server() {}
 
-	void ListenCb(chaos::Listener* ev, chaos::Connecter*, void* userdata);
+	void Start();
 
-	void ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata);
+	void ListenCb(chaos::Listener& ev, socket_t fd);
 
-	void WriteCb(chaos::Connecter* ev, int nTransBytes, void* userdata);
+	void ReadCb(chaos::Connecter& ev, int nTransBytes);
 
-	void TimerCb(chaos::Event* pev, short ev, void* userdata);
+	void WriteCb(chaos::Connecter& ev, int nTransBytes);
 
-	void EventCb(chaos::Event* pev, short ev, int errcode, void* userdata);
+	void Tick(chaos::TimerEvent& timerEvent);
+
+	void EventCb(chaos::Event& pev, short ev, int errcode);
 
 private:
 	uint64 m_totalSendSize;
 	uint64 m_totalRecvSize;
 	std::unordered_map<socket_t, Client> m_clients;
+
+	std::unique_ptr<chaos::EventCentre> m_centre;
+	std::unique_ptr<chaos::EventCentrePool> m_centrePool;
 };
 
 
-void Server::ListenCb(chaos::Listener* pListener, chaos::Connecter* pConner, void* userdata)
+Server::Server() :
+	m_totalSendSize(0),
+	m_totalRecvSize(0),
+	m_centre(new chaos::EventCentre),
+	m_centrePool(new chaos::EventCentrePool(4))
 {
-	if (!pConner)
-	{
-		printf("erro new conn!\n");
-		return;
-	}
-
-	socket_t connfd = pConner->GetSocket().GetFd();
-
-	pConner->SetCallback(std::bind(&Server::ReadCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
-		std::bind(&Server::WriteCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), NULL, NULL);
-
-	pConner->SetErrCallback(std::bind(&Server::EventCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4), NULL);
-
-	if (m_clients.find(connfd) == m_clients.end())
-		m_clients.insert(std::make_pair(connfd, Client{ connfd, 0 }));
-
-	//LOG_DEBUG("socket:%d, newsocket:%d", pListener->GetSocket().GetFd(), pConner->GetSocket().GetFd());
 }
 
 
-void Server::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
+void Server::Start()
 {
-	//LOG_DEBUG("read socket:%d trans bytes:%d", ev->GetSocket().GetFd(), nTransBytes);
+	auto cb = std::bind(&Server::ListenCb, this, std::placeholders::_1, std::placeholders::_2);
 
-	if (0 == nTransBytes)
+	std::shared_ptr<chaos::Listener> ev = chaos::Listener::CreateListener(NULL, PORT, 0, TCP_OPT_TCP_NODELAY, cb);
+	if (!ev)
 	{
-		ev->CancelEvent();
+		printf("create listener failed!\n");
 		return;
 	}
 
-	int readable = ev->GetReadableSize();
-	char* buf = new char[readable];
-	if (!buf)
+	//===================use event pool===================//
+	m_centrePool->Start([ev, this](chaos::EventCentrePool* pPool)
+		{
+			pPool->RegisterEvent(ev);
+
+			//std::shared_ptr<chaos::TimerEvent> timerEv(new chaos::TimerEvent(1000, std::bind(&Server::Tick, this, std::placeholders::_1),
+			//	true));
+			//pPool->RegisterEvent(timerEv);
+		}
+	);
+	//===================use event pool===================//
+
+	//m_centre->RegisterEvent(ev);
+
+	std::shared_ptr<chaos::TimerEvent> timerEv(new chaos::TimerEvent(3000, std::bind(&Server::Tick, this, std::placeholders::_1),
+		true));
+	m_centre->RegisterEvent(timerEv);
+
+	m_centre->EventLoop();
+}
+
+
+void Server::ListenCb(chaos::Listener& listener, socket_t fd)
+{
+	std::shared_ptr<chaos::Connecter> newconn(new chaos::Connecter(fd));
+	newconn->SetReadCallback(std::bind(&Server::ReadCb, this, std::placeholders::_1, std::placeholders::_2));
+	newconn->SetWriteCallback(std::bind(&Server::WriteCb, this, std::placeholders::_1, std::placeholders::_2));
+	newconn->SetErrCallback(std::bind(&Server::EventCb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+
+	m_centre->RegisterEvent(newconn);
+
+	if (m_clients.find(fd) == m_clients.end())
+		m_clients.insert(std::make_pair(fd, Client{ fd, 0 }));
+}
+
+
+void Server::ReadCb(chaos::Connecter& ev, int nTransBytes)
+{
+	//LOG_DEBUG("read socket:%d trans bytes:%d", ev.GetSocket().GetFd(), nTransBytes);
+
+	if (0 == nTransBytes)
+	{
+		ev.CancelEvent();
 		return;
+	}
+
+	int readable = ev.GetReadableSize();
+	char* buf = new char[readable];
 
 	memset(buf, 0, readable);
 
-	ev->ReadBuffer(buf, readable);
+	ev.ReadBuffer(buf, readable);
 
-	if (0 >= ev->WriteBuffer(buf, readable))
+	if (0 >= ev.WriteBuffer(buf, readable))
 	{
 		LOG_DEBUG("wirte buffer faled!");
 		return;
 	}
 
-	socket_t fd = ev->GetSocket().GetFd();
+	socket_t fd = ev.GetSocket().GetFd();
 	Client& c = m_clients.find(fd)->second;
 	c.totalReadSize += nTransBytes;
 
@@ -119,42 +163,40 @@ void Server::ReadCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
 }
 
 
-void Server::WriteCb(chaos::Connecter* ev, int nTransBytes, void* userdata)
+void Server::WriteCb(chaos::Connecter& ev, int nTransBytes)
 {
-	socket_t fd = ev->GetSocket().GetFd();
+	socket_t fd = ev.GetSocket().GetFd();
 	Client& c = m_clients.find(fd)->second;
 	c.totalWriteSize += nTransBytes;
 
 	if (nTransBytes == 0)
 	{
-		LOG_DEBUG("write socket:%d trans bytes:%d", ev->GetSocket().GetFd(), nTransBytes);
+		LOG_DEBUG("write socket:%d trans bytes:%d", ev.GetSocket().GetFd(), nTransBytes);
 	}
 }
 
 
-void Server::TimerCb(chaos::Event* pev, short ev, void* userdata)
+void Server::Tick(chaos::TimerEvent& timerEvent)
 {
-	LOG_DEBUG("timer:%d call back", pev->GetEvKey().timerId);
+	//LOG_DEBUG("timer:%d call back!", timerEvent.GetEvKey().timerId);
+	printf("timer:%d call back!, time:%d\n", timerEvent.GetEvKey().timerId, time(NULL));
 }
 
 
-void Server::EventCb(chaos::Event* pev, short ev, int errcode, void* userdata)
+void Server::EventCb(chaos::Event& evt, short ev, int errcode)
 {
 	if (ev & (EV_CANCEL | EV_ERROR))
 	{
-		if (pev->GetEv() & chaos::IO_CARE_EVENT)
+		if (evt.GetEv() & chaos::IO_CARE_EVENT)
 		{
-			m_clients.erase(pev->GetEvKey().fd);
-			printf("cancel connecter:%d\n", pev->GetEvKey().fd);
+			m_clients.erase(evt.GetEvKey().fd);
+			printf("cancel connecter:%d\n", evt.GetEvKey().fd);
 		}
 
-		pev->CancelEvent();
+		evt.CancelEvent();
 	}
 }
 
-
-#define IP "127.0.0.1"
-#define PORT 3307
 
 
 int main()
@@ -177,33 +219,7 @@ int main()
 
 	Server t;
 
-	chaos::EventCentre* p = new chaos::EventCentre;
-
-	//if (0 != p->Init())
-	//{
-	//	printf("init event centre failed!\n");
-	//	return 0;
-	//}
-
-	auto cb = std::bind(&Server::ListenCb, &t, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
-
-	chaos::Listener* ev = chaos::Listener::CreateListener(NULL, PORT, 0, TCP_OPT_TCP_NODELAY, cb);
-	if (!ev)
-	{
-		printf("create listener failed!\n");
-		return 0;
-	}
-
-	p->RegisterEvent(ev);
-
-	//chaos::TimerEvent* timerEv = new chaos::TimerEvent(3, true);
-	//timerEv->SetEventCallback(std::bind(&Server::TimerCb, &t, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), NULL);
-	//p->RegisterEvent(timerEv);
-
-	p->EventLoop();
-
-	delete p;
-	//delete timerEv;
+	t.Start();
 
 	//---------net test end-----------//
 

@@ -30,7 +30,7 @@ namespace chaos
 		WSABUF wsabufs[MAX_IOVEC];
 		socket_t fd;
 		IOCP_CALLBACK	cb;
-		uint16 eventDestroy : 1;
+		std::atomic<bool> eventDestroy;
 	}COMPLETION_OVERLAPPED, *LPCOMPLETION_OVERLAPPED;
 
 
@@ -38,7 +38,7 @@ namespace chaos
 	{
 		COMPLETION_OVERLAPPED overlapped;
 		socket_t acceptfd;
-		int inListenerPos;			//在listener的ACCEPT_OVERLAPPED数组中的位置
+		int inListenerPos;				//在listener的ACCEPT_OVERLAPPED数组中的位置
 		int* refcnt;					//在listener中投递AcceptEx引用的该结构的个数(listener中的每个ACCEPT_OVERLAPPED此字段都指向同一个数值)
 	}ACCEPT_OVERLAPPED, *LPACCEPT_OVERLAPPED;
 
@@ -65,7 +65,7 @@ namespace chaos
 
 		virtual int Init();
 
-		virtual int Launch(int timeoutMs, Poller::EventList& activeEvents) override;
+		virtual int Launch(int timeoutMs, EventList& activeEvents) override;
 
 		static BOOL AcceptEx(SOCKET sListenSocket, SOCKET sAcceptSocket, PVOID lpOutputBuffer, DWORD dwReceiveDataLength, 
 			DWORD dwLocalAddressLength, DWORD dwRemoteAddressLength, LPDWORD lpdwBytesReceived, LPOVERLAPPED lpOverlapped);
@@ -79,13 +79,14 @@ namespace chaos
 	protected:
 		virtual int RegistFd(socket_t fd, short ev) override;
 
-	public:
-		static unsigned int __stdcall Loop(void* arg);
-
 	private:
 		int AddLiveThread() { return ++m_liveThreads; }
 
 		int DecLiveThread() { return --m_liveThreads; }
+
+		static void* GetExtensionFunction(const GUID& funcGUID);
+
+		static unsigned int __stdcall Loop(void* arg);
 
 	private:
 		HANDLE m_completionPort;

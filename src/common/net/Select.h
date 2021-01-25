@@ -13,8 +13,6 @@
 #include "Poller.h"
 #include "IOCP.h"
 
-extern socket_t listenS;
-
 namespace chaos
 {
 	class Select : public Poller
@@ -31,7 +29,7 @@ namespace chaos
 
 		virtual int Init() override;
 
-		virtual int Launch(int timeoutMs, Poller::EventList& activeEvents) override;
+		virtual int Launch(int timeoutMs, EventList& activeEvents) override;
 
 	protected:
 		virtual int RegistFd(socket_t fd, short ev) override;
@@ -39,7 +37,7 @@ namespace chaos
 		virtual int CancelFd(socket_t fd, short ev) override;
 
 	private:
-		void CollectEvent(const fd_set& rfds, const fd_set& wfds, const fd_set& efds, Poller::EventList& activeEvents);
+		void CollectEvent(const fd_set& rfds, const fd_set& wfds, const fd_set& efds, EventList& activeEvents);
 
 	private:
 		fd_set m_rfds;

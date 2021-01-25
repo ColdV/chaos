@@ -42,7 +42,7 @@ namespace chaos
 	}
 
 
-	int Select::Launch(int timeoutMs, Poller::EventList& activeEvents)
+	int Select::Launch(int timeoutMs, EventList& activeEvents)
 	{
 		if (0 > timeoutMs)
 			timeoutMs = -1;
@@ -91,7 +91,7 @@ namespace chaos
 	}
 
 
-	void Select::CollectEvent(const fd_set& rfds, const fd_set& wfds, const fd_set& efds, EventCentre::EventList& activeEvents)
+	void Select::CollectEvent(const fd_set& rfds, const fd_set& wfds, const fd_set& efds, EventList& activeEvents)
 	{
 #ifdef _WIN32
 

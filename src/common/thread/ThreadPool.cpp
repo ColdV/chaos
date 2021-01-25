@@ -1,6 +1,5 @@
+#include <assert.h>
 #include "ThreadPool.h"
-#include "ThreadTask.h"
-#include <functional>
 
 
 ThreadPool::ThreadPool(int nThreadNum /*= -1*/) :
@@ -9,9 +8,7 @@ ThreadPool::ThreadPool(int nThreadNum /*= -1*/) :
 	m_cond(m_mutex),
 	m_running(false)
 {
-	m_threads.clear();
-
-	if (0 > nThreadNum)
+	if (0 >= nThreadNum)
 	{
 #ifdef _WIN32
 		SYSTEM_INFO systemInfo;
@@ -21,22 +18,17 @@ ThreadPool::ThreadPool(int nThreadNum /*= -1*/) :
 		m_threadNum = sysconf(_SC_NPROCESSORS_ONLN);
 #endif // _WIN32
 	}
+
+	for (uint32 i = 0; i < m_threadNum; ++i)
+	{
+		m_threads.emplace_back(new Thread(&ThreadPool::PoolWorkFunc, (void*)this));
+	}
+
 }
 
 
 ThreadPool::~ThreadPool()
 {
-	for (auto it = m_threads.begin(); it != m_threads.end();)
-	{
-		delete *it;
-		it = m_threads.erase(it);
-	}
-
-	while (!m_tq.empty())
-	{
-		delete m_tq.front();
-		m_tq.pop();
-	}
 }
 
 
@@ -47,16 +39,8 @@ int ThreadPool::Run()
 	
 	m_running = true;
 
-	for (uint32 i = 0; i < m_threadNum; ++i)
-	{
-		Thread* pThread = new Thread(&ThreadPool::PoolWorkFunc, (void*)this);
-		if (!pThread)
-			return -1;
-
-		pThread->Start();
-
-		m_threads.push_back(pThread);
-	}
+	for (auto& thread : m_threads)
+		thread->Start();
 
 	return 0;
 }
@@ -64,14 +48,18 @@ int ThreadPool::Run()
 
 int ThreadPool::Stop()
 {
-	if (!m_running)
-		return -1;
+	{
+		MutexGuard lock(m_mutex);
 
-	m_running = false;
+		if (!m_running)
+			return -1;
 
-	m_cond.CondBroadCast();
+		m_running = false;
 
-	for (auto thread : m_threads)
+		m_cond.CondBroadCast();
+	}
+
+	for (auto& thread : m_threads)
 	{
 		thread->Join();
 	}
@@ -80,66 +68,51 @@ int ThreadPool::Stop()
 }
 
 
-int ThreadPool::PushTask(ThreadTask* pTask)
+
+void ThreadPool::PushTask(const ThreadTask& task)
 {
-	if (!pTask)
-		return -1;
+	if (!task || !m_running)
+		return;
 
-	m_mutex.Lock();
+	MutexGuard lock(m_mutex);
 
-	m_tq.push(pTask);
+	m_tq.emplace(task);
 
 	m_cond.CondSignal();
-
-	m_mutex.UnLock();
-
-	return 0;
 }
 
 
 THREAD_FUNCTION_PRE ThreadPool::PoolWorkFunc(void* arg)
 {
-	if (!arg)
-	{
-#ifdef _WIN32
-		return -1;
-#else
-		return 0;
-#endif // _WIN32
-	}
+	assert(arg);
 
 	ThreadPool* pThreadPool = (ThreadPool*)arg;
 
 	while (pThreadPool->m_running)
 	{
-		pThreadPool->m_mutex.Lock();
-
-		while (pThreadPool->m_tq.empty() && pThreadPool->m_running)
+		ThreadTask task = NULL;
 		{
-			pThreadPool->m_cond.CondWait(THREAD_WAIT_TIMEOUT);
-		}
+			MutexGuard lock(pThreadPool->m_mutex);
 
-		//在cond_wait中可能因为time_out或者pool调用stop而返回 
-		//所以这里还是需要判断下m_tq是否为空
-		if (pThreadPool->m_tq.empty())
-		{
-			pThreadPool->m_mutex.UnLock();
-			continue;
-		}
+			while (pThreadPool->m_tq.empty() && pThreadPool->m_running)
+			{
+				pThreadPool->m_cond.CondWait(/*THREAD_WAIT_TIMEOUT*/);
+			}
 
-		ThreadTask* pTask = pThreadPool->m_tq.front();
-		if (!pTask)
-		{
+			//在cond_wait中会因为pool调用stop(置running为false)而跳出循环
+			//这里再次判断running状态
+			if (!pThreadPool->m_running)
+				continue;
+
+			//这里m_tq应该一定不为空
+			assert(!pThreadPool->m_tq.empty());
+			task = pThreadPool->m_tq.front();
+
 			pThreadPool->m_tq.pop();
-			pThreadPool->m_mutex.UnLock();
-			continue;
 		}
 
-		pThreadPool->m_tq.pop();
-
-		pThreadPool->m_mutex.UnLock();
-
-		pTask->Run();
+		if(task)
+			task();
 
 	}
 

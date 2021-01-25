@@ -1,8 +1,10 @@
 #pragma once
 
+#include <functional>
+#include <atomic>
+#include <memory>
 #include "stdafx.h"
 #include "Thread.h"
-#include "ThreadTask.h"
 #include "Mutex.h"
 #include "Sem.h"
 #include "Condition.h"
@@ -17,6 +19,8 @@ public:
 	//防止线程池实际已停止,但仍阻塞在等待中
 	static const int THREAD_WAIT_TIMEOUT = 10;
 
+	typedef std::function<void()>	ThreadTask;
+
 	explicit ThreadPool(int nThreadNum = -1);
 
 	~ThreadPool();
@@ -25,23 +29,23 @@ public:
 
 	int Stop();
 
-	int PushTask(ThreadTask* pTask);
+	void PushTask(const ThreadTask& task);
 	
 private:
 	static THREAD_FUNCTION_PRE PoolWorkFunc(void*);
 
 private:
-	std::list<Thread*> m_threads;
+	std::vector<std::unique_ptr<Thread>> m_threads;
 
-	std::queue<ThreadTask*> m_tq;		//任务队列
+	std::queue<ThreadTask> m_tq;
 
 	uint32 m_threadNum;
 
 	Mutex m_mutex;
 
-	Condition m_cond;
+	Condition m_cond; 
 
-	bool m_running;
+	std::atomic<bool> m_running;
 
 };
 

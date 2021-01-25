@@ -9,10 +9,8 @@
 *******************************************/
 
 #pragma once
-#include "Socket.h"
-#include <list>
-#include <set>
 #include <unordered_map>
+#include "stdafx.h"
 #include "event_config.h"
 
 namespace chaos
@@ -24,8 +22,9 @@ namespace chaos
 	class Poller : public NonCopyable
 	{
 	public:
-		typedef std::unordered_map<socket_t, Event*> NetEventMap;
+		typedef std::unordered_map<socket_t, std::shared_ptr<Event>> NetEventMap;
 		typedef std::vector<Event*> EventList;
+		typedef std::shared_ptr<Event> EventSharedPtr;
 
 		Poller(EventCentre* pCentre);
 
@@ -36,11 +35,9 @@ namespace chaos
 
 		virtual int Launch(int timeoutMs, EventList& activeEvents) = 0;
 
-		int AddEvent(Event* pEvent);
+		int AddEvent(const EventSharedPtr& pEvent);
 
 		int DelEvent(Event* pEvent);
-
-		//int DelEvent(socket_t fd);
 
 		//更新fd监听的事件
 		//@ev:需要更新的事件

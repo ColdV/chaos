@@ -35,7 +35,7 @@ namespace chaos
 
 		virtual int Init() override;
 
-		virtual int Launch(int timeoutMs, Poller::EventList& activeEvents) override;
+		virtual int Launch(int timeoutMs, EventList& activeEvents) override;
 
 	protected:
 		virtual int RegistFd(socket_t fd, short ev) override;

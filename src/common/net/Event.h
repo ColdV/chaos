@@ -2,20 +2,17 @@
 
 
 #include "stdafx.h"
-#include <map>
-#include <set>
-#include <unordered_set>
+#include "common.h"
 #include <functional>
 #include <memory>
 #include <atomic>
 #include <assert.h>
-#include "Poller.h"
+#include "Socket.h"
 #include "Buffer.h"
 #include "IOCP.h"
 #include "thread/Mutex.h"
 #include "thread/Condition.h"
-#include <condition_variable>
-#include <mutex>
+#include "thread/ThreadPool.h"
 
 
 #define SOCKET_ERR_TRY_AGAIN(e) \
@@ -75,13 +72,11 @@ namespace chaos
 	class Listener;
 	class Connecter;
 	class Timer;
+	class IOCP;
 
 
 	union EventKey
 	{
-		EventKey(timer_id timerid) :timerId(timerid){}
-		EventKey() {}
-
 		socket_t	fd;
 		timer_id	timerId;
 	};
@@ -99,6 +94,12 @@ namespace chaos
 	const int IO_CARE_EVENT = EV_IOREAD | EV_IOWRITE | EV_IOEXCEPT;
 	const int TIMEOUT_CART_EVENT = EV_TIMEOUT;
 
+
+	typedef std::vector<Event*> EventList;
+	typedef std::shared_ptr<Event> EventSharedPtr;
+	typedef std::weak_ptr<Event> EventWeakPtr;
+
+
 	//事件
 	class Event : public NonCopyable
 	{
@@ -106,9 +107,8 @@ namespace chaos
 		friend class EventCentre;
 		friend class Poller;
 
-		typedef std::function<void(Event* pEv, short ev, void* userdata)> EventCallback;
-
-		typedef std::function<void(Event* pEv, short ev, int errcode, void* userdata)> EventErrCallback;
+		typedef std::function<void(Event& pEv, short ev, int errcode)> EventErrCallback;
+		typedef std::function<void()> RegisterCallback;
 
 		virtual ~Event() {}
 
@@ -125,16 +125,20 @@ namespace chaos
 
 		void CancelEvent();
 
-		void SetErrCallback(const EventErrCallback& errcb, void* userdata) { m_errcb = errcb; m_userdata = userdata; }
+		void SetErrCallback(const EventErrCallback& errcb) { m_errcb = errcb; }
 
 	protected:
 		Event(short ev, const EventKey& evKey);
+
+		void PushEventToCentre(short ev);
 
 		void SetEv(short ev) { m_ev = ev; }
 
 		void UpdateEvent(short op, short ev);
 
 		void CallErr(int errcode);
+
+		void SetRegisterCallback(const RegisterCallback& cb) { m_registercb = cb; }
 
 	private:
 		void PushCurEv(short ev) { m_curEv.push(ev); }
@@ -156,48 +160,68 @@ namespace chaos
 
 		EventErrCallback m_errcb;
 
-		void* m_userdata;
+		RegisterCallback m_registercb;
 	};
 
 
-	//事件中心(事件响应,分发)
+
+	//事件中心(事件循环主体)
 	class EventCentre : public NonCopyable
 	{
 	public:
+		friend void Event::PushEventToCentre( short ev);		//use PushEvent();
+		friend class IOCP;			//use GetMutex(), WaitWaittintEvsCond()
+
 		struct ActiveEvent
 		{
 			short ev;
 			Event* pEvent;
 		};
-
-		typedef std::vector<Event*> EventList;
 		
 	public:
 		EventCentre();
 		~EventCentre();
 
-		int Init();
+		bool Init();
 
 		int EventLoop();
 
 		void Exit() { m_running = false; }
 
-		int RegisterEvent(Event* pEvent);
+		int RegisterEvent(const EventSharedPtr& pEvent);
 
 		void CancelEvent(Event* pEvent);
-
-		void PushEvent(Event* pEvent, short ev);
 
 		//更新已注册的事件
 		//@op:更新操作enum EVENT_UPDATE_OP
 		//@ev:需要更新的事件
 		void UpdateEvent(Event* pEvent, short op, short ev);
 
-		Mutex& GetMutex() { return m_mutex; }
+		int GetEventsNum() const { return m_eventsNum; }
 
-		void WaitWaittintEvsCond(int timeoutMs = -1) { MutexGuard lock(m_mutex); m_waittintEvsCond.CondWait(timeoutMs); }
+		//唤醒处于阻塞的centre
+		void WakeUp();
 
 	private:
+		class WakeUpEvent : public Event
+		{
+		public:
+			explicit WakeUpEvent(socket_t fd);
+			~WakeUpEvent();
+
+			bool Init();
+
+			void Handle() override;
+				
+			bool WakeUp();
+
+		private:
+			std::vector<std::unique_ptr<Socket>> m_sockets;
+		};
+
+	private:
+		void PushEvent(Event* pEvent, short ev);
+
 		int DeleteEvent(Event* pEvent);
 
 		int ProcessActiveEvent();
@@ -211,10 +235,14 @@ namespace chaos
 		//将等到中的事件移动到活动列表
 		void MakeWaittingToActive();
 
-	private:
-		Poller* m_pPoller;				//网络事件调度器
+		void WaitWaittintEvsCond(int timeoutMs = -1) { MutexGuard lock(m_mutex); m_waittintEvsCond.CondWait(timeoutMs); }
 
-		Timer* m_pTimer;				//定时器
+		Mutex& GetMutex() { return m_mutex; }
+
+	private:
+		std::unique_ptr<Poller> m_pPoller;				//网络事件调度器
+
+		std::unique_ptr<Timer> m_pTimer;				//定时器
 
 		EventList m_activeEvs;			//活动事件
 
@@ -222,14 +250,58 @@ namespace chaos
 
 		std::atomic_bool m_running;
 
-		std::atomic<int> m_evcount;
+		std::atomic<int> m_eventsNum;
 
-		std::atomic_bool m_isInit;
+		bool m_isInit;
+
+		mutable Mutex m_mutex;
+
+		Condition m_waittintEvsCond;
+
+		std::shared_ptr<WakeUpEvent> m_wakeUpEvent;
+	};
+
+
+
+	class EventCentrePool
+	{
+	public:
+		typedef std::function<void(EventCentrePool*)> StartedCallBack;
+
+		explicit EventCentrePool(int threadNum = 0);
+		~EventCentrePool();
+
+		//如果沒设置CallBack,该调用为阻塞模式(直到有所工作线程启动)
+		//如果设置CallBack,该调用为非阻塞模式(所有工作线程启动后回调CallBack)
+		void Start(const StartedCallBack& cb = NULL);
+
+		void Stop();
+
+		bool Started() const { return m_threadNum; }
+
+		//选择负载较低的事件中心注册事件
+		//int RegisterEvent(Event* pEvent);
+		int RegisterEvent(const EventSharedPtr& pEvent);
+
+	private:
+		void Work();
+
+	private:
+		const int m_threadNum;
 
 		Mutex m_mutex;
 
-		Condition m_waittintEvsCond;
+		std::atomic<bool> m_started;
+
+		Condition m_cond;
+
+		std::unique_ptr<ThreadPool> m_pool;
+
+		std::vector<EventCentre*> m_centres;
+
+		StartedCallBack m_startedCb;
 	};
+
 
 
 	class Listener :public Event
@@ -240,39 +312,39 @@ namespace chaos
 		static const int INIT_ACCEPTADDRBUF_SIZE	= 128; //AcceptEx传入的buffer大小(传输协议的最大地址大小 + 16) * 2
 #endif // IOCP_ENABLE
 
-		typedef std::function<void(Listener* listener, Connecter* newconn, void* userdata)>	ListenerCb;
+		typedef std::function<void(Listener& listener, socket_t acceptedfd)>	ListenerCb;
 
-		explicit Listener(socket_t fd);
+		Listener(socket_t fd, const SockAddr& addr);
 
 		~Listener();
 
-		static Listener* CreateListener(const char* ip = NULL, unsigned short port = 0,
-				bool ipv6 = false, int opt = 0, ListenerCb cb = NULL, void * userdata = NULL);
-
-		int Listen(const sockaddr* sa, int salen);
+		static std::shared_ptr<Listener> CreateListener(const char* ip = NULL, unsigned short port = 0,
+				bool ipv6 = false, int opt = 0, const ListenerCb& cb = NULL);
 
 		Socket& GetSocket() { return *m_socket; }
 
-		void SetListenerCb(const ListenerCb& cb, void* pCbData) { m_cb = cb; m_userdata = pCbData; }
+		void SetListenerCb(const ListenerCb& cb) { m_cb = cb; }
 
-		void CallListenerCb(Connecter* newconn) { if (m_cb) m_cb(this, newconn, m_userdata); }
-
-	protected:
-#ifdef IOCP_ENABLE
-		int StartAsynRequest();
-#endif // IOCP_ENABLE
+		void CallListenerCb(socket_t acceptedfd) { if (m_cb) m_cb(*this, acceptedfd); }
 
 	private:
 		virtual void Handle() override;
 
+		int Listen();
+
+		void DoneAccept(socket_t acceptedfd);
+
+		void RegisterCallback();
+
 #ifdef IOCP_ENABLE
+		int StartAsynAccept();
+
 		int AsynAccept(LPACCEPT_OVERLAPPED lo);
 
 		//GetQueuedCompletionStatus后的回调
 		void AcceptComplete(OVERLAPPED* o, DWORD bytes, ULONG_PTR lpCompletionKey, bool bOk);
-#endif // IOCP_ENABLE
 
-		void DoneAccept(socket_t acceptedfd);
+#endif // IOCP_ENABLE
 
 	private:
 		//Socket* m_socket;
@@ -280,7 +352,7 @@ namespace chaos
 
 		ListenerCb m_cb;
 
-		void* m_userdata;
+		SockAddr m_addr;
 
 #ifdef IOCP_ENABLE
 		LPACCEPT_OVERLAPPED m_acceptOls;
@@ -294,10 +366,11 @@ namespace chaos
 	};
 
 
+
 	class Connecter : public Event
 	{
 	public:
-		typedef std::function<void(Connecter* pConnect, int nTransBytes, void* userdata)> NetCallback;
+		typedef std::function<void(Connecter& pConnect, int nTransBytes)> NetCallback;
 
 		explicit Connecter(socket_t fd);
 
@@ -320,13 +393,19 @@ namespace chaos
 		//获取RBuffer中可读取的字节数
 		int GetReadableSize() { if (!m_pReadBuffer) return 0; return m_pReadBuffer->GetReadSize(); }
 
-		void SetCallback(const NetCallback& readcb, const NetCallback& writecb, const NetCallback& connectcb, void* userdata);
+		void SetReadCallback(const NetCallback& cb) { m_readcb = cb; }
+
+		void SetWriteCallback(const NetCallback& cb) { m_writecb = cb; }
+
+		void SetConnectCallback(const NetCallback& cb) { m_connectcb = cb; }
 
 		//启用一个新事件
 		void EnableEvent(short ev);
 
 		//关闭关注的事件
 		void DisableEvent(short ev);
+
+		bool Connected() const { return m_connected; }
 
 #ifdef IOCP_ENABLE
 		int AsyncConnect(sockaddr* sa, int salen);
@@ -336,11 +415,13 @@ namespace chaos
 	private:
 		virtual void Handle() override;
 
-		void CallbackRead(int nTransferBytes) { if (m_readcb) m_readcb(this, nTransferBytes, m_userdata); }
+		void CallbackRead(int nTransferBytes) { if (m_readcb) m_readcb(*this, nTransferBytes); }
 
-		void CallbackWrite(int nTransferBytes) { if (m_writecb) m_writecb(this, nTransferBytes, m_userdata); }
+		void CallbackWrite(int nTransferBytes) { if (m_writecb) m_writecb(*this, nTransferBytes); }
 
-		void CallbackConnect(bool bOk) { if (m_connectcb) m_connectcb(this, bOk, m_userdata); }
+		void CallbackConnect(bool bOk) { if (m_connectcb) m_connectcb(*this, bOk); }
+
+		void RegisterCallback();
 
 		int HandleRead();
 
@@ -384,38 +465,37 @@ namespace chaos
 
 		NetCallback m_connectcb;
 
-		void* m_userdata;
-
 		SockAddr m_peeraddr;
 
 		socklen_t m_peeraddrlen;
+
+		bool m_connected;
 	};
+
 
 
 	class TimerEvent : public Event
 	{
 	public:
 		friend class Timer;
-		typedef std::function<void()> TimerHandler;
+		typedef std::function<void(TimerEvent&)> TimerHandler;
 
-		explicit TimerEvent(uint32 timeout, bool isLoop = false);
+		explicit TimerEvent(uint32 timeoutMs, const TimerHandler& func = NULL, bool isLoop = false);
 
 		virtual ~TimerEvent();
 
-		uint32 GetTimeOut() const { return m_timeout; }
+		uint32 GetTimeOut() const { return m_timeoutMs; }
 
-		time_t GetNextTime() const { return m_nextTime; }
+		uint64 GetNextTime() const { return m_nextTime; }
 
 		bool IsLoop() const { return m_isLoop; }
 		void SetLoop(bool isLoop) { m_isLoop = isLoop; }
 
-		void Cancel() { m_isCancel = true; };
-
+		//暂停定时器
 		void Suspend() { m_isSuspend = true; };
 
+		//重启定时器
 		void Resume() { m_isSuspend = false; }
-
-		bool IsCancel() const { return m_isCancel; }
 
 		bool IsSuspend() const { return m_isSuspend; }
 
@@ -424,18 +504,14 @@ namespace chaos
 	private:
 		virtual void Handle() override;
 
-		void SetNextTime() { m_nextTime = time(NULL) + m_timeout; }
-
-		void DefaultHandle();
+		void SetNextTime() { m_nextTime = GetCurrentMSec() + m_timeoutMs; }
 
 	private:
-		uint32 m_timeout;
+		uint32 m_timeoutMs;
 
-		time_t m_nextTime;
+		uint64 m_nextTime;
 
 		bool m_isLoop;						//循环定时器
-
-		bool m_isCancel;					//取消定时器
 
 		bool m_isSuspend;					//暂停定时器
 

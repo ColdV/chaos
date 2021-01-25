@@ -42,7 +42,7 @@ namespace chaos
 	}
 
 
-	int Epoll::Launch(int timeoutMs, Poller::EventList& activeEvents)
+	int Epoll::Launch(int timeoutMs, EventList& activeEvents)
 	{
 		if (0 > timeoutMs)
 			timeoutMs = -1;

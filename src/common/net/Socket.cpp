@@ -15,13 +15,14 @@ namespace chaos
 {
 
 #ifdef _WIN32
-	static WsaData g_wsa = WsaData::Instance();
+	static WsaData& g_wsa = WsaData::Instance();
 #endif // _WIN32
 
 
 	Socket::Socket(int af, int type, int protocol)
 	{
 		m_fd = socket(af, type, protocol);
+		//eventfd()
 	}
 
 
@@ -153,25 +154,27 @@ namespace chaos
 	}
 
 
-	socket_unread_t Socket::GetUnreadByte() const
+	int Socket::GetUnreadByte() const
 	{
-		socket_unread_t n = 0;
 #ifdef _WIN32
+		u_long n = 0;
 		if (ioctlsocket(m_fd, FIONREAD, &n) < 0)
 		{
 			printf("call ioctlsocket failed! err:%d\n", WSAGetLastError());
 			return 0;
 		}
+
+		return (int)n;
 #else
+		int n = 0;
 		if (ioctl(m_fd, FIONREAD, &n) < 0)
 		{
 			printf("call ioctlsocket failed!\n");
 			return -1;
 		}
 
-#endif // _WIN32
-
 		return n;
+#endif // _WIN32
 	}
 
 

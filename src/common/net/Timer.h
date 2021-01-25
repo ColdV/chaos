@@ -1,9 +1,8 @@
 #pragma once
 
-
-#include "template/MinHeap.h"
 #include <set>
 #include <unordered_map>
+#include "template/MinHeap.h"
 #include "Event.h"
 
 
@@ -12,8 +11,13 @@ namespace chaos
 
 	struct TimerCmp
 	{
-		bool operator()(const TimerEvent* l, const TimerEvent* r) const
+		bool operator()(const std::weak_ptr<TimerEvent>& weakl, const std::weak_ptr<TimerEvent>& weakr) const
 		{
+			std::shared_ptr<TimerEvent> l(weakl.lock());
+			std::shared_ptr<TimerEvent> r(weakr.lock());
+			if (!l || !r)
+				return false;
+
 			return l->GetNextTime() < r->GetNextTime();
 		}
 
@@ -22,27 +26,25 @@ namespace chaos
 	class Timer
 	{
 	public:
-		enum 
-		{
-			INIT_ID_SIZE = 128,
-		};
+		static const int INIT_ID_SIZE = 128;
+		static const int BYTE2BIT = 8;
 
 		friend EventCentre;
 		friend TimerEvent;
 
-		typedef std::unordered_map<int, TimerEvent*> TimerMap;
-		typedef std::vector<Event*> EventList;
+		typedef std::unordered_map<int, std::shared_ptr<TimerEvent>> TimerMap;
+		typedef std::shared_ptr<TimerEvent> TimerSharedPtr;
+		typedef std::weak_ptr<TimerEvent> TimerWeakPtr;
 
-		//Timer& Instance();
-		Timer();
+		Timer(EventCentre* pCentre);
 		~Timer();
 
-		void DispatchTimer(EventList& activeEvents);
+		void Launch(EventList& activeEvents);
 
 		//添加定时器,返回定时器ID
-		uint32 AddTimer(Event* pTimerEv) { return AddTimer((TimerEvent*)pTimerEv); }
+		uint32 AddTimer(const EventSharedPtr& pEvent) { return AddTimer(std::static_pointer_cast<TimerEvent>(pEvent)); }
 
-		uint32 AddTimer(TimerEvent* pTimerEv);
+		uint32 AddTimer(const TimerSharedPtr& pTimerEv);
 
 		uint32 DelTimer(TimerEvent* pTimerEv);
 
@@ -54,28 +56,29 @@ namespace chaos
 
 		void Clear();
 
-	private:
-		TimerMap& GetAllTimer() { return m_timerMap; }
-
 		//分配一个定时器ID, 返回0表示无ID可用
 		static timer_id CreateTimerID();
 
-		//扩展ID
-		static int ExpandID();
+		static void ReleaseTimerID(timer_id id);
 
 	private:
-		MinHeap<TimerEvent*, TimerCmp> m_timers;
+		TimerMap& GetAllTimer() { return m_timerMap; }
+
+	private:
+		MinHeap<TimerWeakPtr, TimerCmp> m_timers;
+
+		EventCentre* m_pCentre;
 
 		TimerMap m_timerMap;
 
-		time_t	m_lastRunTime;
+		TIME_T	m_lastRunTime;
 
 	private:
-		static char* s_ids;
+		static std::vector<byte> s_ids;
 
-		static uint32 s_curTimers;			//定时器个数
+		static std::atomic<uint32> s_curTimers;			//定时器个数
 
-		static timer_id s_maxIDSize;
+		static Mutex s_mutex;
 	};
 
 }
