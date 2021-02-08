@@ -1,90 +1,99 @@
 #include "DBMysql.h"
+#include <assert.h>
 
-DBMysql::DBMysql(uint32 dbport, const char* dbip, const char* dbuser,
-	const char* dbpwd, const char* dbname):
-	m_pMysql(0),
-	m_dbport(dbport)
+namespace chaos
 {
-	strncpy_safe(m_dbip, MAX_DBINFO_BUF, dbip, strlen(dbip));
-	strncpy_safe(m_dbuser, MAX_DBINFO_BUF, dbuser, strlen(dbuser));
-	strncpy_safe(m_dbpwd, MAX_DBINFO_BUF, dbpwd, strlen(dbpwd));
-	strncpy_safe(m_dbname, MAX_DBINFO_BUF, dbname, strlen(dbname));
-
-	m_pMysql = mysql_init(NULL);
-}
-
-
-DBMysql::~DBMysql()
-{
-	if (m_pMysql)
-		mysql_close(m_pMysql);
-}
-
-
-uint32 DBMysql::Connect()
-{
-	if (!mysql_real_connect(m_pMysql, m_dbip, m_dbuser, m_dbpwd, m_dbname, m_dbport, NULL, 0))
-		return GetLastErrno();
-
-	return 0;
-}
-
-
-int DBMysql::Query(const char* cmd, uint32 length, DBResult* pResult)
-{
-	if (!cmd )
-		return -1;
-
-	Ping();
-
-	int ret = mysql_real_query(m_pMysql, cmd, length);
-
-	if (0 != ret)
-		return ret;
-
-	if(pResult)
-		QueryResult(pResult);
-
-	return ret;
-}
-
-
-int DBMysql::QueryResult(DBResult* pResult)
-{
-	MYSQL_RES* pRes = mysql_store_result(m_pMysql);
-
-	if (!pRes)
-		return GetLastErrno();
-
-	MYSQL_FIELD* fields = mysql_fetch_fields(pRes);
-	if (!fields)
-		return GetLastErrno();
-
-	uint32 fieldnum = mysql_num_fields(pRes);
-
-	DBResult::FieldInfo fieldInfo;
-	for (uint32 i = 0; i < fieldnum; ++i)
+	namespace db
 	{
-		fieldInfo.index = i;
-		fieldInfo.name = fields[i].name;
-		pResult->BuildName2Field(fields[i].name, fieldInfo);
-	}
 
-	MYSQL_ROW row;
-	uint64 rownum = 0;
-
-	while (NULL != (row = mysql_fetch_row(pRes)))
-	{
-		auto lens = mysql_fetch_lengths(pRes);
-		for (uint32 i = 0; i < fieldnum; ++i)
+		DBMysql::DBMysql(uint32 dbport, const char* dbip, const char* dbuser,
+			const char* dbpwd, const char* dbname) :
+			m_pMysql(NULL),
+			m_dbport(dbport),
+			m_dbip(dbip),
+			m_dbuser(dbuser),
+			m_dbpwd(dbpwd),
+			m_dbname(dbname)
 		{
-			pResult->AppendField(rownum, i, row[i], lens[i]);
+			m_pMysql = mysql_init(NULL);
 		}
 
-		++rownum;
-	}
 
-	mysql_free_result(pRes);
+		DBMysql::~DBMysql()
+		{
+			if (m_pMysql)
+				mysql_close(m_pMysql);
+		}
 
-	return 0;
-}
+
+		bool DBMysql::Connect()
+		{
+			if (!mysql_real_connect(m_pMysql, m_dbip.c_str(), m_dbuser.c_str(), m_dbpwd.c_str(), 
+					m_dbname.c_str(), m_dbport, NULL, 0))
+				return false;
+
+			return 0;
+		}
+
+
+		int DBMysql::Query(const std::string& cmd, DBResultBase* result)
+		{
+			if (!result)
+				return -1;
+
+			int ret = mysql_real_query(m_pMysql, cmd.c_str(), cmd.length());
+
+			if (0 != ret)
+				return ret;
+
+
+			QueryResult(static_cast<DBMysqlResult*>(result));
+
+			return ret;
+		}
+
+
+		int DBMysql::QueryResult(DBMysqlResult* result)
+		{
+			assert(result);
+
+			MYSQL_RES* pRes = mysql_store_result(m_pMysql);
+
+			if (!pRes)
+				return GetLastErrno();
+
+			MYSQL_FIELD* fields = mysql_fetch_fields(pRes);
+			if (!fields)
+				return GetLastErrno();
+
+			uint32 fieldnum = mysql_num_fields(pRes);
+
+			DBMysqlResult::FieldInfo fieldInfo;
+			for (uint32 i = 0; i < fieldnum; ++i)
+			{
+				fieldInfo.index = i;
+				fieldInfo.name = fields[i].name;
+				result->BuildName2Field(fields[i].name, fieldInfo);
+			}
+
+			MYSQL_ROW row;
+			uint64 rownum = 0;
+
+			while (NULL != (row = mysql_fetch_row(pRes)))
+			{
+				auto lens = mysql_fetch_lengths(pRes);
+				for (uint32 i = 0; i < fieldnum; ++i)
+				{
+					result->AppendField(rownum, i, row[i], lens[i]);
+				}
+
+				++rownum;
+			}
+
+			mysql_free_result(pRes);
+
+			return 0;
+		}
+
+	}	//namespace db
+}	//namespace chaos

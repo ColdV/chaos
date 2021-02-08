@@ -9,8 +9,10 @@ if(NOT CMAKE_BUILD_TYPE)
         CACHE STRING "Set build type to Debug or Release (default Release)" FORCE)
 endif()
 
+
 set(LIBSRC_DIR
     src/common
+    src/common/db
     #src/common/db/dbmysql
     src/common/log
     src/common/net
@@ -23,23 +25,49 @@ include_directories(src/common)
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin) 
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 
+
+#鍒涘缓libs鍜宨nclude鐩綍浠ヤ究寮曠敤绗笁鏂瑰簱
+file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/deps)
+file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/libs)
+set(PROJECT_DEPS_DIR ${CMAKE_SOURCE_DIR}/deps)
+set(PROJECT_LIBS_DIR ${CMAKE_SOURCE_DIR}/libs)
+
+
+#FindMySQL
 INCLUDE(cmake/mysql.cmake)
 
+#FindRedis
+find_package(HiRedis)
+
+
 if(MYSQL_FOUND)
+    message(STATUS "mysql found.")
     list(APPEND LIBS ${MYSQL_LIBRARIES})
     list(APPEND LIBS_INCLUDE ${MYSQL_INCLUDE_DIR})
     list(APPEND LIB_DIRS ${MYSQL_LIB_DIR})
+    list(APPEND LIBSRC_DIR src/common/db/dbmysql)
+    option(DB_MYSQL_ENABLE "enable mysql." ON)
+endif()
+
+if(HiRedis_FOUND)
+  message(STATUS "hiredis found.")
+  list(APPEND LIBSRC_DIR src/common/db/dbredis)
+  list(APPEND LIBS ${HiRedis_LIBRARY})
+  list(APPEND LIBS_INCLUDE ${HiRedis_INCLUDE_DIR})
+  option(DB_REDIS_ENABLE "enable redis." ON)
 endif()
 
 
 if(WIN32)
-    #在windows中启用此项将使用IOCP模型否则使用SELECT
+    #鍦╳indows涓惎鐢ㄦ椤瑰皢浣跨敤IOCP妯″瀷鍚﹀垯浣跨敤SELECT
     option(IOCP_ENABLE "enable windows iocp." ON)
+
+    list(APPEND LIBS ws2_32.lib)
 endif()
 
 
 if(UNIX)
-    #在unix中启用此项将使用EPOLL模型否则使用SELECT
+    #鍦╱nix涓惎鐢ㄦ椤瑰皢浣跨敤EPOLL妯″瀷鍚﹀垯浣跨敤SELECT
     option(EPOLL_ENABLE "enable unix epoll." ON)
 endif()
 
@@ -85,6 +113,7 @@ if(UNIX)
     set(CMAKE_CXX_FLAGS_DEBUG "-O0")
     set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 endif()
+
 
 foreach(DIR ${LIBSRC_DIR})
     aux_source_directory(${DIR} SOURCE_FILES)

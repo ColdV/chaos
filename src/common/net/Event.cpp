@@ -248,8 +248,7 @@ namespace chaos
 
 		for(auto pev : m_activeEvs)
 		{
-			if (!pev)
-				continue;
+			assert(pev);
 
 			//EV_CANCEL时GetCentre已为NULL
 			//优先处理CANCEL,这个判断必须在GetCentre之前

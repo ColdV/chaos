@@ -3,54 +3,54 @@
 #include "stdafx.h"
 #include "common.h"
 #include "mysql.h"
-#include "DBResult.h"
+#include "db/DBBase.h"
 
-//#ifdef _WIN32
-//#pragma comment(lib, "libmysql.lib")
-//#pragma comment(lib, "mysqlclient.lib")
-//#endif // _WIN32
-
-
-#define MAX_DBINFO_BUF	128
-
-class DBMysql : public NonCopyable
+namespace chaos
 {
-public:
-	DBMysql(uint32 port, const char* dbip, const char* dbuser, 
-		const char* dbpwd, const char* dbname);
+	namespace db
+	{
+		class DBMysql : public NonCopyable, public DBBase
+		{
+		public:
+			DBMysql(uint32 port, const char* dbip, const char* dbuser,
+				const char* dbpwd, const char* dbname);
 
-	~DBMysql();
+			~DBMysql();
 
-	uint32 Connect();
+			bool Connect() override;
 
-	int Ping() { return mysql_ping(m_pMysql); }
+			void DisConnect() override {}
 
-	//Ö´ĞĞqueryÓï¾ä,²¢½«½á¹û·ÅÈëDBResultÖĞ
-	int Query(const char* query, uint32 length, DBResult* pResult);
+			int Ping() override { return mysql_ping(m_pMysql); }
 
-	//»ñÈ¡ÉÏ´Î´íÎóÂë
-	uint32 GetLastErrno() const { return mysql_errno(m_pMysql); }
+			//æ‰§è¡Œqueryè¯­å¥,å¹¶å°†ç»“æœæ”¾å…¥DBMysqlResultä¸­
+			int Query(const std::string& cmd, DBResultBase* result) override;
 
-	//»ñÈ¡ÉÏ´Î´íÎóĞÅÏ¢
-	const char* GetLastErrStr() const { return mysql_error(m_pMysql); }
+			//è·å–ä¸Šæ¬¡é”™è¯¯ç 
+			uint32 GetLastErrno() const { return mysql_errno(m_pMysql); }
 
-	//ÊÜÓ°ÏìĞĞÊı
-	uint64 GetLastAffectRows() const { return mysql_affected_rows(m_pMysql); }
+			//è·å–ä¸Šæ¬¡é”™è¯¯ä¿¡æ¯
+			const char* GetLastErrStr() const { return mysql_error(m_pMysql); }
 
-private:
-	//Ğ´ÈëÖ´ĞĞ½á¹û
-	int QueryResult(DBResult* pResult);
+			//å—å½±å“è¡Œæ•°
+			uint64 GetLastAffectRows() const { return mysql_affected_rows(m_pMysql); }
 
-private:
-	MYSQL* m_pMysql;
+		private:
+			//å†™å…¥æ‰§è¡Œç»“æœ
+			int QueryResult(DBMysqlResult* result);
 
-	uint32 m_dbport;							//Êı¾İ¿â¶Ë¿Ú
+		private:
+			MYSQL* m_pMysql;
 
-	char m_dbip[MAX_DBINFO_BUF];				//Êı¾İ¿âipµØÖ·
+			uint32 m_dbport;					//æ•°æ®åº“ç«¯å£
 
-	char m_dbuser[MAX_DBINFO_BUF];				//Êı¾İ¿âÓÃ»§Ãû
+			std::string m_dbip;					//æ•°æ®åº“ipåœ°å€
 
-	char m_dbpwd[MAX_DBINFO_BUF];				//Êı¾İ¿âÃÜÂë
+			std::string m_dbuser;				//æ•°æ®åº“ç”¨æˆ·å
 
-	char m_dbname[MAX_DBINFO_BUF];				//Êı¾İ¿âÃû
-};
+			std::string m_dbpwd;				//æ•°æ®åº“å¯†ç 
+
+			std::string m_dbname;				//æ•°æ®åº“å
+		};
+	}
+}

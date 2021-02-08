@@ -42,14 +42,6 @@ namespace chaos
 		int* refcnt;					//在listener中投递AcceptEx引用的该结构的个数(listener中的每个ACCEPT_OVERLAPPED此字段都指向同一个数值)
 	}ACCEPT_OVERLAPPED, *LPACCEPT_OVERLAPPED;
 
-	class IOCP;
-
-	typedef struct
-	{
-		HANDLE iocp;
-		IOCP* pIOCP;
-	}THREAD_PARAM, *LPTHREAD_PARAM;
-
 
 	class IOCP : public Poller
 	{
@@ -80,9 +72,9 @@ namespace chaos
 		virtual int RegistFd(socket_t fd, short ev) override;
 
 	private:
-		int AddLiveThread() { return ++m_liveThreads; }
+		//int AddLiveThread() { return ++m_liveThreads; }
 
-		int DecLiveThread() { return --m_liveThreads; }
+		//int DecLiveThread() { return --m_liveThreads; }
 
 		static void* GetExtensionFunction(const GUID& funcGUID);
 
@@ -97,15 +89,13 @@ namespace chaos
 
 		HANDLE* m_threadHandles;			//所有线程
 
-		std::atomic<int> m_liveThreads;		//活动线程数量
+		//std::atomic<int> m_liveThreads;		//活动线程数量
 
 		thread_t* m_tids;					//所有线程ID
 
-		LPTHREAD_PARAM m_pThreadParam;		//线程参数
+		//Sem m_sem;
 
-		Sem m_sem;
-
-		Mutex m_mutex;
+		//Mutex m_mutex;
 
 		static AcceptExPtr	s_acceptEx;
 

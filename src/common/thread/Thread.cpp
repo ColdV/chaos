@@ -18,12 +18,16 @@ Thread::~Thread()
 {	
 	if (m_started && !m_joined)
 	{
+		if (0 != Join())
+		{
 #ifdef _WIN32
-		if(m_hThread)
+			printf("wait thread end failed! force thread.%d\n", GetLastError());
+			TerminateThread(m_hThread, -1);
 			CloseHandle(m_hThread);
 #else
-		pthread_detach(m_tid);
+			pthread_detach(m_tid);
 #endif // _WIN32
+		}
 	}
 }
 
@@ -53,17 +57,27 @@ int Thread::Start()
 
 int Thread::Join()
 {
+	if (m_joined)
+		return 0;
+
 	m_joined = true;
+	int ret = 0;
 #ifdef _WIN32
-	int ret = WaitForSingleObject(m_hThread, INFINITE);
+	if (!m_hThread)
+		return 0;
+
+	ret = WaitForSingleObject(m_hThread, INFINITE);
+
 	if (0 == ret)
-	{
 		CloseHandle(m_hThread);
-	}
 	else
 		m_joined = false;
-	return ret;
 #else
-	return pthread_join(m_tid, NULL);
+	ret = pthread_join(m_tid, NULL);
+	if (0 != ret)
+		m_joined = false;
+
 #endif // _WIN32
+
+	return ret;
 }

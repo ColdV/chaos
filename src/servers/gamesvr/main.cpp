@@ -6,6 +6,8 @@
 #include "common.h"
 #include "net/Timer.h"
 #include "thread/ThreadPool.h"
+#include "db/dbredis/DBRedis.h"
+#include "db/DBPool.h"
 
 #ifdef _WIN32
 
@@ -219,9 +221,41 @@ int main()
 
 	Server t;
 
-	t.Start();
-
 	//---------net test end-----------//
+
+
+	//---------db test start---------//
+	//chaos::db::DBRedis redis("47.116.73.175", 6379);
+
+	//if (!redis.Connect())
+	//{
+	//	printf("connect redis failed!\n");
+	//	return 0;
+	//}
+
+	//chaos::db::DBRedisResult result;
+	//redis.Query("get test", &result);
+
+	chaos::db::DBConfig config;
+	memset(&config, 0, sizeof(config));
+
+	strcpy(config.redisConfig.dbip, "47.116.73.175");
+	config.redisConfig.dbport = 6379;
+
+	chaos::db::DBPool dbPool(config, chaos::db::DBT_REDIS);
+	dbPool.Start();
+	dbPool.Query("GET test",
+		[](const std::string& cmd, chaos::db::DBResultBase& result, int errorno)
+		{
+			chaos::db::DBRedisResult& redisResult = (chaos::db::DBRedisResult&)result;
+			const std::string s = redisResult.String();
+			printf("%s\n", s.c_str());
+		}
+	);
+
+	//---------db test end---------//
+
+	t.Start();
 
 	return 0;
 }

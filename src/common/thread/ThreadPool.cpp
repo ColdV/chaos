@@ -29,6 +29,11 @@ ThreadPool::ThreadPool(int nThreadNum /*= -1*/) :
 
 ThreadPool::~ThreadPool()
 {
+	if (m_running)
+	{
+		for (auto& thread : m_threads)
+			thread->Join();
+	}
 }
 
 
@@ -52,7 +57,7 @@ int ThreadPool::Stop()
 		MutexGuard lock(m_mutex);
 
 		if (!m_running)
-			return -1;
+			return 0;
 
 		m_running = false;
 

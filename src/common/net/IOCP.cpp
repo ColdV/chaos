@@ -28,20 +28,16 @@ namespace chaos
 		m_isInit(false),
 		m_workThreads(0),
 		m_threadHandles(NULL),
-		m_liveThreads(0),
-		m_tids(NULL),
-		m_pThreadParam(new THREAD_PARAM())
+		//m_liveThreads(0),
+		m_tids(NULL)
 	{
-		/*SYSTEM_INFO systemInfo;
+		SYSTEM_INFO systemInfo;
 		GetSystemInfo(&systemInfo);
-		m_workThreads = systemInfo.dwNumberOfProcessors * 2;*/
-		m_workThreads = 2;
+		m_workThreads = systemInfo.dwNumberOfProcessors;
+
 		m_completionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, m_workThreads);
 		m_threadHandles = new HANDLE[m_workThreads]{ 0 };
 		m_tids = new thread_t[m_workThreads]{ 0 };
-
-		m_pThreadParam->iocp = m_completionPort;
-		m_pThreadParam->pIOCP = this;
 	}
 
 
@@ -52,23 +48,28 @@ namespace chaos
 			PostQueuedCompletionStatus(m_completionPort, 0, NOTIFY_SHUTDOWN_KEY, NULL);
 		}
 
-		if (0 != m_liveThreads)
-			m_sem.SemWait();
+		//if (0 != m_liveThreads)
+		//	m_sem.SemWait();
 
 		if (m_threadHandles)
 		{
 			for (DWORD i = 0; i < m_workThreads; ++i)
 			{
-				CloseHandle(m_threadHandles[i]); 
+				int ret = WaitForSingleObject(m_threadHandles[i], INFINITE);
+				if (ret != 0)
+				{
+					//通常不会执行这里
+					printf("wait thread end failed! force thread.%d\n", GetLastError());
+					TerminateThread(m_threadHandles[i], -1);
+				}
+
+				CloseHandle(m_threadHandles[i]);
 			}
 			delete[] m_threadHandles;
 		}
 
 		if (m_tids)
 			delete[] m_tids;
-
-		if (m_pThreadParam)
-			delete m_pThreadParam;
 
 		if (m_completionPort)
 			CloseHandle(m_completionPort);
@@ -82,7 +83,7 @@ namespace chaos
 
 		for (DWORD i = 0; i < m_workThreads; ++i)
 		{
-			m_threadHandles[i] = (HANDLE)_beginthreadex(NULL, 0, &IOCP::Loop, m_pThreadParam, 0, &m_tids[i]);
+			m_threadHandles[i] = (HANDLE)_beginthreadex(NULL, 0, &IOCP::Loop, this, 0, &m_tids[i]);
 			if (!m_threadHandles)
 				return -1;
 		}
@@ -200,24 +201,19 @@ namespace chaos
 
 	unsigned int IOCP::Loop(void* arg)
 	{
-		if (!arg)
-			return -1;
+		assert(arg);
 
-		LPTHREAD_PARAM pThreadParam = (LPTHREAD_PARAM)arg;
-		IOCP* iocp = pThreadParam->pIOCP;
-		if (!iocp)
-			return -1;
-
+		IOCP* iocp = (IOCP*)arg;
 		EventCentre& centre = iocp->GetCentre();
 
-		iocp->AddLiveThread();
+		//iocp->AddLiveThread();
 
 		while (1)
 		{
 			DWORD bytes = 0;
 			ULONG_PTR key = 0;
 			OVERLAPPED *overlapped = NULL;
-			bool bOk = GetQueuedCompletionStatus(pThreadParam->iocp, &bytes, &key, &overlapped, WSA_INFINITE);
+			bool bOk = GetQueuedCompletionStatus(iocp->m_completionPort, &bytes, &key, &overlapped, WSA_INFINITE);
 
 			//结束GetQueuedCompletionStatus 准备退出工作线程
 			if (NOTIFY_SHUTDOWN_KEY == key)
@@ -242,8 +238,8 @@ namespace chaos
 			}
 		}
 
-		if (iocp->DecLiveThread() == 0)
-			iocp->m_sem.SemPost();
+		//if (iocp->DecLiveThread() == 0)
+		//	iocp->m_sem.SemPost();
 
 		return 0;
 	}
