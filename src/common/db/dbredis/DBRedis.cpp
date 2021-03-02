@@ -84,7 +84,7 @@ namespace chaos
 			else if (REDIS_REPLY_STRING == reply->type || REDIS_REPLY_STATUS == reply->type || REDIS_REPLY_DOUBLE == reply->type
 				|| REDIS_REPLY_BOOL == reply->type)
 			{
-				result->SetString(reply->str, reply->len);
+				result->SetString(reply->str, static_cast<int>(reply->len));
 			}
 			else if (REDIS_REPLY_ARRAY == reply->type || REDIS_REPLY_MAP == reply->type || REDIS_REPLY_SET == reply->type)
 			{
@@ -97,13 +97,13 @@ namespace chaos
 			}
 			else if (REDIS_REPLY_NIL == reply->type)
 			{
-				//空返回不执行任何操作
+				//绌鸿繑鍥炰笉鎵ц浠讳綍鎿嶄綔
 				return true;
 			}
-			//错误信息
+			//閿欒淇℃伅
 			else if (REDIS_REPLY_ERROR == reply->type)
 			{
-				result->SetString(reply->str, reply->len);
+				result->SetString(reply->str, static_cast<int>(reply->len));
 				return false;
 			}
 			else

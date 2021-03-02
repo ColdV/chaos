@@ -20,6 +20,7 @@
 #include <stack>
 #include <list>
 #include <memory>
+#include <assert.h>
 #include "noncopyable.h"
 #include "event_config.h"
 
@@ -61,7 +62,6 @@ typedef unsigned int				uint32;
 typedef long long int				int64;
 typedef unsigned long long int		uint64;
 typedef uint32						timer_id;
-typedef int64						TIME_T;
 
 
 #ifdef _WIN32

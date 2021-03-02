@@ -20,15 +20,15 @@ namespace chaos
 		{
 		public:
 			class Field;
-			static const int DEFAULT_RESERVER = 128;		//Ä¬ÈÏÔ¤·ÖÅä´óĞ¡
-			static const Field s_nullfield;				//¿ÕField¶ÔÏó
+			static const int DEFAULT_RESERVER = 128;		//é»˜è®¤é¢„åˆ†é…å¤§å°
+			static const Field s_nullfield;				//ç©ºFieldå¯¹è±¡
 			
 			friend class DBMysql;
 
 			struct FieldInfo
 			{
-				std::string name;		//ÁĞÃû
-				uint32 index;			//ÁĞÏÂ±ê
+				std::string name;		//åˆ—å
+				uint32 index;			//åˆ—ä¸‹æ ‡
 			};
 
 			typedef std::vector<std::vector<Field>>	DBResultVec;
@@ -37,24 +37,24 @@ namespace chaos
 			DBMysqlResult();
 			~DBMysqlResult();
 
-			//»ñÈ¡½á¹û¼¯ĞĞÊı
-			uint32 GetRowCount() const { return m_result.size(); }
+			//è·å–ç»“æœé›†è¡Œæ•°
+			uint32 GetRowCount() const { return (uint32)m_result.size(); }
 
-			//¸ù¾İÖ¸¶¨ĞĞÊıºÍÁĞÃû»ñÈ¡ÁĞ
+			//æ ¹æ®æŒ‡å®šè¡Œæ•°å’Œåˆ—åè·å–åˆ—
 			const Field* GetFieldByName(uint32 row, const std::string& name) const;
 
 		private:
-			//ÔÚÖ¸¶¨ĞĞÖĞÌí¼ÓÁĞÊı¾İ
-			//@parma row:ĞĞ±ê
-			//@param field:ÁĞ±ê
-			//@param value:ÁĞÖµ
-			//@parma len:ÁĞÖµ³¤¶È
+			//åœ¨æŒ‡å®šè¡Œä¸­æ·»åŠ åˆ—æ•°æ®
+			//@parma row:è¡Œæ ‡
+			//@param field:åˆ—æ ‡
+			//@param value:åˆ—å€¼
+			//@parma len:åˆ—å€¼é•¿åº¦
 			int AppendField(uint64 row, uint32 field, const char* value, uint32 len);
 
-			//¹¹½¨ÁĞÃûÓëÁĞµÄ¹ØÏµ
+			//æ„å»ºåˆ—åä¸åˆ—çš„å…³ç³»
 			bool BuildName2Field(const std::string& name, const FieldInfo& field);
 
-			//¸ù¾İÁĞÃû»ñÈ¡ÁĞÏÂ±ê
+			//æ ¹æ®åˆ—åè·å–åˆ—ä¸‹æ ‡
 			int Name2Index(const std::string& name) const
 			{
 				auto it = m_name2info.find(name);
@@ -72,13 +72,13 @@ namespace chaos
 		class DBMysqlResult::Field
 		{
 		public:
-			static const uint32 MAX_SIZE = 1024 * 1024 * 10;	//×î´óÈİÁ¿(10M)
+			static const uint32 MAX_SIZE = 1024 * 1024 * 10;	//æœ€å¤§å®¹é‡(10M)
 
 			Field() {}
 
 			~Field() {}
 
-			//Ìî³äÁĞÊı¾İ
+			//å¡«å……åˆ—æ•°æ®
 			int Fill(const char* value, uint32 len)
 			{
 				if (MAX_SIZE <= len || 0 != m_value.size())
@@ -92,7 +92,7 @@ namespace chaos
 			}
 
 
-			/////////////////////Êı¾İÀàĞÍ×ª»»/////////////////////
+			/////////////////////æ•°æ®ç±»å‹è½¬æ¢/////////////////////
 
 			float Float() const { return Value() ? (float)atof(Value()) : 0; }
 
@@ -118,7 +118,7 @@ namespace chaos
 
 			const char* String() const { return Value(); }
 
-			uint32 Length() const { return m_value.size(); }
+			uint32 Length() const { return (uint32)m_value.size(); }
 
 		private:
 			const char* Value() const { return m_value.empty() ? NULL : &m_value[0]; }

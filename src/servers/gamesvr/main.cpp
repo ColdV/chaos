@@ -6,7 +6,11 @@
 #include "common.h"
 #include "net/Timer.h"
 #include "thread/ThreadPool.h"
+
+#ifdef DB_REDIS_ENABLE
 #include "db/dbredis/DBRedis.h"
+#endif //  DB_REDIS_ENABLE
+
 #include "db/DBPool.h"
 
 #ifdef _WIN32
@@ -30,7 +34,7 @@ void ShowMemUse()
 	HANDLE handle = GetCurrentProcess();
 	PROCESS_MEMORY_COUNTERS pmc;
 	GetProcessMemoryInfo(handle, &pmc, sizeof(pmc));
-	LOG_DEBUG("ÄÚ´æÊ¹ÓÃ:%d", pmc.WorkingSetSize);
+	LOG_DEBUG("å†…å­˜ä½¿ç”¨:%d", pmc.WorkingSetSize);
 }
 
 #endif // _WIN32
@@ -225,7 +229,7 @@ int main()
 
 
 	//---------db test start---------//
-	//chaos::db::DBRedis redis("47.116.73.175", 6379);
+	//chaos::db::DBRedis redis("127.0.0.1", 6379);
 
 	//if (!redis.Connect())
 	//{
@@ -236,22 +240,23 @@ int main()
 	//chaos::db::DBRedisResult result;
 	//redis.Query("get test", &result);
 
-	chaos::db::DBConfig config;
-	memset(&config, 0, sizeof(config));
 
-	strcpy(config.redisConfig.dbip, "47.116.73.175");
-	config.redisConfig.dbport = 6379;
+	//chaos::db::DBConfig config;
+	//memset(&config, 0, sizeof(config));
 
-	chaos::db::DBPool dbPool(config, chaos::db::DBT_REDIS);
-	dbPool.Start();
-	dbPool.Query("GET test",
-		[](const std::string& cmd, chaos::db::DBResultBase& result, int errorno)
-		{
-			chaos::db::DBRedisResult& redisResult = (chaos::db::DBRedisResult&)result;
-			const std::string s = redisResult.String();
-			printf("%s\n", s.c_str());
-		}
-	);
+	//strcpy(config.redisConfig.dbip, "127.0.0.1");
+	//config.redisConfig.dbport = 6379;
+
+	//chaos::db::DBPool dbPool(config, chaos::db::DBT_REDIS);
+	//dbPool.Start();
+	//dbPool.Query("GET test",
+	//	[](const std::string& cmd, chaos::db::DBResultBase& result, int errorno)
+	//	{
+	//		chaos::db::DBRedisResult& redisResult = (chaos::db::DBRedisResult&)result;
+	//		const std::string s = redisResult.String();
+	//		printf("%s\n", s.c_str());
+	//	}
+	//);
 
 	//---------db test end---------//
 

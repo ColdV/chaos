@@ -467,8 +467,6 @@ namespace chaos
 
 		SockAddr m_peeraddr;
 
-		socklen_t m_peeraddrlen;
-
 		bool m_connected;
 	};
 
@@ -486,7 +484,7 @@ namespace chaos
 
 		uint32 GetTimeOut() const { return m_timeoutMs; }
 
-		uint64 GetNextTime() const { return m_nextTime; }
+		time_t GetNextTime() const { return m_nextTime; }
 
 		bool IsLoop() const { return m_isLoop; }
 		void SetLoop(bool isLoop) { m_isLoop = isLoop; }

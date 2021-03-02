@@ -41,22 +41,22 @@ namespace chaos
 
 		void Launch(EventList& activeEvents);
 
-		//Ìí¼Ó¶¨Ê±Æ÷,·µ»Ø¶¨Ê±Æ÷ID
+		//æ·»åŠ å®šæ—¶å™¨,è¿”å›å®šæ—¶å™¨ID
 		uint32 AddTimer(const EventSharedPtr& pEvent) { return AddTimer(std::static_pointer_cast<TimerEvent>(pEvent)); }
 
 		uint32 AddTimer(const TimerSharedPtr& pTimerEv);
 
 		uint32 DelTimer(TimerEvent* pTimerEv);
 
-		//»ñÈ¡ÏÂÒ»´Î³¬Ê±Ê±¼ä
-		//-1:µ±Ç°Ã»ÓĞ¶¨Ê±Æ÷, 0:µ±Ç°ÒÑÓĞ¾ÍĞ÷µÄ¶¨Ê±Æ÷, >0:ÏÂ¸ö¶¨Ê±Æ÷³¬Ê±Ê±¼ä
+		//è·å–ä¸‹ä¸€æ¬¡è¶…æ—¶æ—¶é—´
+		//-1:å½“å‰æ²¡æœ‰å®šæ—¶å™¨, 0:å½“å‰å·²æœ‰å°±ç»ªçš„å®šæ—¶å™¨, >0:ä¸‹ä¸ªå®šæ—¶å™¨è¶…æ—¶æ—¶é—´
 		int GetNextTimeout();
 
 		int Size() { return m_timers.Size(); }
 
 		void Clear();
 
-		//·ÖÅäÒ»¸ö¶¨Ê±Æ÷ID, ·µ»Ø0±íÊ¾ÎŞID¿ÉÓÃ
+		//åˆ†é…ä¸€ä¸ªå®šæ—¶å™¨ID, è¿”å›0è¡¨ç¤ºæ— IDå¯ç”¨
 		static timer_id CreateTimerID();
 
 		static void ReleaseTimerID(timer_id id);
@@ -71,12 +71,12 @@ namespace chaos
 
 		TimerMap m_timerMap;
 
-		TIME_T	m_lastRunTime;
+		time_t	m_lastRunTime;
 
 	private:
 		static std::vector<byte> s_ids;
 
-		static std::atomic<uint32> s_curTimers;			//¶¨Ê±Æ÷¸öÊı
+		static std::atomic<uint32> s_curTimers;			//å®šæ—¶å™¨ä¸ªæ•°
 
 		static Mutex s_mutex;
 	};

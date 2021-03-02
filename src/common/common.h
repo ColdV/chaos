@@ -35,7 +35,7 @@ inline void strncpy_safe(char* des, const unsigned int desSize, const char* src,
 }
 
 
-inline TIME_T GetCurrentMSec()
+inline time_t GetCurrentMSec()
 {
 #ifdef _WIN32
 	SYSTEMTIME st;

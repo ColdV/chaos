@@ -289,7 +289,7 @@ namespace chaos
  
 				//处理当前需要扩展的节点既是读节点也是写节点,并且在当前节点中,前一半是已写入,后一般是未读
 				//此时新插入的节点在该节点之前, 应当将该节点readCursor之前已写入的数据拷贝到新节点之中,并重新计算该节点的useSize 
-				uint32 realUseSize = (*writeNodeIt)->totalSize - ((*writeNodeIt)->readCursor - (*writeNodeIt)->buffer);
+				uint32 realUseSize = (uint32)((*writeNodeIt)->totalSize - ((*writeNodeIt)->readCursor - (*writeNodeIt)->buffer));
 				if (realUseSize < (*writeNodeIt)->useSize)
 				{
 					uint32 moveSize = (*writeNodeIt)->useSize - realUseSize;

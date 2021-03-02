@@ -33,7 +33,7 @@ namespace chaos
 
 			if (!pEvent)
 			{
-				//ÕâÀï²»ÐèÒªÈ¥µ÷ÓÃDelTimer(TimerMapÖÐÊÇshared_ptrÈç¹ûÖ´ÐÐµ½ÕâÀï,TimerMapÖÐ±ØÈ»²»´æÔÚ¸ÃÔªËØ)
+				//è¿™é‡Œä¸éœ€è¦åŽ»è°ƒç”¨DelTimer(TimerMapä¸­æ˜¯shared_ptrå¦‚æžœæ‰§è¡Œåˆ°è¿™é‡Œ,TimerMapä¸­å¿…ç„¶ä¸å­˜åœ¨è¯¥å…ƒç´ )
 				m_timers.Pop();
 				continue;
 			}
@@ -43,7 +43,7 @@ namespace chaos
 
 			if (pEvent->IsSuspend())
 			{
-				//ÔÝÍ£µÄ¶¨Ê±Æ÷Èç¹û²»ÊÇÑ­»·µÄ¾ÍÖ±½ÓÉ¾³ý
+				//æš‚åœçš„å®šæ—¶å™¨å¦‚æžœä¸æ˜¯å¾ªçŽ¯çš„å°±ç›´æŽ¥åˆ é™¤
 				if (pEvent->IsLoop())
 				{
 					pEvent->SetNextTime();
@@ -60,7 +60,7 @@ namespace chaos
 
 			activeEvents.push_back(pEvent.get());
 
-			//Ñ­»·¶¨Ê±ÈÎÎñ
+			//å¾ªçŽ¯å®šæ—¶ä»»åŠ¡
 			if (pEvent->IsLoop())
 			{
 				pEvent->SetNextTime();
@@ -120,9 +120,9 @@ namespace chaos
 			if (!pEvent)
 				return 0;
 
-			TIME_T timeout = pEvent->GetNextTime() - GetCurrentMSec();
+			int timeout = static_cast<int>(pEvent->GetNextTime() - GetCurrentMSec());
 			
-			return (int)(timeout > 0 ? timeout : 0);
+			return timeout > 0 ? timeout : 0;
 		}
 
 		return -1;
@@ -151,7 +151,7 @@ namespace chaos
 		if (s_curTimers >= s_ids.size() * BYTE2BIT)
 			s_ids.emplace_back(0);
 
-		uint32 max = s_ids.size();
+		uint32 max = static_cast<uint32>(s_ids.size());
 		uint32 i = 0;
 
 		while(i < max)

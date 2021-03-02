@@ -961,7 +961,6 @@ namespace chaos
 		m_readcb(NULL),
 		m_writecb(NULL),
 		m_connectcb(NULL),
-		m_peeraddrlen(sizeof(SockAddr)),
 		m_connected(false)
 	{
 		assert(m_socket);
@@ -991,7 +990,8 @@ namespace chaos
 
 		memset(&m_peeraddr, 0, sizeof(m_peeraddr));
 
-		getpeername(fd, &m_peeraddr.sa, &m_peeraddrlen);
+		socklen_t addrLen = 0;
+		getpeername(fd, &m_peeraddr.sa, &addrLen);
 		if (m_peeraddr.sa.sa_family != AF_UNSPEC)
 			m_connected = true;
 	}
@@ -1078,7 +1078,8 @@ namespace chaos
 		if (ret != 0 && errno != EISCONN /*&& SOCKET_ERR_NOT_TRY_AGAIN(errno)*/)
 			sucess = false;
 
-		getpeername(m_socket->GetFd(), &m_peeraddr.sa, &m_peeraddrlen);
+		socklen_t addrLen = 0;
+		getpeername(m_socket->GetFd(), &m_peeraddr.sa, &addrLen);
 
 		if (sucess)
 		{
@@ -1479,7 +1480,9 @@ namespace chaos
 		m_isPostConnect = false;
 
 		setsockopt(lo->fd, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0);
-		getpeername(lo->fd, &m_peeraddr.sa, &m_peeraddrlen);
+
+		int addrLen = 0;
+		getpeername(lo->fd, &m_peeraddr.sa, &addrLen);
 
 		if (bOk)
 		{

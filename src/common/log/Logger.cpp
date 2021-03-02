@@ -104,7 +104,7 @@ void Logger::WriteLog(int logLev, const char* fmt, ...)
 
 	MutexGuard lock(m_mutex);
 
-	//µÚÒ»´ÎĞ´ÎÄ¼şÊ±´ò¿ªÎÄ¼ş¡¢¸ôÈÕĞÂ½¨ÎÄ¼ş
+	//ç¬¬ä¸€æ¬¡å†™æ–‡ä»¶æ—¶æ‰“å¼€æ–‡ä»¶ã€éš”æ—¥æ–°å»ºæ–‡ä»¶
 	if (!m_fp || (now / DAY2SEC) != (m_lastSecond / DAY2SEC))
 	{
 		m_fp = OpenLogFile();
@@ -114,7 +114,7 @@ void Logger::WriteLog(int logLev, const char* fmt, ...)
 		}
 	}
 
-	//ÎÄ¼şĞ´Âú,ĞÂ½¨Ò»¸öÎÄ¼ş
+	//æ–‡ä»¶å†™æ»¡,æ–°å»ºä¸€ä¸ªæ–‡ä»¶
 	if (MAX_SIZE <= m_curSize)
 	{
 		while (MAX_SIZE <= m_curSize)
@@ -182,7 +182,7 @@ FILE* Logger::OpenLogFile()
 	if (!m_fp)
 		return NULL;
 
-	m_curSize = GetFileLength(m_fp);
+	m_curSize = static_cast<int>(GetFileLength(m_fp));
 
 	return m_fp;
 }

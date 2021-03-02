@@ -41,7 +41,7 @@ namespace chaos
 			if (!result)
 				return -1;
 
-			int ret = mysql_real_query(m_pMysql, cmd.c_str(), cmd.length());
+			int ret = mysql_real_query(m_pMysql, cmd.c_str(), (unsigned long)cmd.length());
 
 			if (0 != ret)
 				return ret;
