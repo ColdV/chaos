@@ -242,6 +242,16 @@ namespace chaos
 	}
 
 
+	void EventCentre::Exit()
+	{
+		if (m_running)
+		{
+			m_running = false;
+			WakeUp();
+		}
+	}
+
+
 	int EventCentre::ProcessActiveEvent()
 	{
 		MutexGuard lock(m_mutex);
@@ -460,6 +470,7 @@ namespace chaos
 
 	EventCentrePool::~EventCentrePool()
 	{
+		Stop();
 		m_pool->Stop();
 	}
 

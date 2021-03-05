@@ -105,8 +105,8 @@ if(WIN32)
 endif()
 
 if(UNIX)
-    add_definitions(-std=c++11 -g)
-	set(CMAKE_CXX_FLAGS_DEBUG "-O0")
+    add_definitions(-std=c++11)
+	set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
 	set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 endif()
 

@@ -186,7 +186,7 @@ namespace chaos
 
 		int EventLoop();
 
-		void Exit() { m_running = false; }
+		void Exit();
 
 		int RegisterEvent(const EventSharedPtr& pEvent);
 
