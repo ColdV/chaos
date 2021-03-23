@@ -50,10 +50,13 @@ namespace chaos
 		int nfds = 0;
 
 #ifdef _WIN32
-		//windows�е�select���ò���������յ�fd_set
+		//windows中的select调用不允许传入空的fd_set
 		if (0 >= (m_rfds.fd_count + m_wfds.fd_count + m_efds.fd_count))
 		{
+			//一定不会执行到这里(最少会被注册进一个wakeup fd)
+			printf("win32 select fdset is null\n");
 			Sleep(timeoutMs);
+			//m_pCentre->WaitWaittintEvsCond(timeoutMs);
 			return 0;
 		}
 
@@ -62,14 +65,17 @@ namespace chaos
 #else
 
 #endif // _WIN32
-
+			
 		m_rfdsout = m_rfds;
 		m_wfdsout = m_wfds;
 		m_efdsout = m_efds;
+ 
+		timeval tval{ timeoutMs / SEC2MSEC, timeoutMs % SEC2MSEC * SEC2MSEC };
+		timeval* tv = NULL;
+		if (timeoutMs >= 0)
+			tv = &tval;
 
-		timeval val{ timeoutMs / SEC2MSEC, timeoutMs % SEC2MSEC * SEC2MSEC };
-
-		int cnt = select(MAX_FD, &m_rfdsout, &m_wfdsout, &m_efdsout, &val);
+		int cnt = select(MAX_FD, &m_rfdsout, &m_wfdsout, &m_efdsout, tv);
 
 		if (0 > cnt)
 		{

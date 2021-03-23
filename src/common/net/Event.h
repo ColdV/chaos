@@ -169,7 +169,7 @@ namespace chaos
 	class EventCentre : public NonCopyable
 	{
 	public:
-		friend void Event::PushEventToCentre( short ev);		//use PushEvent();
+		friend void Event::PushEventToCentre(short ev);		//use PushEvent();
 		friend class IOCP;			//use GetMutex(), WaitWaittintEvsCond()
 
 		struct ActiveEvent

@@ -30,11 +30,9 @@ set(PROJECT_DEPS_DIR ${CMAKE_SOURCE_DIR}/deps)
 set(PROJECT_LIBS_DIR ${CMAKE_SOURCE_DIR}/libs)
 
 
-#FindMySQL
-INCLUDE(cmake/mysql.cmake)
-
-#FindRedis
-find_package(HiRedis)
+INCLUDE(cmake/mysql.cmake)		#FindMySQL
+find_package(HiRedis)			#FindRedis
+find_package(Protobuf)			#FindProtobuf
 
 
 if(MYSQL_FOUND)
@@ -52,6 +50,10 @@ if(HiRedis_FOUND)
   list(APPEND LIBS ${HiRedis_LIBRARY})
   list(APPEND LIBS_INCLUDE ${HiRedis_INCLUDE_DIR})
   option(DB_REDIS_ENABLE "enable redis." ON)
+endif()
+
+if(Protobuf_FOUND)
+	message(STATUS "protobuf found.")
 endif()
 
 
@@ -100,14 +102,14 @@ configure_file (
 
 
 if(WIN32)
-	set(CMAKE_CXX_FLAGS_DEBUG "/Od /MDd")
-	set(CMAKE_CXX_FLAGS_RELEASE "/O2 /MD")
+	list(APPEND CMAKE_CXX_FLAGS_DEBUG "/Od /MDd")
+	list(APPEND CMAKE_CXX_FLAGS_RELEASE "/O2 /MD")
 endif()
 
 if(UNIX)
     add_definitions(-std=c++11)
-	set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
-	set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
+	list(APPEND CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
+	list(APPEND CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 endif()
 
 

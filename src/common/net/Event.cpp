@@ -65,6 +65,7 @@ namespace chaos
 	EventCentre::WakeUpEvent::WakeUpEvent(socket_t fd) :
 		Event(EV_IOREAD, { fd })
 	{
+		m_sockets.reserve(2);
 		m_sockets.emplace_back(new Socket(fd));
 	}
 
@@ -76,20 +77,37 @@ namespace chaos
 	bool EventCentre::WakeUpEvent::Init()
 	{
 #ifdef _WIN32
-#ifndef IOCP_ENABLE
-		SOCKADDR_IN sin;
+#ifndef IOCP_ENABLE			// use win32 select
+		SOCKADDR_IN sin, connAddr;
+		std::unique_ptr<Socket> listener(new Socket(AF_INET, SOCK_STREAM, IPPROTO_TCP));
+
 		memset(&sin, 0, sizeof(SOCKADDR_IN));
+		memset(&connAddr, 0, sizeof(SOCKADDR_IN));
 		sin.sin_family = AF_INET;
-		sin.sin_addr.s_addr = 0;
+		sin.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 		sin.sin_port = htons(0);
 
-		if (0 != m_sockets[0]->Bind((sockaddr*)&sin, sizeof(SOCKADDR_IN)))
+		if (listener->Bind((sockaddr*)&sin, sizeof(SOCKADDR_IN)) != 0)
 			return false;
 
-		if (0 != m_sockets[0]->Listen(2))
+		if (listener->Listen(2) != 0)
 			return false;
 
-		m_sockets.emplace_back(new Socket(AF_INET, SOCK_STREAM, IPPROTO_TCP));
+		int size = sizeof(connAddr);
+		if (getsockname(listener->GetFd(), (sockaddr*)&connAddr, &size) == -1)
+			return false;
+
+		if (size != sizeof(connAddr))
+			return false;
+
+		if (m_sockets[0]->Connect((sockaddr*)&connAddr, size) != 0)
+			return false;
+
+		socket_t acceptfd = listener->Accept();
+		if (acceptfd < 0)
+			return false;
+
+		m_sockets.emplace_back(new Socket(acceptfd));
 
 		return true;
 #endif // !IOCP_ENABLE
@@ -105,7 +123,7 @@ namespace chaos
 #ifdef _WIN32
 #ifndef IOCP_ENABLE
 		char buf(0);
-		ret = m_sockets[1]->Recv(&buf, sizeof(buf));
+		ret = m_sockets[0]->Recv(&buf, sizeof(buf));
 #endif // !IOCP_ENABLE
 #else
 		uint64_t buf = 1;
@@ -540,6 +558,7 @@ namespace chaos
 		static std::atomic<int> worked(0);
 
 		EventCentre centre;
+
 		{	
 			MutexGuard lock(m_mutex);
 			m_centres.push_back(&centre);
