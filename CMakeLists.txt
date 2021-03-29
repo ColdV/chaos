@@ -110,6 +110,8 @@ if(UNIX)
     add_definitions(-std=c++11)
 	list(APPEND CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
 	list(APPEND CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
+	string(REPLACE ";" " " CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+    string(REPLACE ";" " " CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
 endif()
 
 
