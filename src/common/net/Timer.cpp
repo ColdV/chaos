@@ -31,15 +31,17 @@ namespace chaos
 		{
 			TimerSharedPtr pEvent(m_timers.Front().lock());
 
-			if (!pEvent)
-			{
-				//这里不需要去调用DelTimer(TimerMap中是shared_ptr如果执行到这里,TimerMap中必然不存在该元素)
-				m_timers.Pop();
-				continue;
-			}
+			//if (!pEvent)
+			//{
+			//	//这里不需要去调用DelTimer(TimerMap中是shared_ptr如果执行到这里,TimerMap中必然不存在该元素)
+			//	m_timers.Pop();
+			//	continue;
+			//}
 
 			if (m_lastRunTime < pEvent->GetNextTime())
 				break;
+
+			m_timers.Pop();
 
 			if (pEvent->IsSuspend())
 			{
@@ -54,7 +56,7 @@ namespace chaos
 					DelTimer(pEvent.get());
 				}
 
-				m_timers.Pop();
+				//m_timers.Pop();
 				continue;
 			}
 
@@ -67,7 +69,7 @@ namespace chaos
 				m_timers.Push(pEvent);
 			}
 
-			m_timers.Pop();
+			//m_timers.Pop();
 
 		}
 	}
